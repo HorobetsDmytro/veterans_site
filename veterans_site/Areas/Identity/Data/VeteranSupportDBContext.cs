@@ -1,15 +1,18 @@
 ﻿using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore;
+using veterans_site.Models;
 
 namespace veterans_site.Data;
 
-public class VeteranSupportDBContext : IdentityDbContext<IdentityUser>
-{
+public class VeteranSupportDBContext : IdentityDbContext<ApplicationUser>
+{   
     public VeteranSupportDBContext(DbContextOptions<VeteranSupportDBContext> options)
         : base(options)
     {
     }
+
+    //public new DbSet<ApplicationUser> Users { get; set; }
 
     protected override void OnModelCreating(ModelBuilder builder)
     {
