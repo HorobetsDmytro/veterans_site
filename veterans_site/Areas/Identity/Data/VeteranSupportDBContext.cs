@@ -12,7 +12,10 @@ public class VeteranSupportDBContext : IdentityDbContext<ApplicationUser>
     {
     }
 
-    //public new DbSet<ApplicationUser> Users { get; set; }
+    public DbSet<Event> Events { get; set; }
+    public DbSet<Consultation> Consultations { get; set; }
+    public DbSet<News> News { get; set; }
+    public DbSet<VeteranService> VeteranServices { get; set; }
 
     protected override void OnModelCreating(ModelBuilder builder)
     {
