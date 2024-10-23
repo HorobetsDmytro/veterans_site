@@ -1,0 +1,39 @@
+﻿@model veterans_site.Models.Event
+
+@{
+    ViewData["Title"] = "Видалення події";
+}
+
+<div class="container mt-5">
+    <div class="card shadow-sm">
+        <div class="card-body">
+            <h1 class="h3 mb-4">Видалення події</h1>
+
+            <div class="alert alert-danger">
+                <strong>Увага!</strong> Ви впевнені, що хочете видалити цю подію?
+            </div>
+
+            <div class="mb-4">
+                <h2 class="h5">@Model.Title</h2>
+                <p>@Model.Description</p>
+
+                <div class="text-muted">
+                    <p><strong>Дата:</strong> @Model.Date.ToString("dd.MM.yyyy HH:mm")</p>
+                    <p><strong>Місце проведення:</strong> @Model.Location</p>
+                    @if (Model.MaxParticipants.HasValue)
+                    {
+                        <p><strong>Максимум учасників:</strong> @Model.MaxParticipants</p>
+                    }
+                </div>
+            </div>
+
+            <form asp-action="Delete">
+                <input type="hidden" asp-for="Id" />
+                <div class="d-flex gap-3">
+                    <button type="submit" class="btn btn-danger">Видалити</button>
+                    <a asp-action="Index" class="btn btn-secondary">Назад до списку</a>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>

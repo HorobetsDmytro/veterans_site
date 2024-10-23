@@ -6,7 +6,7 @@ using veterans_site.Models;
 namespace veterans_site.Data;
 
 public class VeteranSupportDBContext : IdentityDbContext<ApplicationUser>
-{   
+{
     public VeteranSupportDBContext(DbContextOptions<VeteranSupportDBContext> options)
         : base(options)
     {

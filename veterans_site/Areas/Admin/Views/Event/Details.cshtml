@@ -1,0 +1,50 @@
+﻿@model veterans_site.Models.Event
+
+@{
+    ViewData["Title"] = "Деталі події";
+}
+
+<div class="container mt-5">
+    <div class="card shadow-sm">
+        <div class="card-body">
+            <h1 class="h3 mb-4">@Model.Title</h1>
+
+            <div class="row g-4">
+                <div class="col-md-6">
+                    <h2 class="h5 mb-3">Деталі події</h2>
+                    <ul class="list-unstyled">
+                        <li>
+                            <strong>Дата:</strong>
+                            @Model.Date.ToString("dd.MM.yyyy HH:mm")
+                        </li>
+                        <li>
+                            <strong>Місце проведення:</strong>
+                            @Model.Location
+                        </li>
+                        @if (Model.MaxParticipants.HasValue)
+                        {
+                            <li>
+                                <strong>Максимум учасників:</strong>
+                                @Model.MaxParticipants
+                            </li>
+                        }
+                    </ul>
+                </div>
+
+                <div class="col-md-6">
+                    <h2 class="h5 mb-3">Опис</h2>
+                    <p class="text-muted">@Model.Description</p>
+                </div>
+            </div>
+
+            <div class="mt-4 d-flex gap-3">
+                <a asp-action="Index" class="btn btn-secondary">
+                    Назад до списку
+                </a>
+                <a asp-action="Edit" asp-route-id="@Model.Id" class="btn btn-primary">
+                    Редагувати
+                </a>
+            </div>
+        </div>
+    </div>
+</div>

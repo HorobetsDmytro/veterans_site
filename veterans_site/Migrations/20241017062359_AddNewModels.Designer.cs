@@ -5,13 +5,15 @@ using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
 using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
-using veterans_site.Data;
+//using veterans_site.Data;
 
 #nullable disable
 
 namespace veterans_site.Migrations
 {
-    [DbContext(typeof(VeteranSupportDBContext))]
+    /// <summary>
+    /// [DbContext(typeof(VeteranSupportDBContext))]
+    /// </summary>
     [Migration("20241017062359_AddNewModels")]
     partial class AddNewModels
     {

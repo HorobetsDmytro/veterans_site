@@ -4,13 +4,13 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
-using veterans_site.Data;
+//using veterans_site.Data;
 
 #nullable disable
 
 namespace veterans_site.Migrations
 {
-    [DbContext(typeof(VeteranSupportDBContext))]
+    //[DbContext(typeof(VeteranSupportDBContext))]
     partial class VeteranSupportDBContextModelSnapshot : ModelSnapshot
     {
         protected override void BuildModel(ModelBuilder modelBuilder)

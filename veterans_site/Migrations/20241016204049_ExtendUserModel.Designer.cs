@@ -5,13 +5,13 @@ using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
 using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
-using veterans_site.Data;
+//using veterans_site.Data;
 
 #nullable disable
 
 namespace veterans_site.Migrations
 {
-    [DbContext(typeof(VeteranSupportDBContext))]
+    //[DbContext(typeof(VeteranSupportDBContext))]
     [Migration("20241016204049_ExtendUserModel")]
     partial class ExtendUserModel
     {
