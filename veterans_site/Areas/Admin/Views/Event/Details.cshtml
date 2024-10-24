@@ -1,4 +1,6 @@
-﻿@model veterans_site.Models.Event
+﻿@using veterans_site.Extensions
+
+@model veterans_site.Models.Event
 
 @{
     ViewData["Title"] = "Деталі події";
@@ -28,6 +30,14 @@
                                 @Model.MaxParticipants
                             </li>
                         }
+                        <li>
+                            <strong>Категорія:</strong>
+                            @Model.Category.GetDisplayName() <!-- Відображення категорії з використанням GetDisplayName -->
+                        </li>
+                        <li>
+                            <strong>Статус:</strong>
+                            @Model.Status.GetDisplayName() <!-- Відображення статусу з використанням GetDisplayName -->
+                        </li>
                     </ul>
                 </div>
 

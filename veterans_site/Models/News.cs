@@ -16,6 +16,7 @@ namespace veterans_site.Models
         [Required]
         public DateTime PublishDate { get; set; }
 
-        public string Author { get; set; }
+        [Required]
+        public string ImagePath { get; set; }
     }
 }

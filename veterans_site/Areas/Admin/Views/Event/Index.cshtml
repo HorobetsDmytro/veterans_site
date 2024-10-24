@@ -1,40 +1,155 @@
-﻿@model IEnumerable<veterans_site.Models.Event>
+﻿@using veterans_site.Extensions
+@model veterans_site.ViewModels.EventIndexViewModel
 
 @{
     ViewData["Title"] = "Події";
+    Layout = "_Layout";
 }
 
-<div class="container mt-4">
-    <div class="d-flex justify-content-between align-items-center mb-4">
-        <h1 class="h3">Події</h1>
-        <a class="btn btn-primary" asp-area="Admin" asp-controller="Event" asp-action="Create">Створити нову подію</a>
-    </div>
-
-
+<div class="container-fluid mt-4">
     <div class="row">
-        @foreach (var item in Model)
-        {
-            <div class="col-md-6 col-lg-4 mb-4">
-                <div class="card h-100 shadow-sm">
-                    <div class="card-body">
-                        <h5 class="card-title">@item.Title</h5>
-                        <p class="card-text">@item.Description</p>
-                        <ul class="list-unstyled text-muted mb-4">
-                            <li><i class="far fa-calendar-alt"></i> @item.Date.ToString("dd.MM.yyyy HH:mm")</li>
-                            <li><i class="fas fa-map-marker-alt"></i> @item.Location</li>
-                            @if (item.MaxParticipants.HasValue)
-                            {
-                                <li><i class="fas fa-users"></i> Максимум учасників: @item.MaxParticipants</li>
-                            }
-                        </ul>
-                        <div class="d-flex gap-2">
-                            <a asp-action="Details" asp-route-id="@item.Id" class="btn btn-link text-primary">Деталі</a>
-                            <a asp-action="Edit" asp-route-id="@item.Id" class="btn btn-link text-success">Редагувати</a>
-                            <a asp-action="Delete" asp-route-id="@item.Id" class="btn btn-link text-danger">Видалити</a>
+        <div class="col-md-3">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0">Фільтри</h5>
+                </div>
+                <div class="card-body">
+                    <h6>Категорії</h6>
+                    <form method="get" asp-action="Index">
+                        <div class="mb-3">
+                            <select name="category" class="form-select" onchange="this.form.submit()">
+                                <option value="">Всі категорії</option>
+                                @foreach (EventCategory category in Enum.GetValues(typeof(EventCategory)))
+                                {
+                                    if (Model.CurrentCategory == category)
+                                    {
+                                        <option value="@category.ToString()" selected>@category.GetDisplayName()</option>
+                                    }
+                                    else
+                                    {
+                                        <option value="@category.ToString()">@category.GetDisplayName()</option>
+                                    }
+                                }
+                            </select>
                         </div>
-                    </div>
+
+                        <h6 class="mt-4">Статуси</h6>
+                        <div class="mb-3">
+                            <select name="status" class="form-select" onchange="this.form.submit()">
+                                <option value="">Всі статуси</option>
+                                @foreach (EventStatus status in Enum.GetValues(typeof(EventStatus)))
+                                {
+                                    if (Model.CurrentStatus == status)
+                                    {
+                                        <option value="@status.ToString()" selected>@status.GetDisplayName()</option>
+                                    }
+                                    else
+                                    {
+                                        <option value="@status.ToString()">@status.GetDisplayName()</option>
+                                    }
+                                }
+                            </select>
+                        </div>
+
+                    </form>
                 </div>
             </div>
-        }
+        </div>
+
+        <!-- Список подій -->
+        <div class="col-md-9">
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <h1 class="h3">Події</h1>
+
+                <!-- Вибір критерію сортування -->
+                <div class="btn-group me-3">
+                    <a class="btn btn-secondary dropdown-toggle" href="#" role="button" id="dropdownSortBy" data-bs-toggle="dropdown" aria-expanded="false">
+                        Сортувати за:
+                        @switch (Model.CurrentSort)
+                        {
+                            case "date_asc":
+                                @:Дата за зростанням
+                                break;
+                            case "date_desc":
+                                @:Дата за спаданням
+                                break;
+                            case "participants_asc":
+                                @:Кількість учасників за зростанням
+                                break;
+                            case "participants_desc":
+                                @:Кількість учасників за спаданням
+                                break;
+                            default:
+                                @:Дата за зростанням
+                                break;
+                        }
+                    </a>
+                    <ul class="dropdown-menu" aria-labelledby="dropdownSortBy">
+                        <li><a class="dropdown-item" asp-action="Index" asp-route-sortOrder="date_asc" asp-route-category="@Model.CurrentCategory" asp-route-status="@Model.CurrentStatus">Дата за зростанням</a></li>
+                        <li><a class="dropdown-item" asp-action="Index" asp-route-sortOrder="date_desc" asp-route-category="@Model.CurrentCategory" asp-route-status="@Model.CurrentStatus">Дата за спаданням</a></li>
+                        <li><a class="dropdown-item" asp-action="Index" asp-route-sortOrder="participants_asc" asp-route-category="@Model.CurrentCategory" asp-route-status="@Model.CurrentStatus">Кількість учасників за зростанням</a></li>
+                        <li><a class="dropdown-item" asp-action="Index" asp-route-sortOrder="participants_desc" asp-route-category="@Model.CurrentCategory" asp-route-status="@Model.CurrentStatus">Кількість учасників за спаданням</a></li>
+                    </ul>
+                </div>
+
+                <a class="btn btn-primary" asp-action="Create">Створити нову подію</a>
+            </div>
+
+            <div class="row">
+                @foreach (var item in Model.Events)
+                {
+                    <div class="col-md-6 mb-4">
+                        <div class="card h-100 shadow-sm">
+                            <div class="card-body">
+                                <div class="d-flex justify-content-between mb-2">
+                                    <h5 class="card-title">@item.Title</h5>
+                                </div>
+                                @* <p class="card-text">@item.Description</p> *@
+                                <ul class="list-unstyled text-muted mb-4">
+                                    <li><i class="far fa-calendar-alt"></i> Дата проведення: @item.Date.ToString("dd.MM.yyyy HH:mm")</li>
+                                    <li><i class="fas fa-map-marker-alt"></i> Місце проведення: @item.Location</li>
+                                    @if (item.MaxParticipants.HasValue)
+                                    {
+                                        <li><i class="fas fa-users"></i> Максимум учасників: @item.MaxParticipants</li>
+                                    }
+                                    <li><i class="fas fa-tag"></i> Категорія: @item.Category.GetDisplayName()</li>
+                                </ul>
+                                <span class="badge @(item.Status switch
+                                {
+                                    EventStatus.Planned => "bg-primary",
+                                    EventStatus.InProgress => "bg-success",
+                                    EventStatus.Completed => "bg-secondary",
+                                    EventStatus.Cancelled => "bg-danger",
+                                    _ => "bg-secondary"
+                                })" style="font-size: 1rem; font-weight: normal;">@item.Status.GetDisplayName()</span>
+                                <div class="d-flex gap-2 mt-2">
+                                    <a asp-action="Details" asp-route-id="@item.Id" class="btn btn-outline-primary btn-sm">Деталі</a>
+                                    <a asp-action="Edit" asp-route-id="@item.Id" class="btn btn-outline-success btn-sm">Редагувати</a>
+                                    <a asp-action="Delete" asp-route-id="@item.Id" class="btn btn-outline-danger btn-sm">Видалити</a>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                }
+            </div>
+
+            <!-- Пагінація -->
+            @if (Model.TotalPages > 1)
+            {
+                <nav aria-label="Page navigation" class="mt-4">
+                    <ul class="pagination justify-content-center">
+                        @for (int i = 1; i <= Model.TotalPages; i++)
+                        {
+                            <li class="page-item @(i == Model.CurrentPage ? "active" : "")">
+                                <a class="page-link" asp-action="Index"
+                                   asp-route-page="@i"
+                                   asp-route-category="@Model.CurrentCategory" 
+                                   asp-route-status="@Model.CurrentStatus">@i</a>
+                            </li>
+                        }
+                    </ul>
+                </nav>
+            }
+        </div>
     </div>
 </div>
