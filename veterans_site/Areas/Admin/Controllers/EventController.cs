@@ -24,19 +24,16 @@ namespace veterans_site.Areas.Admin.Controllers
         {
             var events = await _eventRepository.GetAllAsync();
 
-            // Фільтрація за категорією
             if (category.HasValue)
             {
                 events = events.Where(e => e.Category == category);
             }
 
-            // Фільтрація за статусом
             if (status.HasValue)
             {
                 events = events.Where(e => e.Status == status);
             }
 
-            // Сортування
             events = sortOrder switch
             {
                 "date_desc" => events.OrderByDescending(e => e.Date),
@@ -45,7 +42,6 @@ namespace veterans_site.Areas.Admin.Controllers
                 _ => events.OrderBy(e => e.Date),
             };
 
-            // Пагінація
             var totalItems = events.Count();
             var totalPages = (int)Math.Ceiling(totalItems / (double)PageSize);
 

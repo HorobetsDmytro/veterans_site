@@ -8,7 +8,7 @@ namespace veterans_site.ViewModels
         public int CurrentPage { get; set; }
         public int TotalPages { get; set; }
         public EventCategory? CurrentCategory { get; set; }
-        public EventStatus? CurrentStatus { get; set; } // Добавлено
+        public EventStatus? CurrentStatus { get; set; }
         public string CurrentSort { get; set; }
     }
 

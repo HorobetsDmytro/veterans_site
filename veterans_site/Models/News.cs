@@ -5,18 +5,12 @@ namespace veterans_site.Models
     public class News
     {
         public int Id { get; set; }
-
-        [Required]
-        [StringLength(200)]
         public string Title { get; set; }
-
-        [Required]
         public string Content { get; set; }
-
-        [Required]
         public DateTime PublishDate { get; set; }
 
-        [Required]
-        public string ImagePath { get; set; }
+        // Зробіть поле ImagePath nullable
+        public string? ImagePath { get; set; }
     }
+
 }

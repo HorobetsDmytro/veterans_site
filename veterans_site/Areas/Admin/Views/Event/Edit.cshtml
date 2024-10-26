@@ -47,7 +47,6 @@
                             <span asp-validation-for="Description" class="text-danger"></span>
                         </div>
 
-                        <!-- Поле для вибору категорії -->
                         <div class="mb-3">
                             <label asp-for="Category" class="form-label">Категорія</label>
                             <select asp-for="Category" class="form-select" asp-items="Html.GetEnumSelectList<EventCategory>()">
@@ -55,7 +54,6 @@
                             <span asp-validation-for="Category" class="text-danger"></span>
                         </div>
 
-                        <!-- Поле для вибору статусу -->
                         <div class="mb-3">
                             <label asp-for="Status" class="form-label">Статус</label>
                             <select asp-for="Status" class="form-select" asp-items="Html.GetEnumSelectList<EventStatus>()">

@@ -1,0 +1,51 @@
+﻿@model veterans_site.Models.News
+@{
+    ViewData["Title"] = "Створення новини";
+}
+
+<div class="container mt-4">
+    <div class="card shadow">
+        <div class="card-body">
+            <h1 class="card-title">Створення нової новини</h1>
+
+            <form asp-action="Create" enctype="multipart/form-data">
+                <div asp-validation-summary="ModelOnly" class="text-danger mb-3"></div>
+
+                <div class="row g-3">
+                    <div class="col-md-6">
+                        <div class="mb-3">
+                            <label asp-for="Title" class="form-label">Заголовок</label>
+                            <input asp-for="Title" class="form-control" />
+                            <span asp-validation-for="Title" class="text-danger"></span>
+                        </div>
+
+                        <div class="mb-3">
+                            <label asp-for="PublishDate" class="form-label">Дата публікації</label>
+                            <input asp-for="PublishDate" type="datetime-local" class="form-control" />
+                            <span asp-validation-for="PublishDate" class="text-danger"></span>
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label">Зображення</label>
+                            <input type="file" name="imageFile" class="form-control" required />
+                            <span asp-validation-for="ImagePath" class="text-danger"></span>
+                        </div>
+                    </div>
+
+                    <div class="col-md-6">
+                        <div class="mb-3">
+                            <label asp-for="Content" class="form-label">Контент</label>
+                            <textarea asp-for="Content" rows="10" class="form-control"></textarea>
+                            <span asp-validation-for="Content" class="text-danger"></span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="d-flex gap-2">
+                    <button type="submit" class="btn btn-primary">Створити</button>
+                    <a asp-action="Index" class="btn btn-secondary">Назад до списку</a>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>

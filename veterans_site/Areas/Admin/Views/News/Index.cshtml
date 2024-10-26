@@ -1,0 +1,87 @@
+﻿@model veterans_site.ViewModels.NewsIndexViewModel
+@{
+    ViewData["Title"] = "Новини";
+}
+
+<div class="container-fluid mt-4">
+    <div class="row">
+        <div class="col-md-3">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0">Пошук</h5>
+                </div>
+                <div class="card-body">
+                    <form method="get" asp-action="Index">
+                        <div class="mb-3">
+                            <label class="form-label">Пошук за заголовком</label>
+                            <input type="text" name="searchTitle" class="form-control" value="@Model.CurrentSearch" />
+                        </div>
+                        <button type="submit" class="btn btn-primary w-100">Пошук</button>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-9">
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <h1 class="h3">Новини</h1>
+
+                <div class="btn-group me-3">
+                    <a class="btn btn-secondary dropdown-toggle" href="#" role="button" id="dropdownSortBy" data-bs-toggle="dropdown" aria-expanded="false">
+                        Сортувати за: @(Model.CurrentSort == "date_desc" ? "Дата за спаданням" : "Дата за зростанням")
+                    </a>
+                    <ul class="dropdown-menu" aria-labelledby="dropdownSortBy">
+                        <li><a class="dropdown-item" asp-action="Index" asp-route-sortOrder="date_asc" asp-route-searchTitle="@Model.CurrentSearch">Дата за зростанням</a></li>
+                        <li><a class="dropdown-item" asp-action="Index" asp-route-sortOrder="date_desc" asp-route-searchTitle="@Model.CurrentSearch">Дата за спаданням</a></li>
+                    </ul>
+                </div>
+
+                <a class="btn btn-primary" asp-action="Create">Створити нову новину</a>
+            </div>
+
+            <div class="row">
+                @foreach (var item in Model.News)
+                {
+                    <div class="col-md-6 mb-4">
+                        <div class="card h-100 shadow-sm">
+                            @if (!string.IsNullOrEmpty(item.ImagePath))
+                            {
+                                <img src="@item.ImagePath" class="card-img-top" alt="@item.Title" style="height: 200px; object-fit: cover;">
+                            }
+                            <div class="card-body">
+                                <div class="d-flex justify-content-between mb-2">
+                                    <h5 class="card-title">@item.Title</h5>
+                                </div>
+                                <ul class="list-unstyled text-muted mb-4">
+                                    <li><i class="far fa-calendar-alt"></i> Дата публікації: @item.PublishDate.ToString("dd.MM.yyyy HH:mm")</li>
+                                </ul>
+                                <div class="d-flex gap-2 mt-2">
+                                    <a asp-action="Details" asp-route-id="@item.Id" class="btn btn-outline-primary btn-sm">Деталі</a>
+                                    <a asp-action="Edit" asp-route-id="@item.Id" class="btn btn-outline-success btn-sm">Редагувати</a>
+                                    <a asp-action="Delete" asp-route-id="@item.Id" class="btn btn-outline-danger btn-sm">Видалити</a>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                }
+            </div>
+
+            @if (Model.TotalPages > 1)
+            {
+                <nav aria-label="Page navigation" class="mt-4">
+                    <ul class="pagination justify-content-center">
+                        @for (int i = 1; i <= Model.TotalPages; i++)
+                        {
+                            <li class="page-item @(i == Model.CurrentPage ? "active" : "")">
+                                <a class="page-link" asp-action="Index"
+                                   asp-route-page="@i"
+                                   asp-route-searchTitle="@Model.CurrentSearch"
+                                   asp-route-sortOrder="@Model.CurrentSort">@i</a>
+                            </li>
+                        }
+                    </ul>
+                </nav>
+            }
+        </div>
+    </div>
+</div>

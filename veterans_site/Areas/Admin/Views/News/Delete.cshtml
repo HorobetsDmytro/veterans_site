@@ -1,0 +1,38 @@
+﻿@model veterans_site.Models.News
+@{
+    ViewData["Title"] = "Видалення новини";
+}
+
+<div class="container mt-5">
+    <div class="card shadow-sm">
+        <div class="card-body">
+            <h1 class="h3 mb-4">Видалення новини</h1>
+
+            <div class="alert alert-danger">
+                <strong>Увага!</strong> Ви впевнені, що хочете видалити цю новину?
+            </div>
+
+            <div class="mb-4">
+                <h2 class="h5">@Model.Title</h2>
+                <p>@Model.Content</p>
+
+                <div class="text-muted">
+                    <p><strong>Дата публікації:</strong> @Model.PublishDate.ToString("dd.MM.yyyy HH:mm")</p>
+                </div>
+
+                @if (!string.IsNullOrEmpty(Model.ImagePath))
+                {
+                    <img src="@Model.ImagePath" class="img-fluid mt-3 rounded" style="max-width: 300px;" alt="@Model.Title" />
+                }
+            </div>
+
+            <form asp-action="Delete">
+                <input type="hidden" asp-for="Id" />
+                <div class="d-flex gap-3">
+                    <button type="submit" class="btn btn-danger">Видалити</button>
+                    <a asp-action="Index" class="btn btn-secondary">Назад до списку</a>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
