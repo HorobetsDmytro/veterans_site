@@ -36,6 +36,7 @@ builder.Services.ConfigureApplicationCookie(options =>
 builder.Services.AddScoped(typeof(IGenericRepository<>), typeof(GenericRepository<>));
 builder.Services.AddScoped<IEventRepository, EventRepository>();
 builder.Services.AddScoped<INewsRepository, NewsRepository>();
+builder.Services.AddScoped<IConsultationRepository, ConsultationRepository>();
 
 // Add services to the container.
 builder.Services.AddControllersWithViews();

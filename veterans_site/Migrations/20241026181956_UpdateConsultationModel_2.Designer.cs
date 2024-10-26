@@ -3,6 +3,7 @@ using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using veterans_site.Data;
 
@@ -11,9 +12,11 @@ using veterans_site.Data;
 namespace veterans_site.Migrations
 {
     [DbContext(typeof(VeteranSupportDBContext))]
-    partial class VeteranSupportDBContextModelSnapshot : ModelSnapshot
+    [Migration("20241026181956_UpdateConsultationModel_2")]
+    partial class UpdateConsultationModel_2
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -248,9 +251,6 @@ namespace veterans_site.Migrations
                     b.Property<string>("Description")
                         .IsRequired()
                         .HasColumnType("nvarchar(max)");
-
-                    b.Property<int>("Duration")
-                        .HasColumnType("int");
 
                     b.Property<int>("Format")
                         .HasColumnType("int");

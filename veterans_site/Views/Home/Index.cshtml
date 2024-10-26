@@ -1,8 +1,186 @@
-﻿@{
-    ViewData["Title"] = "Home Page";
+﻿@using veterans_site.Extensions
+
+@{
+    ViewData["Title"] = "Головна сторінка";
 }
 
-<div class="text-center">
-    <h1 class="display-4">Welcome</h1>
-    <p>Learn about <a href="https://learn.microsoft.com/aspnet/core">building Web apps with ASP.NET Core</a>.</p>
+<!-- Hero Section -->
+<div class="container-fluid px-0">
+    <div class="position-relative">
+        <div class="p-5 text-center bg-image" style="
+            background-image: url('/images/hero-bg.jpg');
+            height: 500px;
+            background-size: cover;
+            background-position: center;
+            background-color: #2c3e50;">
+            <div class="mask" style="background-color: rgba(0, 0, 0, 0.6);">
+                <div class="d-flex justify-content-center align-items-center h-100">
+                    <div class="text-white">
+                        <h1 class="mb-3 display-3">Підтримка Ветеранів України</h1>
+                        <p class="mb-4 fs-4">Платформа для надання всебічної допомоги та підтримки ветеранам</p>
+                        <a class="btn btn-outline-light btn-lg me-2" href="#services">Дізнатись більше</a>
+                        <a class="btn btn-primary btn-lg" asp-area="" asp-controller="Consultation" asp-action="Index">Записатись на консультацію</a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
 </div>
+
+<!-- Services Section -->
+<section id="services" class="py-5 bg-light">
+    <div class="container">
+        <h2 class="text-center mb-5">Наші Послуги</h2>
+        <div class="row g-4">
+            <div class="col-md-4">
+                <div class="card h-100 border-0 shadow-sm">
+                    <div class="card-body text-center">
+                        <div class="mb-4">
+                            <i class="fas fa-calendar-alt fa-3x text-primary"></i>
+                        </div>
+                        <h5 class="card-title">Події та Заходи</h5>
+                        <p class="card-text">Регулярні зустрічі, тренінги та соціальні заходи для ветеранів</p>
+                        <a asp-controller="Events" asp-action="Index" class="btn btn-primary">Переглянути події</a>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="card h-100 border-0 shadow-sm">
+                    <div class="card-body text-center">
+                        <div class="mb-4">
+                            <i class="fas fa-user-md fa-3x text-primary"></i>
+                        </div>
+                        <h5 class="card-title">Консультації</h5>
+                        <p class="card-text">Медичні, психологічні та юридичні консультації від професіоналів</p>
+                        <a asp-controller="Consultation" asp-action="Index" class="btn btn-primary">Записатись</a>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="card h-100 border-0 shadow-sm">
+                    <div class="card-body text-center">
+                        <div class="mb-4">
+                            <i class="fas fa-newspaper fa-3x text-primary"></i>
+                        </div>
+                        <h5 class="card-title">Новини</h5>
+                        <p class="card-text">Актуальні новини та важлива інформація для ветеранів</p>
+                        <a asp-controller="News" asp-action="Index" class="btn btn-primary">Читати новини</a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- Latest News Section -->
+<section class="py-5">
+    <div class="container">
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <h2>Останні Новини</h2>
+            <a asp-controller="News" asp-action="Index" class="btn btn-outline-primary">Всі новини</a>
+        </div>
+        <div class="row g-4">
+            @foreach (var news in ViewBag.LatestNews ?? new List<News>())
+            {
+                <div class="col-md-4">
+                    <div class="card h-100 shadow-sm">
+                        @if (!string.IsNullOrEmpty(news.ImagePath))
+                        {
+                            <img src="@news.ImagePath" class="card-img-top" alt="@news.Title" style="height: 200px; object-fit: cover;">
+                        }
+                        <div class="card-body">
+                            <h5 class="card-title">@news.Title</h5>
+                            <p class="card-text text-muted">@news.PublishDate.ToString("dd.MM.yyyy")</p>
+                            <a asp-controller="News" asp-action="Details" asp-route-id="@news.Id" class="btn btn-link p-0">Читати далі</a>
+                        </div>
+                    </div>
+                </div>
+            }
+        </div>
+    </div>
+</section>
+
+<!-- Upcoming Events Section -->
+<section class="py-5 bg-light">
+    <div class="container">
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <h2>Найближчі Події</h2>
+            <a asp-controller="Events" asp-action="Index" class="btn btn-outline-primary">Всі події</a>
+        </div>
+        <div class="row g-4">
+            @foreach (var evt in ViewBag.UpcomingEvents ?? new List<Event>())
+            {
+                <div class="col-md-6">
+                    <div class="card h-100 shadow-sm">
+                        <div class="card-body">
+                            <h5 class="card-title">@evt.Title</h5>
+                            <ul class="list-unstyled text-muted">
+                                <li><i class="far fa-calendar-alt"></i> @evt.Date.ToString("dd.MM.yyyy HH:mm")</li>
+                                <li><i class="fas fa-map-marker-alt"></i> @evt.Location</li>
+                                <li><i class="fas fa-tag"></i> @veterans_site.Extensions.EnumExtensions.GetDisplayName(evt.Category)</li>
+                            </ul>
+                            <a asp-controller="Events" asp-action="Details" asp-route-id="@evt.Id" class="btn btn-primary">Деталі</a>
+                        </div>
+                    </div>
+                </div>
+            }
+        </div>
+    </div>
+</section>
+
+<!-- Consultation Types Section -->
+<section class="py-5">
+    <div class="container">
+        <h2 class="text-center mb-5">Види Консультацій</h2>
+        <div class="row g-4">
+            <div class="col-md-4">
+                <div class="card h-100 border-0 shadow-sm">
+                    <div class="card-body text-center">
+                        <div class="rounded-circle bg-primary bg-opacity-10 p-4 mx-auto mb-4" style="width: fit-content;">
+                            <i class="fas fa-heartbeat fa-3x text-primary"></i>
+                        </div>
+                        <h5>Медичні Консультації</h5>
+                        <p class="text-muted">Професійні консультації з питань здоров'я та реабілітації</p>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="card h-100 border-0 shadow-sm">
+                    <div class="card-body text-center">
+                        <div class="rounded-circle bg-primary bg-opacity-10 p-4 mx-auto mb-4" style="width: fit-content;">
+                            <i class="fas fa-brain fa-3x text-primary"></i>
+                        </div>
+                        <h5>Психологічні Консультації</h5>
+                        <p class="text-muted">Підтримка та допомога у подоланні психологічних труднощів</p>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="card h-100 border-0 shadow-sm">
+                    <div class="card-body text-center">
+                        <div class="rounded-circle bg-primary bg-opacity-10 p-4 mx-auto mb-4" style="width: fit-content;">
+                            <i class="fas fa-balance-scale fa-3x text-primary"></i>
+                        </div>
+                        <h5>Юридичні Консультації</h5>
+                        <p class="text-muted">Правова допомога та консультації з юридичних питань</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- Call to Action -->
+<section class="py-5 bg-primary text-white">
+    <div class="container">
+        <div class="row align-items-center">
+            <div class="col-lg-8 text-center text-lg-start">
+                <h2 class="mb-3">Потрібна допомога?</h2>
+                <p class="mb-lg-0">Запишіться на консультацію прямо зараз і отримайте професійну допомогу</p>
+            </div>
+            <div class="col-lg-4 text-center text-lg-end">
+                <a asp-controller="Consultation" asp-action="Create" class="btn btn-light btn-lg">Записатись на консультацію</a>
+            </div>
+        </div>
+    </div>
+</section>

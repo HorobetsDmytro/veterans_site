@@ -1,0 +1,193 @@
+﻿@* Views/Consultation/Index.cshtml *@
+@model veterans_site.ViewModels.ConsultationIndexViewModel
+@using veterans_site.Extensions
+
+@{
+    ViewData["Title"] = "Консультації";
+}
+
+<div class="container-fluid mt-4">
+    <div class="row">
+        <!-- Фільтри -->
+        <div class="col-md-3">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0">Фільтри</h5>
+                </div>
+                <div class="card-body">
+                    <form method="get" asp-action="Index">
+                        <!-- Тип консультації -->
+                        <div class="mb-3">
+                            <label class="form-label">Тип консультації</label>
+                            <select name="type" class="form-select" onchange="this.form.submit()">
+                                <option value="">Всі типи</option>
+                                @foreach (ConsultationType type in Enum.GetValues(typeof(ConsultationType)))
+                                {
+                                    if (Model.CurrentType == type)
+                                    {
+                                        <option value="@type.ToString()" selected>@type.GetDisplayName()</option>
+                                    }
+                                    else
+                                    {
+                                        <option value="@type.ToString()">@type.GetDisplayName()</option>
+                                    }
+                                }
+                            </select>
+                        </div>
+
+                        <!-- Формат консультації -->
+                        <div class="mb-3">
+                            <label class="form-label">Формат консультації</label>
+                            <select name="format" class="form-select" onchange="this.form.submit()">
+                                <option value="">Всі формати</option>
+                                @foreach (ConsultationFormat format in Enum.GetValues(typeof(ConsultationFormat)))
+                                {
+                                    if (Model.CurrentFormat == format)
+                                    {
+                                        <option value="@format.ToString()" selected>@format.GetDisplayName()</option>
+                                    }
+                                    else
+                                    {
+                                        <option value="@format.ToString()">@format.GetDisplayName()</option>
+                                    }
+                                }
+                            </select>
+                        </div>
+
+                        <!-- Статус консультації -->
+                        <div class="mb-3">
+                            <label class="form-label">Статус</label>
+                            <select name="status" class="form-select" onchange="this.form.submit()">
+                                <option value="">Всі статуси</option>
+                                @foreach (ConsultationStatus status in Enum.GetValues(typeof(ConsultationStatus)))
+                                {
+                                    if (Model.CurrentStatus == status)
+                                    {
+                                        <option value="@status.ToString()" selected>@status.GetDisplayName()</option>
+                                    }
+                                    else
+                                    {
+                                        <option value="@status.ToString()">@status.GetDisplayName()</option>
+                                    }
+                                }
+                            </select>
+                        </div>
+
+                        <!-- Ціновий діапазон -->
+                        <div class="mb-3">
+                            <label class="form-label">Ціна від</label>
+                            <input type="number" name="minPrice" class="form-control" value="@Model.MinPrice" step="0.01" min="0">
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Ціна до</label>
+                            <input type="number" name="maxPrice" class="form-control" value="@Model.MaxPrice" step="0.01" min="0">
+                        </div>
+
+                        <button type="submit" class="btn btn-primary w-100">Застосувати фільтри</button>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        <!-- Список консультацій -->
+        <div class="col-md-9">
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <h1 class="h3">Консультації</h1>
+
+                <!-- Сортування -->
+                <div class="btn-group me-3">
+                    <a class="btn btn-secondary dropdown-toggle" href="#" role="button" id="dropdownSortBy" data-bs-toggle="dropdown" aria-expanded="false">
+                        Сортувати за:
+                        @switch (Model.CurrentSort)
+                        {
+                            case "date_desc":
+                                @:Дата за спаданням
+                                break;
+                            case "date_asc":
+                                @:Дата за зростанням
+                                break;
+                            case "price_desc":
+                                @:Ціна за спаданням
+                                break;
+                            case "price_asc":
+                                @:Ціна за зростанням
+                                break;
+                            default:
+                                @:Дата за зростанням
+                                break;
+                        }
+                    </a>
+                    <ul class="dropdown-menu">
+                        <li><a class="dropdown-item" asp-action="Index" asp-route-sortOrder="date_asc" asp-route-type="@Model.CurrentType" asp-route-format="@Model.CurrentFormat" asp-route-status="@Model.CurrentStatus">Дата за зростанням</a></li>
+                        <li><a class="dropdown-item" asp-action="Index" asp-route-sortOrder="date_desc" asp-route-type="@Model.CurrentType" asp-route-format="@Model.CurrentFormat" asp-route-status="@Model.CurrentStatus">Дата за спаданням</a></li>
+                        <li><a class="dropdown-item" asp-action="Index" asp-route-sortOrder="price_asc" asp-route-type="@Model.CurrentType" asp-route-format="@Model.CurrentFormat" asp-route-status="@Model.CurrentStatus">Ціна за зростанням</a></li>
+                        <li><a class="dropdown-item" asp-action="Index" asp-route-sortOrder="price_desc" asp-route-type="@Model.CurrentType" asp-route-format="@Model.CurrentFormat" asp-route-status="@Model.CurrentStatus">Ціна за спаданням</a></li>
+                    </ul>
+                </div>
+
+                <a class="btn btn-primary" asp-action="Create">Створити нову консультацію</a>
+            </div>
+
+            <!-- Картки консультацій -->
+            <div class="row">
+                @foreach (var item in Model.Consultations)
+                {
+                    <div class="col-md-6 mb-4">
+                        <div class="card h-100 shadow-sm">
+                            <div class="card-body">
+                                <div class="d-flex justify-content-between mb-2">
+                                    <h5 class="card-title">@item.Title</h5>
+                                </div>
+                                <ul class="list-unstyled text-muted mb-4">
+                                    <li><i class="far fa-calendar-alt"></i> Дата: @item.DateTime.ToString("dd.MM.yyyy HH:mm")</li>
+                                    <li><i class="far fa-clock"></i> Тривалість: @item.Duration хв</li>
+                                    <li><i class="fas fa-user-md"></i> Спеціаліст: @item.SpecialistName</li>
+                                    <li><i class="fas fa-tag"></i> Тип: @item.Type.GetDisplayName()</li>
+                                    <li><i class="fas fa-users"></i> Формат: @item.Format.GetDisplayName()</li>
+                                    @if (item.MaxParticipants.HasValue)
+                                    {
+                                        <li><i class="fas fa-user-friends"></i> Максимум учасників: @item.MaxParticipants</li>
+                                    }
+                                    <li><i class="fas fa-money-bill-wave"></i> Ціна: @item.Price.ToString("C")</li>
+                                </ul>
+                                <span class="badge @(item.Status switch
+                                {
+                                    ConsultationStatus.Planned => "bg-primary",
+                                    ConsultationStatus.InProgress => "bg-success",
+                                    ConsultationStatus.Completed => "bg-secondary",
+                                    ConsultationStatus.Cancelled => "bg-danger",
+                                    _ => "bg-secondary"
+                                })" style="font-size: 1rem; font-weight: normal;">@item.Status.GetDisplayName()</span>
+                                <div class="d-flex gap-2 mt-2">
+                                    <a asp-action="Details" asp-route-id="@item.Id" class="btn btn-outline-primary btn-sm">Деталі</a>
+                                    <a asp-action="Edit" asp-route-id="@item.Id" class="btn btn-outline-success btn-sm">Редагувати</a>
+                                    <a asp-action="Delete" asp-route-id="@item.Id" class="btn btn-outline-danger btn-sm">Видалити</a>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                }
+            </div>
+
+            <!-- Пагінація -->
+            @if (Model.TotalPages > 1)
+            {
+                <nav aria-label="Page navigation" class="mt-4">
+                    <ul class="pagination justify-content-center">
+                        @for (int i = 1; i <= Model.TotalPages; i++)
+                        {
+                            <li class="page-item @(i == Model.CurrentPage ? "active" : "")">
+                                <a class="page-link" asp-action="Index"
+                                   asp-route-page="@i"
+                                   asp-route-type="@Model.CurrentType"
+                                   asp-route-format="@Model.CurrentFormat"
+                                   asp-route-status="@Model.CurrentStatus"
+                                   asp-route-sortOrder="@Model.CurrentSort">@i</a>
+                            </li>
+                        }
+                    </ul>
+                </nav>
+            }
+        </div>
+    </div>
+</div>

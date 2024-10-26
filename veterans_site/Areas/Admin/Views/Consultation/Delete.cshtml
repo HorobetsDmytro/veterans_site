@@ -1,0 +1,45 @@
+﻿@* Views/Consultation/Delete.cshtml *@
+@model veterans_site.Models.Consultation
+@using veterans_site.Extensions
+@{
+    ViewData["Title"] = "Видалення консультації";
+}
+
+<div class="container mt-5">
+    <div class="card shadow-sm">
+        <div class="card-body">
+            <h1 class="h3 mb-4">Видалення консультації</h1>
+
+            <div class="alert alert-danger">
+                <strong>Увага!</strong> Ви впевнені, що хочете видалити цю консультацію?
+            </div>
+
+            <div class="mb-4">
+                <h2 class="h5">@Model.Title</h2>
+                <p>@Model.Description</p>
+
+                <div class="text-muted">
+                    <p><strong>Дата та час:</strong> @Model.DateTime.ToString("dd.MM.yyyy HH:mm")</p>
+                    <p><strong>Тривалість:</strong> @Model.Duration хв</p>
+                    <p><strong>Тип:</strong> @Model.Type.GetDisplayName()</p>
+                    <p><strong>Формат:</strong> @Model.Format.GetDisplayName()</p>
+                    <p><strong>Спеціаліст:</strong> @Model.SpecialistName</p>
+                    <p><strong>Ціна:</strong> @Model.Price.ToString("C")</p>
+                    @if (Model.MaxParticipants.HasValue)
+                    {
+                        <p><strong>Максимум учасників:</strong> @Model.MaxParticipants</p>
+                    }
+                    <p><strong>Статус:</strong> @Model.Status.GetDisplayName()</p>
+                </div>
+            </div>
+
+            <form asp-action="Delete">
+                <input type="hidden" asp-for="Id" />
+                <div class="d-flex gap-3">
+                    <button type="submit" class="btn btn-danger">Видалити</button>
+                    <a asp-action="Index" class="btn btn-secondary">Назад до списку</a>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>

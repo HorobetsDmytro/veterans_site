@@ -7,26 +7,76 @@ namespace veterans_site.Models
     {
         public int Id { get; set; }
 
-        [Required]
-        public ConsultationType Type { get; set; } // Медична, психологічна, юридична
+        [Required(ErrorMessage = "Поле Назва є обов'язковим")]
+        [StringLength(100)]
+        [Display(Name = "Назва")]
+        public string Title { get; set; }
 
-        [Required]
-        public DateTime DateTime { get; set; }
-
-        [Required]
-        public string SpecialistName { get; set; }
-
+        [Required(ErrorMessage = "Поле Опис є обов'язковим")]
+        [Display(Name = "Опис")]
         public string Description { get; set; }
 
-        [ForeignKey("Veteran")]
-        public string VeteranId { get; set; }
-        public ApplicationUser Veteran { get; set; }
+        [Required(ErrorMessage = "Поле Дата та час є обов'язковим")]
+        [Display(Name = "Дата та час")]
+        public DateTime DateTime { get; set; }
+
+        [Required(ErrorMessage = "Поле Тривалість є обов'язковим")]
+        [Range(1, 480, ErrorMessage = "Тривалість повинна бути від 1 до 480 хвилин")]
+        [Display(Name = "Тривалість (хв)")]
+        public int Duration { get; set; }
+
+        [Required(ErrorMessage = "Поле Тип консультації є обов'язковим")]
+        [Display(Name = "Тип консультації")]
+        public ConsultationType Type { get; set; }
+
+        [Required(ErrorMessage = "Поле Формат консультації є обов'язковим")]
+        [Display(Name = "Формат консультації")]
+        public ConsultationFormat Format { get; set; }
+
+        [Required(ErrorMessage = "Поле Статус є обов'язковим")]
+        [Display(Name = "Статус")]
+        public ConsultationStatus Status { get; set; }
+
+        [Required(ErrorMessage = "Поле Ціна є обов'язковим")]
+        [Range(0, double.MaxValue, ErrorMessage = "Ціна повинна бути більше 0")]
+        [Display(Name = "Ціна")]
+        public double Price { get; set; }
+
+        [Required(ErrorMessage = "Поле Ім'я спеціаліста є обов'язковим")]
+        [Display(Name = "Ім'я спеціаліста")]
+        public string SpecialistName { get; set; }
+
+        [Display(Name = "Максимум учасників")]
+        public int? MaxParticipants { get; set; }
     }
 
     public enum ConsultationType
     {
+        [Display(Name = "Медична")]
         Medical,
-        psychological,
+        [Display(Name = "Психологічна")]
+        Psychological,
+        [Display(Name = "Юридична")]
         Legal
+    }
+
+    public enum ConsultationFormat
+    {
+        [Display(Name = "Індивідуальна")]
+        Individual,
+        [Display(Name = "Групова")]
+        Group
+    }
+
+    public enum ConsultationStatus
+    {
+        [Display(Name = "Заплановано")]
+        Planned,
+        [Display(Name = "Проходить")]
+        InProgress,
+        [Display(Name = "Завершено")]
+        Completed,
+        [Display(Name = "Скасовано")]
+        Cancelled
     }
 }

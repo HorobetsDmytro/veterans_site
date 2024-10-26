@@ -7,8 +7,9 @@ namespace veterans_site.Extensions
     {
         public static string GetDisplayName(this Enum enumValue)
         {
-            var enumMember = enumValue.GetType().GetMember(enumValue.ToString());
-            var displayAttribute = enumMember.FirstOrDefault()?.GetCustomAttribute<DisplayAttribute>();
+            var displayAttribute = enumValue.GetType()
+                .GetField(enumValue.ToString())
+                .GetCustomAttribute<DisplayAttribute>();
             return displayAttribute?.Name ?? enumValue.ToString();
         }
     }

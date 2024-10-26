@@ -1,32 +1,30 @@
 using Microsoft.AspNetCore.Mvc;
 using System.Diagnostics;
+using veterans_site.Interfaces;
 using veterans_site.Models;
 
 namespace veterans_site.Controllers
 {
     public class HomeController : Controller
     {
-        private readonly ILogger<HomeController> _logger;
+        private readonly INewsRepository _newsRepository;
+        private readonly IEventRepository _eventRepository;
 
-        public HomeController(ILogger<HomeController> logger)
+        public HomeController(INewsRepository newsRepository, IEventRepository eventRepository)
         {
-            _logger = logger;
+            _newsRepository = newsRepository;
+            _eventRepository = eventRepository;
         }
 
-        public IActionResult Index()
+        public async Task<IActionResult> Index()
         {
+            var latestNews = await _newsRepository.GetLatestNewsAsync(3);
+            var upcomingEvents = await _eventRepository.GetUpcomingEventsAsync();
+
+            ViewBag.LatestNews = latestNews;
+            ViewBag.UpcomingEvents = upcomingEvents;
+
             return View();
-        }
-
-        public IActionResult Privacy()
-        {
-            return View();
-        }
-
-        [ResponseCache(Duration = 0, Location = ResponseCacheLocation.None, NoStore = true)]
-        public IActionResult Error()
-        {
-            return View(new ErrorViewModel { RequestId = Activity.Current?.Id ?? HttpContext.TraceIdentifier });
         }
     }
 }
