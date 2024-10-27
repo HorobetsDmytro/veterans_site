@@ -1,0 +1,88 @@
+﻿@model IEnumerable<veterans_site.Models.News>
+@{
+    ViewData["Title"] = "Новини";
+}
+
+<div class="container mt-5">
+    <nav aria-label="breadcrumb" class="mb-4">
+        <ol class="breadcrumb">
+            <li class="breadcrumb-item"><a asp-controller="Home" asp-action="Index">Головна</a></li>
+            <li class="breadcrumb-item active" aria-current="page">Новини</li>
+        </ol>
+    </nav>
+
+    <div class="row">
+        <div class="col-md-3">
+            <div class="card shadow-sm mb-4">
+                <div class="card-body">
+                    <h5 class="card-title mb-3">Пошук</h5>
+                    <form method="get" asp-action="Index">
+                        <div class="mb-3">
+                            <label class="form-label">Пошук за заголовком</label>
+                            <input type="text" name="searchTitle" class="form-control" placeholder="Введіть текст..." value="@ViewBag.CurrentSearch">
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label">Сортувати за</label>
+                            <select name="sortOrder" class="form-select">
+                                <option value="latest" selected>Найновіші</option>
+                                <option value="oldest">Найстаріші</option>
+                            </select>
+                        </div>
+
+                        <button type="submit" class="btn btn-primary w-100">Застосувати</button>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-9">
+            <div class="row g-4">
+                @foreach (var news in Model)
+                {
+                    <div class="col-md-6">
+                        <div class="card h-100 shadow-sm">
+                            @if (!string.IsNullOrEmpty(news.ImagePath))
+                            {
+                                <img src="@news.ImagePath" class="card-img-top" alt="@news.Title" style="height: 200px; object-fit: cover;">
+                            }
+                            <div class="card-body">
+                                <h5 class="card-title">@news.Title</h5>
+                                <p class="text-muted">
+                                    <i class="far fa-calendar-alt"></i>
+                                    @news.PublishDate.ToString("dd MMMM yyyy")
+                                </p>
+                                <p class="card-text">
+                                    @(news.Content.Length > 150
+                                        ? news.Content.Substring(0, 147) + "..."
+                                        : news.Content)
+                                </p>
+                                <a asp-action="Details" asp-route-id="@news.Id" class="btn btn-primary">
+                                    Читати далі
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+                }
+            </div>
+
+            @if (ViewBag.TotalPages > 1)
+            {
+                <nav class="mt-4" aria-label="Page navigation">
+                    <ul class="pagination justify-content-center">
+                        @for (int i = 1; i <= ViewBag.TotalPages; i++)
+                        {
+                            <li class="page-item @(i == ViewBag.CurrentPage ? "active" : "")">
+                                <a class="page-link"
+                                   asp-action="Index"
+                                   asp-route-page="@i"
+                                   asp-route-searchTitle="@ViewBag.CurrentSearch"
+                                   asp-route-sortOrder="@ViewBag.CurrentSort">@i</a>
+                            </li>
+                        }
+                    </ul>
+                </nav>
+            }
+        </div>
+    </div>
+</div>

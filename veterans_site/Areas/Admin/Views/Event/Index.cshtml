@@ -56,12 +56,10 @@
             </div>
         </div>
 
-        <!-- Список подій -->
         <div class="col-md-9">
             <div class="d-flex justify-content-between align-items-center mb-4">
                 <h1 class="h3">Події</h1>
 
-                <!-- Вибір критерію сортування -->
                 <div class="btn-group me-3">
                     <a class="btn btn-secondary dropdown-toggle" href="#" role="button" id="dropdownSortBy" data-bs-toggle="dropdown" aria-expanded="false">
                         Сортувати за:
@@ -104,7 +102,6 @@
                                 <div class="d-flex justify-content-between mb-2">
                                     <h5 class="card-title">@item.Title</h5>
                                 </div>
-                                @* <p class="card-text">@item.Description</p> *@
                                 <ul class="list-unstyled text-muted mb-4">
                                     <li><i class="far fa-calendar-alt"></i> Дата проведення: @item.Date.ToString("dd.MM.yyyy HH:mm")</li>
                                     <li><i class="fas fa-map-marker-alt"></i> Місце проведення: @item.Location</li>
@@ -133,7 +130,6 @@
                 }
             </div>
 
-            <!-- Пагінація -->
             @if (Model.TotalPages > 1)
             {
                 <nav aria-label="Page navigation" class="mt-4">

@@ -1,0 +1,101 @@
+﻿@using static veterans_site.Extensions.EnumExtensions;
+@model Consultation
+@{
+    ViewData["Title"] = "Деталі консультації";
+}
+
+<div class="container mt-5">
+    <div class="card shadow-sm">
+        <div class="card-body">
+            <nav aria-label="breadcrumb" class="mb-4">
+                <ol class="breadcrumb">
+                    <li class="breadcrumb-item"><a asp-controller="Home" asp-action="Index">Головна</a></li>
+                    <li class="breadcrumb-item"><a asp-controller="Consultations" asp-action="Index">Консультації</a></li>
+                    <li class="breadcrumb-item active">@Model.Title</li>
+                </ol>
+            </nav>
+
+            <div class="row">
+                <div class="col-md-8">
+                    <h1 class="h2 mb-4">@Model.Title</h1>
+
+                    <div class="mb-4">
+                        <h5 class="text-muted mb-3">Опис консультації</h5>
+                        <p>@Model.Description</p>
+                    </div>
+
+                    <div class="row mb-4">
+                        <div class="col-md-6">
+                            <h5 class="text-muted mb-3">Деталі консультації</h5>
+                            <ul class="list-unstyled">
+                                <li class="mb-2">
+                                    <i class="far fa-calendar-alt"></i>
+                                    <strong>Дата та час:</strong> @Model.DateTime.ToString("dd.MM.yyyy HH:mm")
+                                </li>
+                                <li class="mb-2">
+                                    <i class="far fa-clock"></i>
+                                    <strong>Тривалість:</strong> @Model.Duration хв
+                                </li>
+                                <li class="mb-2">
+                                    <i class="fas fa-user-md"></i>
+                                    <strong>Спеціаліст:</strong> @Model.SpecialistName
+                                </li>
+                                <li class="mb-2">
+                                    <i class="fas fa-tag"></i>
+                                    <strong>Тип:</strong> @Model.Type.GetDisplayName()
+                                </li>
+                                <li class="mb-2">
+                                    <i class="fas fa-users"></i>
+                                    <strong>Формат:</strong> @Model.Format.GetDisplayName()
+                                </li>
+                                @if (Model.Format == ConsultationFormat.Group)
+                                {
+                                    <li class="mb-2">
+                                        <i class="fas fa-user-friends"></i>
+                                        <strong>Вільних місць:</strong> @(Model.MaxParticipants - Model.BookedParticipants) з @Model.MaxParticipants
+                                    </li>
+                                }
+                                <li class="mb-2">
+                                    <i class="fas fa-money-bill-wave"></i>
+                                    <strong>Ціна:</strong> @Model.Price.ToString("C")
+                                </li>
+                            </ul>
+                        </div>
+                    </div>
+
+                    <!-- Кнопка запису -->
+                    <div class="mt-4">
+                        @if (User.Identity.IsAuthenticated)
+                        {
+                            if (Model.Format == ConsultationFormat.Group && Model.BookedParticipants >= Model.MaxParticipants)
+                            {
+                                <button class="btn btn-secondary" disabled>Немає вільних місць</button>
+                            }
+                            else if (!Model.IsBooked)
+                            {
+                                <a asp-action="Book" asp-route-id="@Model.Id" class="btn btn-primary">
+                                    Записатись на консультацію
+                                </a>
+                            }
+                            else
+                            {
+                                <button class="btn btn-secondary" disabled>Ви вже записані</button>
+                            }
+                        }
+                        else
+                        {
+                            <a asp-area="Identity" asp-page="/Account/Login"
+                               asp-route-returnUrl="@Url.Action("Book", new { id = Model.Id })"
+                               class="btn btn-primary">
+                                Увійдіть щоб записатись
+                            </a>
+                        }
+                        <a asp-action="Index" class="btn btn-secondary ms-2">
+                            <i class="fas fa-arrow-left"></i> Назад до списку
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>

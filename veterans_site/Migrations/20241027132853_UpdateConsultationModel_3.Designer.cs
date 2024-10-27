@@ -3,6 +3,7 @@ using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using veterans_site.Data;
 
@@ -11,9 +12,11 @@ using veterans_site.Data;
 namespace veterans_site.Migrations
 {
     [DbContext(typeof(VeteranSupportDBContext))]
-    partial class VeteranSupportDBContextModelSnapshot : ModelSnapshot
+    [Migration("20241027132853_UpdateConsultationModel_3")]
+    partial class UpdateConsultationModel_3
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -242,9 +245,6 @@ namespace veterans_site.Migrations
 
                     SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
 
-                    b.Property<int>("BookedParticipants")
-                        .HasColumnType("int");
-
                     b.Property<DateTime?>("BookingTime")
                         .HasColumnType("datetime2");
 
@@ -295,33 +295,6 @@ namespace veterans_site.Migrations
                     b.ToTable("Consultations");
                 });
 
-            modelBuilder.Entity("veterans_site.Models.ConsultationBooking", b =>
-                {
-                    b.Property<int>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("int");
-
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
-
-                    b.Property<DateTime>("BookingTime")
-                        .HasColumnType("datetime2");
-
-                    b.Property<int>("ConsultationId")
-                        .HasColumnType("int");
-
-                    b.Property<string>("UserId")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(450)");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("ConsultationId");
-
-                    b.HasIndex("UserId");
-
-                    b.ToTable("ConsultationBookings");
-                });
-
             modelBuilder.Entity("veterans_site.Models.Event", b =>
                 {
                     b.Property<int>("Id")
@@ -358,33 +331,6 @@ namespace veterans_site.Migrations
                     b.HasKey("Id");
 
                     b.ToTable("Events");
-                });
-
-            modelBuilder.Entity("veterans_site.Models.EventParticipant", b =>
-                {
-                    b.Property<int>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("int");
-
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
-
-                    b.Property<int>("EventId")
-                        .HasColumnType("int");
-
-                    b.Property<DateTime>("RegistrationDate")
-                        .HasColumnType("datetime2");
-
-                    b.Property<string>("UserId")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(450)");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("EventId");
-
-                    b.HasIndex("UserId");
-
-                    b.ToTable("EventParticipants");
                 });
 
             modelBuilder.Entity("veterans_site.Models.News", b =>
@@ -498,54 +444,6 @@ namespace veterans_site.Migrations
                         .HasForeignKey("UserId");
 
                     b.Navigation("User");
-                });
-
-            modelBuilder.Entity("veterans_site.Models.ConsultationBooking", b =>
-                {
-                    b.HasOne("veterans_site.Models.Consultation", "Consultation")
-                        .WithMany("Bookings")
-                        .HasForeignKey("ConsultationId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.HasOne("veterans_site.Models.ApplicationUser", "User")
-                        .WithMany()
-                        .HasForeignKey("UserId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.Navigation("Consultation");
-
-                    b.Navigation("User");
-                });
-
-            modelBuilder.Entity("veterans_site.Models.EventParticipant", b =>
-                {
-                    b.HasOne("veterans_site.Models.Event", "Event")
-                        .WithMany("EventParticipants")
-                        .HasForeignKey("EventId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.HasOne("veterans_site.Models.ApplicationUser", "User")
-                        .WithMany()
-                        .HasForeignKey("UserId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.Navigation("Event");
-
-                    b.Navigation("User");
-                });
-
-            modelBuilder.Entity("veterans_site.Models.Consultation", b =>
-                {
-                    b.Navigation("Bookings");
-                });
-
-            modelBuilder.Entity("veterans_site.Models.Event", b =>
-                {
-                    b.Navigation("EventParticipants");
                 });
 #pragma warning restore 612, 618
         }

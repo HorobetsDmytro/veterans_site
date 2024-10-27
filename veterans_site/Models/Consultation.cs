@@ -48,6 +48,20 @@ namespace veterans_site.Models
 
         [Display(Name = "Максимум учасників")]
         public int? MaxParticipants { get; set; }
+
+        public string? UserId { get; set; }
+
+        [ForeignKey("UserId")]
+        public ApplicationUser? User { get; set; }
+
+        public DateTime? BookingTime { get; set; }
+
+        public bool IsBooked { get; set; } = false;
+
+        [Display(Name = "Кількість зареєстрованих учасників")]
+        public int BookedParticipants { get; set; } = 0;
+
+        public ICollection<ConsultationBooking> Bookings { get; set; } = new List<ConsultationBooking>();
     }
 
     public enum ConsultationType

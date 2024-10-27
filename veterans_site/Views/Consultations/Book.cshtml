@@ -1,0 +1,55 @@
+﻿@using veterans_site.Extensions
+@model Consultation
+@{
+    ViewData["Title"] = "Запис на консультацію";
+}
+
+<div class="container mt-5">
+    <div class="row justify-content-center">
+        <div class="col-md-8">
+            <div class="card shadow">
+                <div class="card-body">
+                    <h2 class="card-title text-center mb-4">Запис на консультацію</h2>
+
+                    <div class="alert alert-info">
+                        <h5 class="mb-3">Деталі консультації:</h5>
+                        <ul class="list-unstyled">
+                            <li class="mb-2"><strong>Назва:</strong> @Model.Title</li>
+                            <li class="mb-2"><strong>Спеціаліст:</strong> @Model.SpecialistName</li>
+                            <li class="mb-2"><strong>Дата та час:</strong> @Model.DateTime.ToString("dd.MM.yyyy HH:mm")</li>
+                            <li class="mb-2"><strong>Тривалість:</strong> @Model.Duration хв</li>
+                            <li class="mb-2"><strong>Тип:</strong> @Model.Type.GetDisplayName()</li>
+                            <li class="mb-2"><strong>Формат:</strong> @Model.Format.GetDisplayName()</li>
+                            @if (Model.Format == ConsultationFormat.Group)
+                            {
+                                <li class="mb-2"><strong>Вільних місць:</strong> @(Model.MaxParticipants - Model.BookedParticipants) з @Model.MaxParticipants</li>
+                            }
+                            <li class="mb-2"><strong>Ціна:</strong> @Model.Price.ToString("C")</li>
+                        </ul>
+                    </div>
+
+                    <div class="alert alert-secondary">
+                        <p class="mb-0">@Model.Description</p>
+                    </div>
+
+                    <form asp-action="BookConfirm" method="post" class="mt-4">
+                        @Html.AntiForgeryToken()
+                        <input type="hidden" name="id" value="@Model.Id" />
+
+                        <div class="form-check mb-3">
+                            <input class="form-check-input" type="checkbox" id="confirmCheck" required>
+                            <label class="form-check-label" for="confirmCheck">
+                                Я підтверджую запис на консультацію та згоден з умовами
+                            </label>
+                        </div>
+
+                        <div class="d-grid gap-2">
+                            <button type="submit" class="btn btn-primary">Підтвердити запис</button>
+                            <a asp-action="Index" class="btn btn-outline-secondary">Скасувати</a>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>

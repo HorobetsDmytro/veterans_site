@@ -6,5 +6,10 @@ namespace veterans_site.Interfaces
     {
         Task<IEnumerable<Event>> GetUpcomingEventsAsync();
         Task<IEnumerable<Event>> GetEventsByLocationAsync(string location);
+        Task<IEnumerable<Event>> GetUserEventsAsync(string userId);
+        Task<bool> IsUserRegisteredForEventAsync(string userId, int eventId);
+        Task RegisterUserForEventAsync(string userId, int eventId);
+        Task UnregisterUserFromEventAsync(string userId, int eventId);
+        Task<int> GetEventParticipantsCountAsync(int eventId);
     }
 }

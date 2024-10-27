@@ -1,4 +1,5 @@
 ﻿using System.ComponentModel.DataAnnotations;
+using System.ComponentModel.DataAnnotations.Schema;
 
 namespace veterans_site.Models
 {
@@ -23,6 +24,15 @@ namespace veterans_site.Models
 
         public EventStatus Status { get; set; }
         public EventCategory Category { get; set; }
+
+        public ICollection<EventParticipant> EventParticipants { get; set; } = new List<EventParticipant>();
+
+        [NotMapped]
+        public int AvailableSpots => MaxParticipants.HasValue
+            ? MaxParticipants.Value - EventParticipants.Count
+            : int.MaxValue;
+
+        public bool CanRegister => !MaxParticipants.HasValue || EventParticipants.Count < MaxParticipants.Value;
 
     }
 

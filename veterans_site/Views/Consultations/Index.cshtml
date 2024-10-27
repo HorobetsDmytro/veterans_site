@@ -1,0 +1,200 @@
+﻿@using Microsoft.AspNetCore.Identity
+
+@model veterans_site.ViewModels.PublicConsultationIndexViewModel
+@using veterans_site.Extensions
+@inject UserManager<ApplicationUser> UserManager
+@{
+    ViewData["Title"] = "Консультації";
+}
+
+<div class="container-fluid mt-4">
+    <div class="row">
+        <div class="col-md-3">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0">Фільтри</h5>
+                </div>
+                <div class="card-body">
+                    <form method="get" asp-action="Index">
+                        <div class="mb-3">
+                            <label class="form-label">Тип консультації</label>
+                            <select name="type" class="form-select" onchange="this.form.submit()">
+                                <option value="">Всі типи</option>
+                                @foreach (ConsultationType type in Enum.GetValues(typeof(ConsultationType)))
+                                {
+                                    @if (Model.CurrentType == type)
+                                    {
+                                        <option value="@type" selected>@type.GetDisplayName()</option>
+                                    }
+                                    else
+                                    {
+                                        <option value="@type">@type.GetDisplayName()</option>
+                                    }
+                                }
+                            </select>
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label">Формат консультації</label>
+                            <select name="format" class="form-select" onchange="this.form.submit()">
+                                <option value="">Всі формати</option>
+                                @foreach (ConsultationFormat format in Enum.GetValues(typeof(ConsultationFormat)))
+                                {
+                                    @if (Model.CurrentFormat == format)
+                                    {
+                                        <option value="@format" selected>@format.GetDisplayName()</option>
+                                    }
+                                    else
+                                    {
+                                        <option value="@format">@format.GetDisplayName()</option>
+                                    }
+                                }
+                            </select>
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label">Ціна від</label>
+                            <input type="number" name="minPrice" class="form-control" value="@Model.MinPrice" step="0.01" min="0">
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Ціна до</label>
+                            <input type="number" name="maxPrice" class="form-control" value="@Model.MaxPrice" step="0.01" min="0">
+                        </div>
+
+                        <button type="submit" class="btn btn-primary w-100">Застосувати фільтри</button>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-9">
+            @if (TempData["Success"] != null)
+            {
+                <div class="alert alert-success alert-dismissible fade show" role="alert">
+                    @TempData["Success"]
+                    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                </div>
+            }
+
+            @if (TempData["Error"] != null)
+            {
+                <div class="alert alert-danger alert-dismissible fade show" role="alert">
+                    @TempData["Error"]
+                    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                </div>
+            }
+
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <h1 class="h3">Консультації</h1>
+
+                <div class="btn-group">
+                    <button class="btn btn-secondary dropdown-toggle" type="button" data-bs-toggle="dropdown">
+                        Сортувати за: @(Model.CurrentSort switch
+                        {
+                            "date_desc" => "Дата за спаданням",
+                            "date_asc" => "Дата за зростанням",
+                            "price_desc" => "Ціна за спаданням",
+                            "price_asc" => "Ціна за зростанням",
+                            _ => "Дата за зростанням"
+                        })
+                    </button>
+                    <ul class="dropdown-menu">
+                        <li><a class="dropdown-item" asp-route-sortOrder="date_asc" asp-route-type="@Model.CurrentType" asp-route-format="@Model.CurrentFormat">Дата за зростанням</a></li>
+                        <li><a class="dropdown-item" asp-route-sortOrder="date_desc" asp-route-type="@Model.CurrentType" asp-route-format="@Model.CurrentFormat">Дата за спаданням</a></li>
+                        <li><a class="dropdown-item" asp-route-sortOrder="price_asc" asp-route-type="@Model.CurrentType" asp-route-format="@Model.CurrentFormat">Ціна за зростанням</a></li>
+                        <li><a class="dropdown-item" asp-route-sortOrder="price_desc" asp-route-type="@Model.CurrentType" asp-route-format="@Model.CurrentFormat">Ціна за спаданням</a></li>
+                    </ul>
+                </div>
+            </div>
+
+            <div class="row g-4">
+                @foreach (var item in Model.Consultations)
+                {
+                    <div class="col-md-6">
+                        <div class="card h-100 shadow-sm d-flex flex-column">
+                            <div class="card-body d-flex flex-column">
+                                <h5 class="card-title mb-3">@item.Title</h5>
+                                <ul class="list-unstyled text-muted mb-4">
+                                    <li class="mb-2">
+                                        <i class="far fa-calendar-alt"></i>
+                                        Дата: @item.DateTime.ToString("dd.MM.yyyy HH:mm")
+                                    </li>
+                                    <li class="mb-2">
+                                        <i class="far fa-clock"></i>
+                                        Тривалість: @item.Duration хв
+                                    </li>
+                                    <li class="mb-2">
+                                        <i class="fas fa-user-md"></i>
+                                        Спеціаліст: @item.SpecialistName
+                                    </li>
+                                    <li class="mb-2">
+                                        <i class="fas fa-tag"></i>
+                                        Тип: @item.Type.GetDisplayName()
+                                    </li>
+                                    <li class="mb-2">
+                                        <i class="fas fa-users"></i>
+                                        Формат: @item.Format.GetDisplayName()
+                                    </li>
+                                    @if (item.Format == ConsultationFormat.Group)
+                                    {
+                                        <li class="mb-2">
+                                            <i class="fas fa-user-friends"></i>
+                                            <strong>Вільних місць:</strong> @(item.MaxParticipants - item.BookedParticipants) з @item.MaxParticipants
+                                        </li>
+                                    }
+                                    <li class="mb-2">
+                                        <i class="fas fa-money-bill-wave"></i>
+                                        Ціна: @item.Price.ToString("C")
+                                    </li>
+                                </ul>
+
+                                <div class="mt-auto d-flex gap-2">
+                                    @if (User.Identity.IsAuthenticated)
+                                    {
+                                        if (!item.IsBooked)
+                                        {
+                                            <a asp-action="Book" asp-route-id="@item.Id" class="btn btn-primary btn-sm">Записатись</a>
+                                        }
+                                        else
+                                        {   
+                                            <button class="btn btn-secondary btn-sm" disabled>Ви записані</button>
+                                        }
+                                    }
+                                    else
+                                    {
+                                        <a asp-area="Identity" asp-page="/Account/Login"
+                                           asp-route-returnUrl="@Url.Action("Book", new { id = item.Id })"
+                                           class="btn btn-primary btn-sm">
+                                            Увійдіть щоб записатись
+                                        </a>
+                                    }
+                                    <a asp-action="Details" asp-route-id="@item.Id" class="btn btn-outline-primary btn-sm">Деталі</a>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                }
+            </div>
+
+            @if (Model.TotalPages > 1)
+            {
+                <nav aria-label="Page navigation" class="mt-4">
+                    <ul class="pagination justify-content-center">
+                        @for (int i = 1; i <= Model.TotalPages; i++)
+                        {
+                            <li class="page-item @(i == Model.CurrentPage ? "active" : "")">
+                                <a class="page-link" asp-action="Index"
+                                   asp-route-page="@i"
+                                   asp-route-type="@Model.CurrentType"
+                                   asp-route-format="@Model.CurrentFormat"
+                                   asp-route-minPrice="@Model.MinPrice"
+                                   asp-route-maxPrice="@Model.MaxPrice"
+                                   asp-route-sortOrder="@Model.CurrentSort">@i</a>
+                            </li>
+                        }
+                    </ul>
+                </nav>
+            }
+        </div>
+    </div>
+</div>

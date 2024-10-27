@@ -1,0 +1,224 @@
+﻿@model veterans_site.ViewModels.UserProfileViewModel
+@using veterans_site.Extensions
+@{
+    ViewData["Title"] = "Мій профіль";
+}
+
+<div class="container mt-5">
+    @if (TempData["Success"] != null)
+    {
+        <div class="alert alert-success alert-dismissible fade show" role="alert">
+            @TempData["Success"]
+            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+        </div>
+    }
+
+    @if (TempData["Error"] != null)
+    {
+        <div class="alert alert-danger alert-dismissible fade show" role="alert">
+            @TempData["Error"]
+            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+        </div>
+    }
+
+    <div class="row">
+        <div class="col-md-4">
+            <div class="card shadow-sm mb-4">
+                <div class="card-body">
+                    <h2 class="h4 mb-4">Персональна інформація</h2>
+
+                    <div class="mb-3">
+                        <label class="text-muted d-block">Ім'я</label>
+                        <span class="h6">@Model.User.FirstName</span>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="text-muted d-block">Прізвище</label>
+                        <span class="h6">@Model.User.LastName</span>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="text-muted d-block">Email</label>
+                        <span class="h6">@Model.User.Email</span>
+                    </div>
+
+                    <a asp-area="Identity" asp-page="/Account/Manage/Index" class="btn btn-outline-primary btn-sm">
+                        Редагувати профіль
+                    </a>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-8">
+            <div class="card shadow-sm mb-4">
+                <div class="card-body">
+                    <h2 class="h4 mb-4">Мої консультації</h2>
+
+                    <ul class="nav nav-tabs mb-3">
+                        <li class="nav-item">
+                            <a class="nav-link active" data-bs-toggle="tab" href="#upcoming">Заплановані</a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" data-bs-toggle="tab" href="#past">Минулі</a>
+                        </li>
+                    </ul>
+
+                    <div class="tab-content">
+                        <div class="tab-pane fade show active" id="upcoming">
+                            @if (Model.UpcomingConsultations.Any())
+                            {
+                                <div class="list-group">
+                                    @foreach (var consultation in Model.UpcomingConsultations)
+                                    {
+                                        <div class="list-group-item">
+                                            <div class="d-flex w-100 justify-content-between align-items-center">
+                                                <div>
+                                                    <h5 class="mb-1">@consultation.Title</h5>
+                                                    <p class="mb-1">
+                                                        <i class="far fa-calendar-alt"></i> @consultation.DateTime.ToString("dd.MM.yyyy HH:mm")<br />
+                                                        <i class="fas fa-user-md"></i> @consultation.SpecialistName<br />
+                                                        <i class="fas fa-tag"></i> @consultation.Type.GetDisplayName()
+                                                    </p>
+                                                </div>
+                                                <div class="d-flex flex-column gap-2">
+                                                    <form asp-controller="Consultations" asp-action="Cancel" method="post" onsubmit="return confirm('Ви впевнені, що хочете скасувати запис на консультацію?');">
+                                                        @Html.AntiForgeryToken()
+                                                        <input type="hidden" name="consultationId" value="@consultation.Id" />
+                                                        <button type="submit" class="btn btn-danger btn-sm">
+                                                            <i class="fas fa-times"></i> Скасувати
+                                                        </button>
+                                                    </form>
+                                                    <a asp-action="ConsultationDetails" asp-route-id="@consultation.Id" class="btn btn-outline-primary btn-sm">
+                                                        <i class="fas fa-info-circle"></i> Деталі
+                                                    </a>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    }
+                                </div>
+                            }
+                            else
+                            {
+                                <p class="text-muted">Немає запланованих консультацій</p>
+                            }
+                        </div>
+                        <div class="tab-pane fade" id="past">
+                            @if (Model.PastConsultations.Any())
+                            {
+                                <div class="list-group">
+                                    @foreach (var consultation in Model.PastConsultations)
+                                    {
+                                        <div class="list-group-item">
+                                            <div class="d-flex w-100 justify-content-between align-items-center">
+                                                <div>
+                                                    <h5 class="mb-1">@consultation.Title</h5>
+                                                    <p class="mb-1">
+                                                        <i class="far fa-calendar-alt"></i> @consultation.DateTime.ToString("dd.MM.yyyy HH:mm")<br />
+                                                        <i class="fas fa-user-md"></i> @consultation.SpecialistName<br />
+                                                        <i class="fas fa-tag"></i> @consultation.Type.GetDisplayName()
+                                                    </p>
+                                                </div>
+                                                <a asp-action="ConsultationDetails" asp-route-id="@consultation.Id" class="btn btn-outline-primary btn-sm">
+                                                    <i class="fas fa-info-circle"></i> Деталі
+                                                </a>
+                                            </div>
+                                        </div>
+                                    }
+                                </div>
+                            }
+                            else
+                            {
+                                <p class="text-muted">Немає минулих консультацій</p>
+                            }
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card shadow-sm">
+                <div class="card-body">
+                    <h2 class="h4 mb-4">Мої події</h2>
+
+                    <ul class="nav nav-tabs mb-3">
+                        <li class="nav-item">
+                            <a class="nav-link active" data-bs-toggle="tab" href="#upcomingEvents">Заплановані</a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" data-bs-toggle="tab" href="#pastEvents">Минулі</a>
+                        </li>
+                    </ul>
+
+                    <div class="tab-content">
+                        <div class="tab-pane fade show active" id="upcomingEvents">
+                            @if (Model.UpcomingEvents.Any())
+                            {
+                                <div class="list-group">
+                                    @foreach (var evt in Model.UpcomingEvents)
+                                    {
+                                        <div class="list-group-item">
+                                            <div class="d-flex w-100 justify-content-between align-items-center">
+                                                <div>
+                                                    <h5 class="mb-1">@evt.Title</h5>
+                                                    <p class="mb-1">
+                                                        <i class="far fa-calendar-alt"></i> @evt.Date.ToString("dd.MM.yyyy HH:mm")<br />
+                                                        <i class="fas fa-map-marker-alt"></i> @evt.Location<br />
+                                                        <i class="fas fa-tag"></i> @evt.Category.GetDisplayName()
+                                                    </p>
+                                                </div>
+                                                <div class="d-flex flex-column gap-2">
+                                                    <form asp-controller="Events" asp-action="Cancel" method="post" onsubmit="return confirm('Ви впевнені, що хочете скасувати реєстрацію на подію?');">
+                                                        @Html.AntiForgeryToken()
+                                                        <input type="hidden" name="eventId" value="@evt.Id" />
+                                                        <button type="submit" class="btn btn-danger btn-sm">
+                                                            <i class="fas fa-times"></i> Скасувати
+                                                        </button>
+                                                    </form>
+                                                    <a asp-action="EventDetails" asp-route-id="@evt.Id" class="btn btn-outline-primary btn-sm">
+                                                        <i class="fas fa-info-circle"></i> Деталі
+                                                    </a>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    }
+                                </div>
+                            }
+                            else
+                            {
+                                <p class="text-muted">Немає запланованих подій</p>
+                            }
+                        </div>
+                        <div class="tab-pane fade" id="pastEvents">
+                            @if (Model.PastEvents.Any())
+                            {
+                                <div class="list-group">
+                                    @foreach (var evt in Model.PastEvents)
+                                    {
+                                        <div class="list-group-item">
+                                            <div class="d-flex w-100 justify-content-between align-items-center">
+                                                <div>
+                                                    <h5 class="mb-1">@evt.Title</h5>
+                                                    <p class="mb-1">
+                                                        <i class="far fa-calendar-alt"></i> @evt.Date.ToString("dd.MM.yyyy HH:mm")<br />
+                                                        <i class="fas fa-map-marker-alt"></i> @evt.Location<br />
+                                                        <i class="fas fa-tag"></i> @evt.Category.GetDisplayName()
+                                                    </p>
+                                                </div>
+                                                <a asp-action="EventDetails" asp-route-id="@evt.Id" class="btn btn-outline-primary btn-sm">
+                                                    <i class="fas fa-info-circle"></i> Деталі
+                                                </a>
+                                            </div>
+                                        </div>
+                                    }
+                                </div>
+                            }
+                            else
+                            {
+                                <p class="text-muted">Немає минулих подій</p>
+                            }
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>

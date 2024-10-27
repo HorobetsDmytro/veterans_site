@@ -48,6 +48,15 @@ namespace veterans_site.Repositories
         {
             return await FindAsync(n => n.Title.Contains(title));
         }
+
+        public async Task<IEnumerable<News>> GetRelatedNewsAsync(int newsId, int count)
+        {
+            return await _context.News
+                .Where(n => n.Id != newsId)
+                .OrderByDescending(n => n.PublishDate)
+                .Take(count)
+                .ToListAsync();
+        }
     }
 }
     

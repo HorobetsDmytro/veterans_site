@@ -3,6 +3,7 @@ using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using veterans_site.Data;
 
@@ -11,9 +12,11 @@ using veterans_site.Data;
 namespace veterans_site.Migrations
 {
     [DbContext(typeof(VeteranSupportDBContext))]
-    partial class VeteranSupportDBContextModelSnapshot : ModelSnapshot
+    [Migration("20241027143334_UpdateModels")]
+    partial class UpdateModels
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -309,6 +312,9 @@ namespace veterans_site.Migrations
                     b.Property<int>("ConsultationId")
                         .HasColumnType("int");
 
+                    b.Property<int>("Status")
+                        .HasColumnType("int");
+
                     b.Property<string>("UserId")
                         .IsRequired()
                         .HasColumnType("nvarchar(450)");
@@ -319,7 +325,7 @@ namespace veterans_site.Migrations
 
                     b.HasIndex("UserId");
 
-                    b.ToTable("ConsultationBookings");
+                    b.ToTable("ConsultationBooking");
                 });
 
             modelBuilder.Entity("veterans_site.Models.Event", b =>

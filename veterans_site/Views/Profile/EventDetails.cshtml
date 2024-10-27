@@ -1,0 +1,93 @@
+﻿@using veterans_site.Extensions
+@model Event
+@{
+    ViewData["Title"] = "Деталі події";
+}
+
+<div class="container mt-5">
+    <div class="card shadow">
+        <div class="card-body">
+            <nav aria-label="breadcrumb" class="mb-4">
+                <ol class="breadcrumb">
+                    <li class="breadcrumb-item"><a asp-controller="Profile" asp-action="Index">Мій профіль</a></li>
+                    <li class="breadcrumb-item active">Деталі події</li>
+                </ol>
+            </nav>
+
+            <div class="row">
+                <div class="col-md-8">
+                    <h1 class="h3 mb-4">@Model.Title</h1>
+
+                    <div class="card mb-4">
+                        <div class="card-body">
+                            <h5 class="card-title">Опис події</h5>
+                            <p class="card-text">@Model.Description</p>
+                        </div>
+                    </div>
+
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="card mb-4">
+                                <div class="card-body">
+                                    <h5 class="card-title">Деталі події</h5>
+                                    <ul class="list-unstyled">
+                                        <li class="mb-2">
+                                            <i class="far fa-calendar-alt"></i>
+                                            <strong>Дата та час:</strong> @Model.Date.ToString("dd.MM.yyyy HH:mm")
+                                        </li>
+                                        <li class="mb-2">
+                                            <i class="fas fa-map-marker-alt"></i>
+                                            <strong>Місце проведення:</strong> @Model.Location
+                                        </li>
+                                        <li class="mb-2">
+                                            <i class="fas fa-users"></i>
+                                            <strong>Категорія:</strong> @Model.Category.GetDisplayName()
+                                        </li>
+                                        @if (Model.MaxParticipants.HasValue)
+                                        {
+                                            <li class="mb-2">
+                                                <i class="fas fa-user-friends"></i>
+                                                <strong>Учасники:</strong> @Model.EventParticipants.Count з @Model.MaxParticipants
+                                            </li>
+                                        }
+                                        <li class="mb-2">
+                                            <i class="fas fa-info-circle"></i>
+                                            <strong>Статус:</strong>
+                                            <span class="badge @(Model.Status switch
+                                            {
+                                                EventStatus.Planned => "bg-primary",
+                                                EventStatus.InProgress => "bg-success",
+                                                EventStatus.Completed => "bg-secondary",
+                                                EventStatus.Cancelled => "bg-danger",
+                                                _ => "bg-secondary"
+                                            })">
+                                                @Model.Status.GetDisplayName()
+                                            </span>
+                                        </li>
+                                    </ul>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="mt-4">
+                <a asp-controller="Profile" asp-action="Index" class="btn btn-secondary">
+                    <i class="fas fa-arrow-left"></i> Назад до профілю
+                </a>
+                @if (Model.Date > DateTime.Now && Model.Status != EventStatus.Cancelled)
+                {
+                    <form asp-controller="Events" asp-action="Cancel" method="post" class="d-inline"
+                          onsubmit="return confirm('Ви впевнені, що хочете скасувати реєстрацію на подію?');">
+                        @Html.AntiForgeryToken()
+                        <input type="hidden" name="eventId" value="@Model.Id" />
+                        <button type="submit" class="btn btn-danger">
+                            <i class="fas fa-times"></i> Скасувати реєстрацію
+                        </button>
+                    </form>
+                }
+            </div>
+        </div>
+    </div>
+</div>
