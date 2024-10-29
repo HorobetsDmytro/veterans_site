@@ -42,5 +42,13 @@ public class VeteranSupportDBContext : IdentityDbContext<ApplicationUser>
             .HasOne(cb => cb.User)
             .WithMany()
             .HasForeignKey(cb => cb.UserId);
+
+        builder.Entity<ApplicationUser>()
+            .Property(u => u.IsActive)
+            .HasDefaultValue(true);
+
+        builder.Entity<ApplicationUser>()
+            .Property(u => u.RegistrationDate)
+            .HasDefaultValueSql("GETUTCDATE()");
     }
 }

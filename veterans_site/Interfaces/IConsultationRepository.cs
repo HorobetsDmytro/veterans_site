@@ -41,5 +41,11 @@ namespace veterans_site.Interfaces
         Task<bool> BookConsultationAsync(int consultationId, string userId);
         Task<bool> IsUserBookedForConsultationAsync(int consultationId, string userId);
         Task RemoveBookingAsync(int consultationId, string userId);
+
+        Task<int> GetUserConsultationsCount(string userId);
+        Task RemoveUserBookingsAsync(string userId);
+        Task<IEnumerable<Consultation>> GetUserConsultationsAsync(string userId, bool includeBookings = false);
+        Task CancelConsultationAsync(int consultationId, string userId);
+        Task<bool> HasActiveConsultationsAsync(string userId);
     }
 }

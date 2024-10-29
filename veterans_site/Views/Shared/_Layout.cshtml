@@ -28,18 +28,31 @@
                             <a class="nav-link text-dark" asp-area="" asp-controller="Home" asp-action="Index">Головна</a>
                         </li>
                         <li class="nav-item">
-                            <a class="nav-link text-dark" asp-area="" asp-controller="Profile" asp-action="Index">Профіль</a>
+                            <a class="nav-link text-dark" asp-area="" asp-controller="Profile" asp-action="Index">
+                                <i class="fas fa-user"></i> Профіль
+                            </a>
                         </li>
                         @if (SignInManager.IsSignedIn(User) && User.IsInRole("Admin"))
                         {
                             <li class="nav-item">
-                                <a class="nav-link text-dark" asp-area="Admin" asp-controller="Event" asp-action="Index">Заходи</a>
+                                <a class="nav-link text-dark" asp-area="Admin" asp-controller="Event" asp-action="Index">
+                                    <i class="fas fa-calendar-alt"></i> Заходи
+                                </a>
                             </li>
                             <li class="nav-item">
-                                <a class="nav-link text-dark" asp-area="Admin" asp-controller="News" asp-action="Index">Новини</a>
+                                <a class="nav-link text-dark" asp-area="Admin" asp-controller="News" asp-action="Index">
+                                    <i class="fas fa-newspaper"></i> Новини
+                                </a>
                             </li>
                             <li class="nav-item">
-                                <a class="nav-link text-dark" asp-area="Admin" asp-controller="Consultation" asp-action="Index">Консультації</a>
+                                <a class="nav-link text-dark" asp-area="Admin" asp-controller="Consultation" asp-action="Index">
+                                    <i class="fas fa-user-md"></i> Консультації
+                                </a>
+                            </li>
+                            <li class="nav-item">
+                                <a class="nav-link" asp-area="Admin" asp-controller="Users" asp-action="Index">
+                                    <i class="fas fa-users"></i> Користувачі
+                                </a>
                             </li>
                         }
                     </ul>

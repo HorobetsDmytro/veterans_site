@@ -26,6 +26,17 @@
             <div class="card shadow-sm mb-4">
                 <div class="card-body">
                     <h2 class="h4 mb-4">Персональна інформація</h2>
+                    <div class="alert @(Model.User.IsActive ? "alert-success" : "alert-danger") mb-4">
+                        <h5 class="alert-heading">Статус облікового запису</h5>
+                        @if (Model.User.IsActive)
+                        {
+                            <p class="mb-0">Ваш обліковий запис активний</p>
+                        }
+                        else
+                        {
+                            <p class="mb-0">Ваш обліковий запис неактивний. Зв'яжіться з адміністрацією для відновлення доступу.</p>
+                        }
+                    </div>
 
                     <div class="mb-3">
                         <label class="text-muted d-block">Ім'я</label>

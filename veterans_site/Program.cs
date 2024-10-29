@@ -2,6 +2,7 @@ using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using veterans_site.Data;
 using veterans_site.Interfaces;
+using veterans_site.Middleware;
 using veterans_site.Models;
 using veterans_site.Repositories;
 using veterans_site.Services;
@@ -79,6 +80,7 @@ app.UseRouting();
 
 app.UseAuthentication();
 app.UseAuthorization();
+app.UseUserActivityCheck();
 
 app.MapControllerRoute(
     name: "areas",

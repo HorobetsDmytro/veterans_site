@@ -71,5 +71,77 @@ namespace veterans_site.Repositories
             return await _context.EventParticipants
                 .CountAsync(ep => ep.EventId == eventId);
         }
+
+        public async Task<int> GetUserEventsCount(string userId)
+        {
+            return await _context.EventParticipants
+                .Where(ep => ep.UserId == userId)
+                .CountAsync();
+        }
+
+        public async Task RemoveUserParticipationsAsync(string userId)
+        {
+            var participations = await _context.EventParticipants
+                .Where(ep => ep.UserId == userId)
+                .ToListAsync();
+
+            if (participations.Any())
+            {
+                _context.EventParticipants.RemoveRange(participations);
+                await _context.SaveChangesAsync();
+            }
+        }
+
+        public async Task<IEnumerable<Event>> GetUserEventsAsync(string userId, bool includeParticipants = false)
+        {
+            IQueryable<Event> query = _context.Events;
+
+            if (includeParticipants)
+            {
+                query = query.Include(e => e.EventParticipants);
+            }
+
+            var events = await query
+                .Where(e => e.EventParticipants.Any(ep => ep.UserId == userId))
+                .OrderByDescending(e => e.Date)
+                .ToListAsync();
+
+            return events;
+        }
+
+        public async Task<bool> IsUserRegisteredForEventAsync(int eventId, string userId)
+        {
+            return await _context.EventParticipants
+                .AnyAsync(ep => ep.EventId == eventId && ep.UserId == userId);
+        }
+
+        public async Task CancelEventParticipationAsync(int eventId, string userId)
+        {
+            var participation = await _context.EventParticipants
+                .FirstOrDefaultAsync(ep => ep.EventId == eventId && ep.UserId == userId);
+
+            if (participation != null)
+            {
+                _context.EventParticipants.Remove(participation);
+                await _context.SaveChangesAsync();
+            }
+        }
+
+        public async Task<bool> HasActiveEventsAsync(string userId)
+        {
+            return await _context.Events
+                .AnyAsync(e =>
+                    e.EventParticipants.Any(ep => ep.UserId == userId) &&
+                    e.Date > DateTime.Now &&
+                    e.Status != EventStatus.Cancelled);
+        }
+
+        public async Task<Event> GetByIdWithParticipantsAsync(int eventId)
+        {
+            return await _context.Events
+                .Include(e => e.EventParticipants)
+                .ThenInclude(ep => ep.User)
+                .FirstOrDefaultAsync(e => e.Id == eventId);
+        }
     }
 }

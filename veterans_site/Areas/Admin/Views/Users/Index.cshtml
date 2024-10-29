@@ -1,0 +1,151 @@
+﻿@* Areas/Admin/Views/Users/Index.cshtml *@
+@model veterans_site.ViewModels.UserIndexViewModel
+@{
+    ViewData["Title"] = "Управління користувачами";
+}
+
+<div class="container-fluid mt-4">
+    <div class="row">
+        <!-- Фільтри -->
+        <div class="col-md-3">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0">Пошук</h5>
+                </div>
+                <div class="card-body">
+                    <form asp-action="Index" method="get">
+                        <div class="mb-3">
+                            <label class="form-label">Пошук за іменем або email</label>
+                            <input type="text" name="SearchString" class="form-control" value="@Model.SearchString" />
+                        </div>
+                        <button type="submit" class="btn btn-primary w-100">Пошук</button>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        <!-- Список користувачів -->
+        <div class="col-md-9">
+            <div class="card">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-center mb-4">
+                        <h1 class="h3">Користувачі системи</h1>
+
+                        <!-- Сортування -->
+                        <div class="btn-group">
+                            <button class="btn btn-secondary dropdown-toggle" type="button" data-bs-toggle="dropdown">
+                                Сортувати за: @(Model.CurrentSort switch
+                                {
+                                    "name_desc" => "Ім'я (З-А)",
+                                    "Date" => "Дата реєстрації (старіші)",
+                                    "date_desc" => "Дата реєстрації (новіші)",
+                                    _ => "Ім'я (А-Я)"
+                                })
+                            </button>
+                            <ul class="dropdown-menu">
+                                <li><a class="dropdown-item" asp-action="Index" asp-route-sortOrder="">Ім'я (А-Я)</a></li>
+                                <li><a class="dropdown-item" asp-action="Index" asp-route-sortOrder="name_desc">Ім'я (З-А)</a></li>
+                                <li><a class="dropdown-item" asp-action="Index" asp-route-sortOrder="Date">Дата реєстрації (старіші)</a></li>
+                                <li><a class="dropdown-item" asp-action="Index" asp-route-sortOrder="date_desc">Дата реєстрації (новіші)</a></li>
+                            </ul>
+                        </div>
+                    </div>
+
+                    <div class="table-responsive">
+                        <table class="table table-hover">
+                            <thead>
+                                <tr>
+                                    <th>Ім'я</th>
+                                    <th>Email</th>
+                                    <th>Ролі</th>
+                                    <th>Консультації</th>
+                                    <th>Події</th>
+                                    <th>Статус</th>
+                                    <th>Дії</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @foreach (var user in Model.Users)
+                                {
+                                    <tr>
+                                        <td>@user.FirstName @user.LastName</td>
+                                        <td>@user.Email</td>
+                                        <td>
+                                            @foreach (var role in user.Roles)
+                                            {
+                                                <span class="badge bg-primary">@role</span>
+                                            }
+                                        </td>
+                                        <td>@user.ConsultationsCount</td>
+                                        <td>@user.EventsCount</td>
+                                        <td>
+                                            @if (user.IsActive)
+                                            {
+                                                <span class="badge bg-success">Активний</span>
+                                            }
+                                            else
+                                            {
+                                                <span class="badge bg-danger">Неактивний</span>
+                                            }
+                                        </td>
+                                        <td>
+                                            <div class="btn-group">
+                                                <a asp-action="Details" asp-route-id="@user.Id"
+                                                   class="btn btn-outline-primary btn-sm">
+                                                    <i class="fas fa-info-circle"></i>
+                                                </a>
+                                                <form asp-action="ToggleActive" method="post" class="d-inline">
+                                                    @Html.AntiForgeryToken()
+                                                    <input type="hidden" name="id" value="@user.Id" />
+                                                    <button type="submit" class="btn btn-outline-warning btn-sm">
+                                                        @if (user.IsActive)
+                                                        {
+                                                            <i class="fas fa-ban"></i>
+                                                        }
+                                                        else
+                                                        {
+                                                            <i class="fas fa-check"></i>
+                                                        }
+                                                    </button>
+                                                </form>
+                                                @if (!user.Roles.Contains("Admin"))
+                                                {
+                                                    <form asp-action="Delete" method="post" class="d-inline"
+                                                          onsubmit="return confirm('Ви впевнені, що хочете видалити цього користувача?');">
+                                                        @Html.AntiForgeryToken()
+                                                        <input type="hidden" name="id" value="@user.Id" />
+                                                        <button type="submit" class="btn btn-outline-danger btn-sm">
+                                                            <i class="fas fa-trash"></i>
+                                                        </button>
+                                                    </form>
+                                                }
+                                            </div>
+                                        </td>
+                                    </tr>
+                                }
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <!-- Пагінація -->
+                    @if (Model.TotalPages > 1)
+                    {
+                        <nav aria-label="Page navigation" class="mt-4">
+                            <ul class="pagination justify-content-center">
+                                @for (int i = 1; i <= Model.TotalPages; i++)
+                                {
+                                    <li class="page-item @(i == Model.CurrentPage ? "active" : "")">
+                                        <a class="page-link" asp-action="Index"
+                                           asp-route-page="@i"
+                                           asp-route-sortOrder="@Model.CurrentSort"
+                                           asp-route-currentFilter="@Model.CurrentFilter">@i</a>
+                                    </li>
+                                }
+                            </ul>
+                        </nav>
+                    }
+                </div>
+            </div>
+        </div>
+    </div>
+</div>

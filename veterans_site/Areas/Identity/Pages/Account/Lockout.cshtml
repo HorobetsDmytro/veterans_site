@@ -1,0 +1,24 @@
+﻿@page
+@model LockoutModel
+@{
+    ViewData["Title"] = "Обліковий запис заблоковано";
+}
+
+<div class="container mt-5">
+    <div class="row justify-content-center">
+        <div class="col-md-6">
+            <div class="card shadow">
+                <div class="card-body text-center">
+                    <h1 class="h4 mb-4">@ViewData["Title"]</h1>
+                    <div class="alert alert-warning">
+                        <p>Цей обліковий запис було деактивовано адміністратором.</p>
+                        <p>Будь ласка, зв'яжіться з адміністрацією для отримання додаткової інформації.</p>
+                    </div>
+                    <a class="btn btn-primary" href="mailto:support@example.com">
+                        Зв'язатися з адміністрацією
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>

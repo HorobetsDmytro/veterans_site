@@ -65,6 +65,13 @@ namespace veterans_site.Controllers
         [HttpGet]
         public async Task<IActionResult> Book(int id)
         {
+            var user = await _userManager.GetUserAsync(User);
+            if (!user.IsActive)
+            {
+                TempData["Error"] = "Ваш обліковий запис неактивний. Ви не можете записуватись на консультації.";
+                return RedirectToAction("Index");
+            }
+
             var consultation = await _consultationRepository.GetByIdAsync(id);
             if (consultation == null)
             {

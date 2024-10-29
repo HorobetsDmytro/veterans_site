@@ -1,0 +1,294 @@
+﻿@* Areas/Admin/Views/Users/Details.cshtml *@
+@using veterans_site.Extensions
+@model veterans_site.ViewModels.UserDetailsViewModel
+@{
+    ViewData["Title"] = "Деталі користувача";
+}
+
+<div class="container mt-5">
+    <!-- Інформація про користувача -->
+    <div class="card shadow-sm mb-4">
+        <div class="card-body">
+            <h2 class="h4 mb-4">Інформація про користувача</h2>
+
+            <div class="row">
+                <div class="col-md-6">
+                    <ul class="list-unstyled">
+                        <li class="mb-3">
+                            <strong>Ім'я:</strong> @Model.User.FirstName @Model.User.LastName
+                        </li>
+                        <li class="mb-3">
+                            <strong>Email:</strong> @Model.User.Email
+                        </li>
+                        <li class="mb-3">
+                            <strong>Дата реєстрації:</strong> @Model.User.RegistrationDate.ToString("dd.MM.yyyy")
+                        </li>
+                        <li class="mb-3">
+                            <strong>Статус:</strong>
+                            @if (Model.User.IsActive)
+                            {
+                                <span class="badge bg-success">Активний</span>
+                            }
+                            else
+                            {
+                                <span class="badge bg-danger">Неактивний</span>
+                            }
+                        </li>
+                        <li class="mb-3">
+                            <strong>Ролі:</strong>
+                            @foreach (var role in Model.Roles)
+                            {
+                                <span class="badge bg-primary me-1">@role</span>
+                            }
+                        </li>
+                    </ul>
+
+                    <div class="mt-4">
+                        <a asp-action="Index" class="btn btn-secondary">
+                            <i class="fas fa-arrow-left"></i> Назад до списку
+                        </a>
+                        @if (!Model.Roles.Contains("Admin"))
+                        {
+                            <form asp-action="Delete" method="post" class="d-inline"
+                                  onsubmit="return confirm('Ви впевнені, що хочете видалити цього користувача?');">
+                                @Html.AntiForgeryToken()
+                                <input type="hidden" name="id" value="@Model.User.Id" />
+                                <button type="submit" class="btn btn-danger">
+                                    <i class="fas fa-trash"></i> Видалити користувача
+                                </button>
+                            </form>
+                        }
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Консультації користувача -->
+    <div class="card shadow-sm mb-4">
+        <div class="card-body">
+            <h2 class="h4 mb-4">Консультації користувача</h2>
+
+            <ul class="nav nav-tabs mb-4">
+                <li class="nav-item">
+                    <a class="nav-link active" data-bs-toggle="tab" href="#upcomingConsultations">
+                        Заплановані (@Model.UpcomingConsultations.Count())
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" data-bs-toggle="tab" href="#pastConsultations">
+                        Минулі (@Model.PastConsultations.Count())
+                    </a>
+                </li>
+            </ul>
+
+            <div class="tab-content">
+                <div class="tab-pane fade show active" id="upcomingConsultations">
+                    @if (Model.UpcomingConsultations.Any())
+                    {
+                        <div class="table-responsive">
+                            <table class="table">
+                                <thead>
+                                    <tr>
+                                        <th>Назва</th>
+                                        <th>Дата</th>
+                                        <th>Тип</th>
+                                        <th>Спеціаліст</th>
+                                        <th>Статус</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    @foreach (var consultation in Model.UpcomingConsultations)
+                                    {
+                                        <tr>
+                                            <td>@consultation.Title</td>
+                                            <td>@consultation.DateTime.ToString("dd.MM.yyyy HH:mm")</td>
+                                            <td>@consultation.Type.GetDisplayName()</td>
+                                            <td>@consultation.SpecialistName</td>
+                                            <td>
+                                                <span class="badge @(consultation.Status switch
+                                                {
+                                                    ConsultationStatus.Planned => "bg-primary",
+                                                    ConsultationStatus.InProgress => "bg-success",
+                                                    ConsultationStatus.Completed => "bg-secondary",
+                                                    ConsultationStatus.Cancelled => "bg-danger",
+                                                    _ => "bg-secondary"
+                                                })">
+                                                    @consultation.Status.GetDisplayName()
+                                                </span>
+                                            </td>
+                                        </tr>
+                                    }
+                                </tbody>
+                            </table>
+                        </div>
+                    }
+                    else
+                    {
+                        <p class="text-muted">Немає запланованих консультацій</p>
+                    }
+                </div>
+
+                <div class="tab-pane fade" id="pastConsultations">
+                    @if (Model.PastConsultations.Any())
+                    {
+                        <div class="table-responsive">
+                            <table class="table">
+                                <thead>
+                                    <tr>
+                                        <th>Назва</th>
+                                        <th>Дата</th>
+                                        <th>Тип</th>
+                                        <th>Спеціаліст</th>
+                                        <th>Статус</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    @foreach (var consultation in Model.PastConsultations)
+                                    {
+                                        <tr>
+                                            <td>@consultation.Title</td>
+                                            <td>@consultation.DateTime.ToString("dd.MM.yyyy HH:mm")</td>
+                                            <td>@consultation.Type.GetDisplayName()</td>
+                                            <td>@consultation.SpecialistName</td>
+                                            <td>
+                                                <span class="badge @(consultation.Status switch
+                                                {
+                                                    ConsultationStatus.Planned => "bg-primary",
+                                                    ConsultationStatus.InProgress => "bg-success",
+                                                    ConsultationStatus.Completed => "bg-secondary",
+                                                    ConsultationStatus.Cancelled => "bg-danger",
+                                                    _ => "bg-secondary"
+                                                })">
+                                                    @consultation.Status.GetDisplayName()
+                                                </span>
+                                            </td>
+                                        </tr>
+                                    }
+                                </tbody>
+                            </table>
+                        </div>
+                    }
+                    else
+                    {
+                        <p class="text-muted">Немає минулих консультацій</p>
+                    }
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Події користувача -->
+    <div class="card shadow-sm">
+        <div class="card-body">
+            <h2 class="h4 mb-4">Події користувача</h2>
+
+            <ul class="nav nav-tabs mb-4">
+                <li class="nav-item">
+                    <a class="nav-link active" data-bs-toggle="tab" href="#upcomingEvents">
+                        Заплановані (@Model.UpcomingEvents.Count())
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" data-bs-toggle="tab" href="#pastEvents">
+                        Минулі (@Model.PastEvents.Count())
+                    </a>
+                </li>
+            </ul>
+
+            <div class="tab-content">
+                <div class="tab-pane fade show active" id="upcomingEvents">
+                    @if (Model.UpcomingEvents.Any())
+                    {
+                        <div class="table-responsive">
+                            <table class="table">
+                                <thead>
+                                    <tr>
+                                        <th>Назва</th>
+                                        <th>Дата</th>
+                                        <th>Місце</th>
+                                        <th>Категорія</th>
+                                        <th>Статус</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    @foreach (var evt in Model.UpcomingEvents)
+                                    {
+                                        <tr>
+                                            <td>@evt.Title</td>
+                                            <td>@evt.Date.ToString("dd.MM.yyyy HH:mm")</td>
+                                            <td>@evt.Location</td>
+                                            <td>@evt.Category.GetDisplayName()</td>
+                                            <td>
+                                                <span class="badge @(evt.Status switch
+                                                {
+                                                    EventStatus.Planned => "bg-primary",
+                                                    EventStatus.InProgress => "bg-success",
+                                                    EventStatus.Completed => "bg-secondary",
+                                                    EventStatus.Cancelled => "bg-danger",
+                                                    _ => "bg-secondary"
+                                                })">
+                                                    @evt.Status.GetDisplayName()
+                                                </span>
+                                            </td>
+                                        </tr>
+                                    }
+                                </tbody>
+                            </table>
+                        </div>
+                    }
+                    else
+                    {
+                        <p class="text-muted">Немає запланованих подій</p>
+                    }
+                </div>
+
+                <div class="tab-pane fade" id="pastEvents">
+                    @if (Model.PastEvents.Any())
+                    {
+                        <div class="table-responsive">
+                            <table class="table">
+                                <thead>
+                                    <tr>
+                                        <th>Назва</th>
+                                        <th>Дата</th>
+                                        <th>Місце</th>
+                                        <th>Категорія</th>
+                                        <th>Статус</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    @foreach (var evt in Model.PastEvents)
+                                    {
+                                        <tr>
+                                            <td>@evt.Title</td>
+                                            <td>@evt.Date.ToString("dd.MM.yyyy HH:mm")</td>
+                                            <td>@evt.Location</td>
+                                            <td>@evt.Category.GetDisplayName()</td>
+                                            <td>
+                                                <span class="badge @(evt.Status switch
+                                                {
+                                                    EventStatus.Planned => "bg-primary",
+                                                    EventStatus.InProgress => "bg-success",
+                                                    EventStatus.Completed => "bg-secondary",
+                                                    EventStatus.Cancelled => "bg-danger",
+                                                    _ => "bg-secondary"
+                                                })">
+                                                    @evt.Status.GetDisplayName()
+                                                </span>
+                                            </td>
+                                        </tr>
+                                    }
+                                </tbody>
+                            </table>
+                        </div>
+                    }
+                    else
+                    {
+                        <p class="text-muted">Немає минулих подій</p>
+                    }
+                </div>
+            </div>
+        </div>
+    </div>
+</div>

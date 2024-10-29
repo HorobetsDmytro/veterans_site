@@ -11,5 +11,13 @@ namespace veterans_site.Interfaces
         Task RegisterUserForEventAsync(string userId, int eventId);
         Task UnregisterUserFromEventAsync(string userId, int eventId);
         Task<int> GetEventParticipantsCountAsync(int eventId);
+
+        Task<int> GetUserEventsCount(string userId);
+        Task RemoveUserParticipationsAsync(string userId);
+        Task<IEnumerable<Event>> GetUserEventsAsync(string userId, bool includeParticipants = false);
+        Task<bool> IsUserRegisteredForEventAsync(int eventId, string userId);
+        Task CancelEventParticipationAsync(int eventId, string userId);
+        Task<bool> HasActiveEventsAsync(string userId);
+        Task<Event> GetByIdWithParticipantsAsync(int eventId);
     }
 }

@@ -246,5 +246,102 @@ namespace veterans_site.Repositories
                 await _context.SaveChangesAsync();
             }
         }
+
+        public async Task<int> GetUserConsultationsCount(string userId)
+        {
+            return await _context.Consultations
+                .Where(c => c.UserId == userId || c.Bookings.Any(b => b.UserId == userId))
+                .CountAsync();
+        }
+
+        public async Task RemoveUserBookingsAsync(string userId)
+        {
+            // Видаляємо записи з групових консультацій
+            var bookings = await _context.ConsultationBookings
+                .Where(b => b.UserId == userId)
+                .ToListAsync();
+
+            if (bookings.Any())
+            {
+                _context.ConsultationBookings.RemoveRange(bookings);
+            }
+
+            // Оновлюємо лічильники учасників
+            var groupConsultations = await _context.Consultations
+                .Where(c => c.Format == ConsultationFormat.Group && c.Bookings.Any(b => b.UserId == userId))
+                .ToListAsync();
+
+            foreach (var consultation in groupConsultations)
+            {
+                consultation.BookedParticipants--;
+            }
+
+            // Очищаємо індивідуальні консультації
+            var individualConsultations = await _context.Consultations
+                .Where(c => c.Format == ConsultationFormat.Individual && c.UserId == userId)
+                .ToListAsync();
+
+            foreach (var consultation in individualConsultations)
+            {
+                consultation.UserId = null;
+                consultation.IsBooked = false;
+            }
+
+            await _context.SaveChangesAsync();
+        }
+
+        public async Task<IEnumerable<Consultation>> GetUserConsultationsAsync(string userId, bool includeBookings = false)
+        {
+            IQueryable<Consultation> query = _context.Consultations;
+
+            if (includeBookings)
+            {
+                query = query.Include(c => c.Bookings);
+            }
+
+            // Отримуємо як індивідуальні, так і групові консультації
+            var consultations = await query
+                .Where(c => c.UserId == userId || c.Bookings.Any(b => b.UserId == userId))
+                .OrderByDescending(c => c.DateTime)
+                .ToListAsync();
+
+            return consultations;
+        }
+
+        public async Task CancelConsultationAsync(int consultationId, string userId)
+        {
+            var consultation = await _context.Consultations
+                .Include(c => c.Bookings)
+                .FirstOrDefaultAsync(c => c.Id == consultationId);
+
+            if (consultation == null)
+                return;
+
+            if (consultation.Format == ConsultationFormat.Individual && consultation.UserId == userId)
+            {
+                consultation.UserId = null;
+                consultation.IsBooked = false;
+            }
+            else if (consultation.Format == ConsultationFormat.Group)
+            {
+                var booking = consultation.Bookings.FirstOrDefault(b => b.UserId == userId);
+                if (booking != null)
+                {
+                    _context.ConsultationBookings.Remove(booking);
+                    consultation.BookedParticipants--;
+                }
+            }
+
+            await _context.SaveChangesAsync();
+        }
+
+        public async Task<bool> HasActiveConsultationsAsync(string userId)
+        {
+            return await _context.Consultations
+                .AnyAsync(c =>
+                    (c.UserId == userId || c.Bookings.Any(b => b.UserId == userId)) &&
+                    c.DateTime > DateTime.Now &&
+                    c.Status != ConsultationStatus.Cancelled);
+        }
     }
 }
