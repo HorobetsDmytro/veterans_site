@@ -39,6 +39,10 @@ builder.Services.AddScoped<IEventRepository, EventRepository>();
 builder.Services.AddScoped<INewsRepository, NewsRepository>();
 builder.Services.AddScoped<IConsultationRepository, ConsultationRepository>();
 
+builder.Services.Configure<EmailSettings>(
+    builder.Configuration.GetSection("EmailSettings"));
+builder.Services.AddScoped<IEmailService, EmailService>();
+
 // Add services to the container.
 builder.Services.AddControllersWithViews();
 

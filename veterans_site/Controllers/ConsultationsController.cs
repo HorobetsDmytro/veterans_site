@@ -5,6 +5,7 @@ using veterans_site.Extensions;
 using veterans_site.Interfaces;
 using veterans_site.Models;
 using veterans_site.Repositories;
+using veterans_site.Services;
 using veterans_site.ViewModels;
 
 namespace veterans_site.Controllers
@@ -12,15 +13,18 @@ namespace veterans_site.Controllers
     public class ConsultationsController : Controller
     {
         private readonly IConsultationRepository _consultationRepository;
+        private readonly IEmailService _emailService;
         private readonly UserManager<ApplicationUser> _userManager;
         private const int PageSize = 6;
 
         public ConsultationsController(
             IConsultationRepository consultationRepository,
-            UserManager<ApplicationUser> userManager)
+            UserManager<ApplicationUser> userManager,
+            IEmailService emailService)
         {
             _consultationRepository = consultationRepository;
             _userManager = userManager;
+            _emailService = emailService;
         }
 
         public async Task<IActionResult> Index(
@@ -100,12 +104,12 @@ namespace veterans_site.Controllers
             return View(consultation);
         }
 
-        [Authorize]
         [HttpPost]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> BookConfirm(int id)
         {
             var userId = _userManager.GetUserId(User);
+            var user = await _userManager.GetUserAsync(User);
 
             if (await _consultationRepository.IsUserBookedForConsultationAsync(id, userId))
             {
@@ -113,8 +117,30 @@ namespace veterans_site.Controllers
                 return RedirectToAction(nameof(Index));
             }
 
+            var consultation = await _consultationRepository.GetByIdAsync(id);
+            if (consultation == null)
+            {
+                TempData["Error"] = "Консультацію не знайдено.";
+                return RedirectToAction(nameof(Index));
+            }
+
             if (await _consultationRepository.BookConsultationAsync(id, userId))
             {
+                // Відправляємо email підтвердження
+                try
+                {
+                    await _emailService.SendConsultationConfirmationAsync(
+                        user.Email,
+                        $"{user.FirstName} {user.LastName}",
+                        consultation.Title,
+                        consultation.DateTime
+                    );
+                }
+                catch (Exception ex)
+                {
+                    Console.WriteLine($"Error sending confirmation email: {ex.Message}");
+                }
+
                 TempData["Success"] = "Ви успішно записались на консультацію!";
             }
             else
