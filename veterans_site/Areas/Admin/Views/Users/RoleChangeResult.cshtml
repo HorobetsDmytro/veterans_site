@@ -1,0 +1,25 @@
+﻿@model veterans_site.ViewModels.RoleChangeResultViewModel
+@{
+    ViewData["Title"] = Model.Success ? "Успішно" : "Помилка";
+}
+
+<div class="container mt-5">
+    <div class="card shadow">
+        <div class="card-body text-center">
+            @if (Model.Success)
+            {
+                <i class="fas fa-check-circle text-success" style="font-size: 48px;"></i>
+                <h2 class="text-success mt-3">@Model.Message</h2>
+            }
+            else
+            {
+                <i class="fas fa-times-circle text-danger" style="font-size: 48px;"></i>
+                <h2 class="text-danger mt-3">@Model.Message</h2>
+            }
+            
+            <div class="mt-4">
+                <p>Ви можете закрити це вікно.</p>
+            </div>
+        </div>
+    </div>
+</div>

@@ -18,7 +18,8 @@ public class VeteranSupportDBContext : IdentityDbContext<ApplicationUser>
     public DbSet<VeteranService> VeteranServices { get; set; }
     public DbSet<EventParticipant> EventParticipants { get; set; }
     public DbSet<ConsultationBooking> ConsultationBookings { get; set; }
-
+    public DbSet<RoleChangeRequest> RoleChangeRequests { get; set; }
+    
     protected override void OnModelCreating(ModelBuilder builder)
     {
         base.OnModelCreating(builder);

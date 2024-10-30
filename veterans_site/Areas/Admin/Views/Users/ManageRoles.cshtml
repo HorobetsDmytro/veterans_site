@@ -46,15 +46,19 @@
     </div>
 </div>
 
-@section Scripts {
-    <script>
-        // Переконуємося, що хоча б одна роль вибрана перед відправкою форми
-        document.querySelector('form').addEventListener('submit', function (e) {
-            var selectedRole = document.querySelector('input[name="SelectedRole"]:checked');
-            if (!selectedRole) {
-                e.preventDefault();
-                alert('Будь ласка, виберіть роль');
+<script>
+    document.addEventListener('DOMContentLoaded', function () {
+        var currentRole = '@Model.SelectedRole'; // Поточна роль
+
+        // При зміні вибраної ролі
+        document.querySelector('input[name="SelectedRole"]').addEventListener('change', function (e) {
+            var submitButton = document.querySelector('button[type="submit"]');
+            if (e.target.value === currentRole) {
+                submitButton.disabled = true;
+                alert('Користувач вже має цю роль');
+            } else {
+                submitButton.disabled = false;
             }
         });
-    </script>
-}
+    });
+</script>

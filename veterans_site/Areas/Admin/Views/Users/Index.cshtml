@@ -1,7 +1,6 @@
-﻿@* Areas/Admin/Views/Users/Index.cshtml *@
-@model veterans_site.ViewModels.UserIndexViewModel
+﻿@model veterans_site.ViewModels.UserIndexViewModel
 @{
-    ViewData["Title"] = "Управління користувачами";
+    ViewData["Title"] = "Користувачі";
 }
 
 <div class="container-fluid mt-4">
@@ -13,7 +12,7 @@
                     <h5 class="mb-0">Пошук</h5>
                 </div>
                 <div class="card-body">
-                    <form asp-action="Index" method="get">
+                    <form method="get" asp-action="Index">
                         <div class="mb-3">
                             <label class="form-label">Пошук за іменем або email</label>
                             <input type="text" name="SearchString" class="form-control" value="@Model.SearchString" />
@@ -26,6 +25,22 @@
 
         <!-- Список користувачів -->
         <div class="col-md-9">
+            @if (TempData["Success"] != null)
+            {
+                <div class="alert alert-success alert-dismissible fade show" role="alert">
+                    @TempData["Success"]
+                    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                </div>
+            }
+
+            @if (TempData["Error"] != null)
+            {
+                <div class="alert alert-danger alert-dismissible fade show" role="alert">
+                    @TempData["Error"]
+                    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                </div>
+            }
+
             <div class="card">
                 <div class="card-body">
                     <div class="d-flex justify-content-between align-items-center mb-4">

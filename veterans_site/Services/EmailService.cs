@@ -101,5 +101,82 @@ namespace veterans_site.Services
                 throw;
             }
         }
+
+        // Services/EmailService.cs
+        public async Task SendRoleChangeConfirmationEmailAsync(string toEmail, string userName, string newRole, string confirmationLink, string rejectLink)
+        {
+            var email = new MimeMessage();
+            email.From.Add(MailboxAddress.Parse(_emailSettings.FromEmail));
+            email.To.Add(MailboxAddress.Parse(toEmail));
+            email.Subject = "Запит на зміну ролі";
+
+            var builder = new BodyBuilder();
+            builder.HtmlBody = $@"
+        <html>
+        <head>
+            <meta name='viewport' content='width=device-width, initial-scale=1.0'>
+            <style>
+                .container {{
+                    padding: 20px;
+                    font-family: Arial, sans-serif;
+                    max-width: 600px;
+                    margin: 0 auto;
+                }}
+                .button {{
+                    display: inline-block;
+                    padding: 15px 30px;
+                    margin: 10px;
+                    text-decoration: none;
+                    border-radius: 5px;
+                    font-weight: bold;
+                    color: white !important;
+                }}
+                @media (max-width: 480px) {{
+                    .button {{
+                        display: block;
+                        margin: 10px 0;
+                    }}
+                }}
+                .confirm-button {{
+                    background-color: #28a745;
+                }}
+                .reject-button {{
+                    background-color: #dc3545;
+                }}
+            </style>
+        </head>
+        <body>
+            <div class='container'>
+                <h2>Вітаємо, {userName}!</h2>
+                <p>Адміністратор хоче змінити вашу роль у системі на: <strong>{newRole}</strong></p>
+                <p>Будь ласка, підтвердіть чи відхиліть цю зміну:</p>
+                
+                <div style='margin: 20px 0;'>
+                    <!-- Видалено target='_blank' з обох посилань -->
+                    <a href='{confirmationLink}' class='button confirm-button'>
+                        Підтвердити зміну ролі
+                    </a>
+                    <a href='{rejectLink}' class='button reject-button'>
+                        Відхилити зміну ролі
+                    </a>
+                </div>
+                
+                <p style='margin-top: 20px; color: #666;'>
+                    З повагою,<br>
+                    Команда підтримки ветеранів
+                </p>
+            </div>
+        </body>
+        </html>";
+
+            email.Body = builder.ToMessageBody();
+
+            using var smtp = new SmtpClient();
+            await smtp.ConnectAsync(_emailSettings.SmtpServer, _emailSettings.SmtpPort, SecureSocketOptions.StartTls);
+            await smtp.AuthenticateAsync(_emailSettings.FromEmail, _emailSettings.Password);
+            await smtp.SendAsync(email);
+            await smtp.DisconnectAsync(true);
+        }
     }
+
 }

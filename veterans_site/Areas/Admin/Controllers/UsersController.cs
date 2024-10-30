@@ -9,6 +9,7 @@ using veterans_site.Models;
 using veterans_site.ViewModels;
 using veterans_site.Interfaces;
 using veterans_site.Services;
+using veterans_site.Data;
 
 namespace veterans_site.Areas.Admin.Controllers
 {
@@ -22,6 +23,8 @@ namespace veterans_site.Areas.Admin.Controllers
         private readonly IConsultationRepository _consultationRepository;
         private readonly IEventRepository _eventRepository;
         private readonly ILogger<UsersController> _logger;
+        private readonly VeteranSupportDBContext _context;
+        private readonly IConfiguration _configuration;
         private const int PageSize = 10;
 
         public UsersController(
@@ -30,7 +33,9 @@ namespace veterans_site.Areas.Admin.Controllers
             IEventRepository eventRepository,
             RoleManager<IdentityRole> roleManager,
             IEmailService emailService,
-            ILogger<UsersController> logger)
+            ILogger<UsersController> logger,
+            VeteranSupportDBContext context,
+            IConfiguration configuration)
         {
             _userManager = userManager;
             _consultationRepository = consultationRepository;
@@ -38,6 +43,8 @@ namespace veterans_site.Areas.Admin.Controllers
             _roleManager = roleManager;
             _emailService = emailService;
             _logger = logger;
+            _context = context;
+            _configuration = configuration;
         }
 
         public async Task<IActionResult> Index(string sortOrder, string currentFilter, string searchString, int? page)
@@ -225,52 +232,107 @@ namespace veterans_site.Areas.Admin.Controllers
                 return NotFound();
             }
 
+            // Отримуємо поточну роль користувача
+            var currentRole = (await _userManager.GetRolesAsync(user)).FirstOrDefault();
+
+            // Перевіряємо чи нова роль відрізняється від поточної
+            if (currentRole == model.SelectedRole)
+            {
+                TempData["Error"] = $"Користувач вже має роль {model.SelectedRole}";
+                return RedirectToAction(nameof(Index));
+            }
+
             try
             {
-                // Отримуємо поточні ролі користувача
-                var userRoles = await _userManager.GetRolesAsync(user);
-                var currentRole = userRoles.FirstOrDefault();
+                // Генеруємо токен для підтвердження
+                var token = Guid.NewGuid().ToString();
 
-                // Якщо нова роль відрізняється від поточної
-                if (currentRole != model.SelectedRole)
+                // Створюємо запит на зміну ролі
+                var roleChangeRequest = new RoleChangeRequest
                 {
-                    // Видаляємо всі поточні ролі
-                    if (userRoles.Any())
+                    UserId = user.Id,
+                    NewRole = model.SelectedRole,
+                    Token = token,
+                    ExpiryTime = DateTime.UtcNow.AddHours(24),
+                    IsConfirmed = false
+                };
+
+                // Зберігаємо запит
+                _context.RoleChangeRequests.Add(roleChangeRequest);
+                await _context.SaveChangesAsync();
+
+                // Формуємо посилання для підтвердження/відхилення
+                var baseUrl = $"{Request.Scheme}://{Request.Host}";
+                var confirmationLink = $"{baseUrl}/Admin/Users/ConfirmRoleChange?token={token}&confirm=true";
+                var rejectLink = $"{baseUrl}/Admin/Users/ConfirmRoleChange?token={token}&confirm=false";
+
+                // Відправляємо email
+                await _emailService.SendRoleChangeConfirmationEmailAsync(
+                    user.Email,
+                    $"{user.FirstName} {user.LastName}",
+                    model.SelectedRole,
+                    confirmationLink,
+                    rejectLink
+                );
+
+                TempData["Success"] = "Запит на зміну ролі надіслано користувачу. Очікуйте підтвердження.";
+            }
+            catch (Exception ex)
+            {
+                TempData["Error"] = $"Помилка: {ex.Message}";
+            }
+
+            return RedirectToAction(nameof(Index));
+        }
+
+        [AllowAnonymous]
+        [HttpGet] // Явно вказуємо, що це GET запит
+        public async Task<IActionResult> ConfirmRoleChange(string token, bool confirm)
+        {
+            if (string.IsNullOrEmpty(token))
+            {
+                return View("Error", new ErrorViewModel { Message = "Токен не може бути пустим." });
+            }
+
+            var request = await _context.RoleChangeRequests
+                .FirstOrDefaultAsync(r => r.Token == token && !r.IsConfirmed && r.ExpiryTime > DateTime.UtcNow);
+
+            if (request == null)
+            {
+                return View("Error", new ErrorViewModel { Message = "Недійсний або застарілий токен." });
+            }
+
+            try
+            {
+                if (confirm)
+                {
+                    var user = await _userManager.FindByIdAsync(request.UserId);
+                    if (user != null)
                     {
-                        await _userManager.RemoveFromRolesAsync(user, userRoles);
+                        var currentRoles = await _userManager.GetRolesAsync(user);
+                        await _userManager.RemoveFromRolesAsync(user, currentRoles);
+                        await _userManager.AddToRoleAsync(user, request.NewRole);
+
+                        request.IsConfirmed = true;
+                        await _context.SaveChangesAsync();
+
+                        return View("RoleChangeSuccess");
                     }
+                }
+                else
+                {
+                    _context.RoleChangeRequests.Remove(request);
+                    await _context.SaveChangesAsync();
 
-                    // Додаємо нову роль
-                    if (!string.IsNullOrEmpty(model.SelectedRole))
-                    {
-                        await _userManager.AddToRoleAsync(user, model.SelectedRole);
-
-                        // Відправляємо email про зміну ролі
-                        try
-                        {
-                            await _emailService.SendRoleChangedEmailAsync(
-                                user.Email,
-                                $"{user.FirstName} {user.LastName}",
-                                model.SelectedRole
-                            );  
-                        }
-                        catch (Exception emailEx)
-                        {
-                            // Логуємо помилку, але не перериваємо процес
-                            _logger.LogError($"Failed to send role change email: {emailEx.Message}");
-                        }
-                    }
-
-                    TempData["Success"] = "Роль користувача успішно оновлено";
+                    return View("RoleChangeRejected");
                 }
             }
             catch (Exception ex)
             {
-                TempData["Error"] = $"Помилка при оновленні ролі: {ex.Message}";
-                _logger.LogError($"Error updating user role: {ex.Message}");
+                return View("Error", new ErrorViewModel { Message = $"Помилка при зміні ролі: {ex.Message}" });
             }
 
-            return RedirectToAction(nameof(Index));
+            return View("Error", new ErrorViewModel { Message = "Щось пішло не так." });
         }
     }
 }
