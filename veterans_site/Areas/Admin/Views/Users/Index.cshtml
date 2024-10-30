@@ -94,6 +94,13 @@
                                                    class="btn btn-outline-primary btn-sm">
                                                     <i class="fas fa-info-circle"></i>
                                                 </a>
+                                                @if (!user.Roles.Contains("Admin"))
+                                                {
+                                                    <a asp-action="ManageRoles" asp-route-userId="@user.Id"
+                                                       class="btn btn-outline-success btn-sm">
+                                                        <i class="fas fa-user-tag"></i>
+                                                    </a>
+                                                }
                                                 <form asp-action="ToggleActive" method="post" class="d-inline">
                                                     @Html.AntiForgeryToken()
                                                     <input type="hidden" name="id" value="@user.Id" />

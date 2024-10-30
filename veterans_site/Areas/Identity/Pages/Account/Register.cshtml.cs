@@ -103,6 +103,7 @@ namespace veterans_site.Areas.Identity.Pages.Account
 
                 if (result.Succeeded)
                 {
+                    await _userManager.AddToRoleAsync(user, "Veteran");
                     _logger.LogInformation("User created a new account with password.");
 
                     // Автоматичний вхід

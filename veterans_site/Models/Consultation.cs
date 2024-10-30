@@ -62,6 +62,19 @@ namespace veterans_site.Models
         public int BookedParticipants { get; set; } = 0;
 
         public ICollection<ConsultationBooking> Bookings { get; set; } = new List<ConsultationBooking>();
+
+        [Required(ErrorMessage = "Оберіть формат проведення консультації")]
+        [Display(Name = "Формат проведення")]
+        public ConsultationMode Mode { get; set; }
+
+        [Display(Name = "Місце проведення")]
+        public string Location { get; set; }
+
+        // Валідація для місця проведення, якщо консультація офлайн
+        public bool ShouldValidateLocation()
+        {
+            return Mode == ConsultationMode.Offline;
+        }
     }
 
     public enum ConsultationType
@@ -92,5 +105,13 @@ namespace veterans_site.Models
         Completed,
         [Display(Name = "Скасовано")]
         Cancelled
+    }
+
+    public enum ConsultationMode
+    {
+        [Display(Name = "Онлайн")]
+        Online,
+        [Display(Name = "Офлайн")]
+        Offline
     }
 }

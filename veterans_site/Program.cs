@@ -13,6 +13,7 @@ var connectionString = builder.Configuration.GetConnectionString("DefaultConnect
 
 builder.Services.AddDbContext<VeteranSupportDBContext>(options => options.UseSqlServer(connectionString));
 
+// Додаємо конфігурацію для Identity з автоматичним призначенням ролі Veteran
 builder.Services.AddDefaultIdentity<ApplicationUser>(options =>
 {
     options.SignIn.RequireConfirmedAccount = false;
@@ -23,7 +24,18 @@ builder.Services.AddDefaultIdentity<ApplicationUser>(options =>
     options.Password.RequiredLength = 4;
 })
 .AddRoles<IdentityRole>()
-.AddEntityFrameworkStores<VeteranSupportDBContext>();
+.AddEntityFrameworkStores<VeteranSupportDBContext>()
+.AddDefaultTokenProviders()
+.AddDefaultUI();
+
+// Додаємо обробник подій для автоматичного призначення ролі Veteran
+builder.Services.Configure<IdentityOptions>(options =>
+{
+    options.SignIn.RequireConfirmedAccount = false;
+});
+
+// Додаємо обробник подій для автоматичного призначення ролі Veteran при реєстрації
+builder.Services.AddScoped<IUserClaimsPrincipalFactory<ApplicationUser>, UserClaimsPrincipalFactory<ApplicationUser, IdentityRole>>();
 
 builder.Services.ConfigureApplicationCookie(options =>
 {
@@ -34,6 +46,11 @@ builder.Services.ConfigureApplicationCookie(options =>
     options.ExpireTimeSpan = TimeSpan.FromMinutes(60);
 });
 
+// Реєструємо обробник подій для автоматичного призначення ролі
+builder.Services.Configure<IdentityOptions>(options => { });
+builder.Services.AddScoped<IUserClaimsPrincipalFactory<ApplicationUser>, CustomUserClaimsPrincipalFactory>();
+
+// Додаємо репозиторії та сервіси
 builder.Services.AddScoped(typeof(IGenericRepository<>), typeof(GenericRepository<>));
 builder.Services.AddScoped<IEventRepository, EventRepository>();
 builder.Services.AddScoped<INewsRepository, NewsRepository>();
@@ -43,16 +60,18 @@ builder.Services.Configure<EmailSettings>(
     builder.Configuration.GetSection("EmailSettings"));
 builder.Services.AddScoped<IEmailService, EmailService>();
 
-// Add services to the container.
 builder.Services.AddControllersWithViews();
 
 builder.Services.AddAuthorization(options =>
 {
     options.AddPolicy("RequireAdminRole", policy => policy.RequireRole("Admin"));
+    options.AddPolicy("RequireVeteranRole", policy => policy.RequireRole("Veteran"));
+    options.AddPolicy("RequireSpecialistRole", policy => policy.RequireRole("Specialist"));
 });
 
 var app = builder.Build();
 
+// Ініціалізація ролей та адміністратора
 using (var scope = app.Services.CreateScope())
 {
     var services = scope.ServiceProvider;
@@ -68,6 +87,8 @@ using (var scope = app.Services.CreateScope())
         logger.LogError(ex, "An error occurred while seeding the database.");
     }
 }
+
+// Решта коду залишається без змін
 
 // Configure the HTTP request pipeline.
 if (!app.Environment.IsDevelopment())

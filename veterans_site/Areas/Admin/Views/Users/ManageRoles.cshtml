@@ -1,0 +1,60 @@
+﻿@* Areas/Admin/Views/Users/ManageRoles.cshtml *@
+@model veterans_site.ViewModels.UserRolesViewModel
+@{
+    ViewData["Title"] = "Управління ролями користувача";
+}
+
+<div class="container mt-4">
+    <div class="card shadow">
+        <div class="card-body">
+            <h2 class="card-title mb-4">Управління ролями користувача</h2>
+
+            <div class="alert alert-info mb-4">
+                <p class="mb-0">
+                    <strong>Користувач:</strong> @Model.UserName
+                </p>
+            </div>
+
+            <form method="post" asp-action="ManageRoles">
+                <input type="hidden" asp-for="UserId" />
+                <input type="hidden" asp-for="UserName" />
+
+                <div class="mb-4">
+                    <label class="form-label">Виберіть роль:</label>
+                    @foreach (var role in Model.AvailableRoles)
+                    {
+                        <div class="form-check mb-2">
+                            <input type="radio"
+                                   class="form-check-input"
+                                   name="SelectedRole"
+                                   value="@role"
+                                   id="role_@role"
+                            @(Model.SelectedRole == role ? "checked" : "") />
+                            <label class="form-check-label" for="role_@role">
+                                @role
+                            </label>
+                        </div>
+                    }
+                </div>
+
+                <div class="d-flex gap-2">
+                    <button type="submit" class="btn btn-primary">Зберегти зміни</button>
+                    <a asp-action="Index" class="btn btn-secondary">Назад до списку</a>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        // Переконуємося, що хоча б одна роль вибрана перед відправкою форми
+        document.querySelector('form').addEventListener('submit', function (e) {
+            var selectedRole = document.querySelector('input[name="SelectedRole"]:checked');
+            if (!selectedRole) {
+                e.preventDefault();
+                alert('Будь ласка, виберіть роль');
+            }
+        });
+    </script>
+}

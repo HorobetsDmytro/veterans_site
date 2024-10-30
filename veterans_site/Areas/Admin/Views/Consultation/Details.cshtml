@@ -47,6 +47,17 @@
                         <li class="mb-2">
                             <strong>Статус:</strong> @Model.Status.GetDisplayName()
                         </li>
+                        <li class="mb-2">
+                            <i class="fas fa-desktop"></i>
+                            <strong>Формат проведення:</strong> @Model.Mode.GetDisplayName()
+                        </li>
+                        @if (Model.Mode == ConsultationMode.Offline)
+                        {
+                            <li class="mb-2">
+                                <i class="fas fa-map-marker-alt"></i>
+                                <strong>Місце проведення:</strong> @Model.Location
+                            </li>
+                        }
                     </ul>
                 </div>
 

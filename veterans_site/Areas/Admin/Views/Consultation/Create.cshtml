@@ -1,4 +1,5 @@
-﻿@model veterans_site.Models.Consultation
+﻿
+@model veterans_site.Models.Consultation
 @{
     ViewData["Title"] = "Створення консультації";
 }
@@ -75,6 +76,20 @@
 
                     <div class="col-md-6">
                         <div class="mb-3">
+                            <label asp-for="Mode" class="form-label">Формат проведення</label>
+                            <select asp-for="Mode" class="form-select" asp-items="Html.GetEnumSelectList<ConsultationMode>()" id="consultationMode">
+                                <option value="">Виберіть формат проведення</option>
+                            </select>
+                            <span asp-validation-for="Mode" class="text-danger"></span>
+                        </div>
+
+                        <div class="mb-3" id="locationGroup">
+                            <label asp-for="Location" class="form-label">Місце проведення</label>
+                            <input asp-for="Location" class="form-control" id="locationInput" />
+                            <span asp-validation-for="Location" class="text-danger"></span>
+                        </div>
+
+                        <div class="mb-3">
                             <label asp-for="SpecialistName" class="form-label"></label>
                             <input asp-for="SpecialistName" class="form-control" />
                             <span asp-validation-for="SpecialistName" class="text-danger"></span>
@@ -109,8 +124,41 @@
     </div>
 </div>
 
+
 @section Scripts {
     @{
         await Html.RenderPartialAsync("_ValidationScriptsPartial");
     }
+    <script>
+        document.addEventListener('DOMContentLoaded', function () {
+            var modeSelect = document.getElementById('consultationMode');
+            var locationInput = document.getElementById('locationInput');
+            var locationGroup = document.getElementById('locationGroup');
+
+            function updateLocationField() {
+                console.log('Selected value:', modeSelect.value); // Для діагностики
+                if (modeSelect.value === '0') { // Онлайн
+                    locationInput.disabled = true;
+                    locationInput.value = '';
+                    locationGroup.style.opacity = '0.5';
+                } else {
+                    locationInput.disabled = false;
+                    locationGroup.style.opacity = '1';
+                }
+            }
+
+            // При завантаженні сторінки
+            updateLocationField();
+
+            // При зміні значення
+            modeSelect.addEventListener('change', updateLocationField);
+
+            // При відправці форми
+            document.querySelector('form').addEventListener('submit', function () {
+                if (modeSelect.value === '0') {
+                    locationInput.value = '';
+                }
+            });
+        });
+    </script>
 }

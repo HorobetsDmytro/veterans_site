@@ -60,5 +60,46 @@ namespace veterans_site.Services
                 throw;
             }
         }
+
+        public async Task SendRoleChangedEmailAsync(string toEmail, string userName, string newRole)
+        {
+            try
+            {
+                var email = new MimeMessage();
+                email.From.Add(MailboxAddress.Parse(_emailSettings.FromEmail));
+                email.To.Add(MailboxAddress.Parse(toEmail));
+                email.Subject = "Зміна ролі в системі підтримки ветеранів";
+
+                var builder = new BodyBuilder();
+                builder.HtmlBody = $@"
+                <html>
+                <body style='font-family: Arial, sans-serif; margin: 0; padding: 20px;'>
+                    <div style='background-color: #f8f9fa; padding: 20px; border-radius: 5px;'>
+                        <h2 style='color: #2c3e50;'>Вітаємо, {userName}!</h2>
+                        <p>Повідомляємо, що адміністратор змінив вашу роль у системі.</p>
+                        <p>Ваша нова роль: <strong>{newRole}</strong></p>
+                        <p>Якщо у вас виникли питання, будь ласка, зв'яжіться з адміністрацією.</p>
+                        <br>
+                        <p style='color: #7f8c8d;'>З повагою,<br>Команда підтримки ветеранів</p>
+                    </div>
+                </body>
+                </html>";
+
+                email.Body = builder.ToMessageBody();
+
+                using var smtp = new SmtpClient();
+                await smtp.ConnectAsync(_emailSettings.SmtpServer, _emailSettings.SmtpPort, SecureSocketOptions.StartTls);
+                await smtp.AuthenticateAsync(_emailSettings.FromEmail, _emailSettings.Password);
+                await smtp.SendAsync(email);
+                await smtp.DisconnectAsync(true);
+
+                _logger.LogInformation($"Role change email sent to {toEmail}");
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError($"Error sending role change email: {ex.Message}");
+                throw;
+            }
+        }
     }
 }

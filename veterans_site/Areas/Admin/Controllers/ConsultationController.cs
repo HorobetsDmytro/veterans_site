@@ -69,36 +69,19 @@ namespace veterans_site.Areas.Admin.Controllers
 
         [HttpPost]
         [ValidateAntiForgeryToken]
-        public async Task<IActionResult> Create([Bind("Title,Description,DateTime,Duration,Type,Format,Status,Price,SpecialistName,MaxParticipants")] Consultation consultation)
+        public async Task<IActionResult> Create([Bind("Title,Description,DateTime,Duration,Type,Format,Mode,Location,Price,SpecialistName,MaxParticipants")] Consultation consultation)
         {
-            try
+            if (consultation.Mode == ConsultationMode.Offline && string.IsNullOrWhiteSpace(consultation.Location))
             {
-                if (!ModelState.IsValid)
-                {
-                    foreach (var modelState in ModelState.Values)
-                    {
-                        foreach (var error in modelState.Errors)
-                        {
-                            Console.WriteLine($"Validation Error: {error.ErrorMessage}");
-                        }
-                    }
-                    return View(consultation);
-                }
+                ModelState.AddModelError("Location", "Для офлайн консультації необхідно вказати місце проведення");
+            }
 
-                if (consultation.MaxParticipants == null)
-                {
-                    consultation.MaxParticipants = 1;
-                }
-
+            if (ModelState.IsValid)
+            {
                 await _consultationRepository.AddAsync(consultation);
                 return RedirectToAction(nameof(Index));
             }
-            catch (Exception ex)
-            {
-                Console.WriteLine($"Error creating consultation: {ex.Message}");
-                ModelState.AddModelError("", "Виникла помилка при створенні консультації. Спробуйте ще раз.");
-                return View(consultation);
-            }
+            return View(consultation);
         }
 
         public async Task<IActionResult> Edit(int? id)
@@ -115,23 +98,23 @@ namespace veterans_site.Areas.Admin.Controllers
 
         [HttpPost]
         [ValidateAntiForgeryToken]
-        public async Task<IActionResult> Edit(int id, [Bind("Id,Title,Description,DateTime,Duration,Type,Format,Status,Price,SpecialistName,MaxParticipants")] Consultation consultation)
+        public async Task<IActionResult> Edit(int id, [Bind("Id,Title,Description,DateTime,Duration,Type,Format,Mode,Location,Price,SpecialistName,MaxParticipants")] Consultation consultation)
         {
             if (id != consultation.Id)
+            {
                 return NotFound();
+            }
+
+            // Додаткова валідація для офлайн консультацій
+            if (consultation.Mode == ConsultationMode.Offline && string.IsNullOrWhiteSpace(consultation.Location))
+            {
+                ModelState.AddModelError("Location", "Для офлайн консультації необхідно вказати місце проведення");
+            }
 
             if (ModelState.IsValid)
             {
-                try
-                {
-                    await _consultationRepository.UpdateAsync(consultation);
-                    return RedirectToAction(nameof(Index));
-                }
-                catch (Exception ex)
-                {
-                    Console.WriteLine($"Error updating consultation: {ex.Message}");
-                    ModelState.AddModelError("", "Виникла помилка при оновленні консультації.");
-                }
+                await _consultationRepository.UpdateAsync(consultation);
+                return RedirectToAction(nameof(Index));
             }
             return View(consultation);
         }

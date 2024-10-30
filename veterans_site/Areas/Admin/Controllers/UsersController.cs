@@ -8,6 +8,7 @@ using System.Threading.Tasks;
 using veterans_site.Models;
 using veterans_site.ViewModels;
 using veterans_site.Interfaces;
+using veterans_site.Services;
 
 namespace veterans_site.Areas.Admin.Controllers
 {
@@ -16,18 +17,27 @@ namespace veterans_site.Areas.Admin.Controllers
     public class UsersController : Controller
     {
         private readonly UserManager<ApplicationUser> _userManager;
+        private readonly RoleManager<IdentityRole> _roleManager;
+        private readonly IEmailService _emailService;
         private readonly IConsultationRepository _consultationRepository;
         private readonly IEventRepository _eventRepository;
+        private readonly ILogger<UsersController> _logger;
         private const int PageSize = 10;
 
         public UsersController(
             UserManager<ApplicationUser> userManager,
             IConsultationRepository consultationRepository,
-            IEventRepository eventRepository)
+            IEventRepository eventRepository,
+            RoleManager<IdentityRole> roleManager,
+            IEmailService emailService,
+            ILogger<UsersController> logger)
         {
             _userManager = userManager;
             _consultationRepository = consultationRepository;
             _eventRepository = eventRepository;
+            _roleManager = roleManager;
+            _emailService = emailService;
+            _logger = logger;
         }
 
         public async Task<IActionResult> Index(string sortOrder, string currentFilter, string searchString, int? page)
@@ -179,6 +189,86 @@ namespace veterans_site.Areas.Admin.Controllers
             TempData["Success"] = user.IsActive ?
                 "Обліковий запис активовано." :
                 "Обліковий запис деактивовано.";
+
+            return RedirectToAction(nameof(Index));
+        }
+
+        public async Task<IActionResult> ManageRoles(string userId)
+        {
+            var user = await _userManager.FindByIdAsync(userId);
+            if (user == null)
+            {
+                return NotFound();
+            }
+
+            var userRoles = await _userManager.GetRolesAsync(user);
+            var allRoles = new List<string> { "Veteran", "Specialist" }; // Фіксований список доступних ролей
+
+            var model = new UserRolesViewModel
+            {
+                UserId = userId,
+                UserName = $"{user.FirstName} {user.LastName}",
+                SelectedRole = userRoles.FirstOrDefault(), // Поточна роль
+                AvailableRoles = allRoles
+            };
+
+            return View(model);
+        }
+
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> ManageRoles(UserRolesViewModel model)
+        {
+            var user = await _userManager.FindByIdAsync(model.UserId);
+            if (user == null)
+            {
+                return NotFound();
+            }
+
+            try
+            {
+                // Отримуємо поточні ролі користувача
+                var userRoles = await _userManager.GetRolesAsync(user);
+                var currentRole = userRoles.FirstOrDefault();
+
+                // Якщо нова роль відрізняється від поточної
+                if (currentRole != model.SelectedRole)
+                {
+                    // Видаляємо всі поточні ролі
+                    if (userRoles.Any())
+                    {
+                        await _userManager.RemoveFromRolesAsync(user, userRoles);
+                    }
+
+                    // Додаємо нову роль
+                    if (!string.IsNullOrEmpty(model.SelectedRole))
+                    {
+                        await _userManager.AddToRoleAsync(user, model.SelectedRole);
+
+                        // Відправляємо email про зміну ролі
+                        try
+                        {
+                            await _emailService.SendRoleChangedEmailAsync(
+                                user.Email,
+                                $"{user.FirstName} {user.LastName}",
+                                model.SelectedRole
+                            );  
+                        }
+                        catch (Exception emailEx)
+                        {
+                            // Логуємо помилку, але не перериваємо процес
+                            _logger.LogError($"Failed to send role change email: {emailEx.Message}");
+                        }
+                    }
+
+                    TempData["Success"] = "Роль користувача успішно оновлено";
+                }
+            }
+            catch (Exception ex)
+            {
+                TempData["Error"] = $"Помилка при оновленні ролі: {ex.Message}";
+                _logger.LogError($"Error updating user role: {ex.Message}");
+            }
 
             return RedirectToAction(nameof(Index));
         }

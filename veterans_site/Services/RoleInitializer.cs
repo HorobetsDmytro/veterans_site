@@ -7,7 +7,7 @@ namespace veterans_site.Services
     {
         public static async Task InitializeAsync(UserManager<ApplicationUser> userManager, RoleManager<IdentityRole> roleManager)
         {
-            string[] roleNames = { "Admin", "Veteran", "Guest" };
+            string[] roleNames = { "Admin", "Veteran", "Specialist" };
             foreach (var roleName in roleNames)
             {
                 if (!await roleManager.RoleExistsAsync(roleName))
@@ -26,7 +26,9 @@ namespace veterans_site.Services
                     UserName = adminEmail,
                     Email = adminEmail,
                     FirstName = "Admin",
-                    LastName = "User"
+                    LastName = "User",
+                    EmailConfirmed = true,
+                    IsActive = true
                 };
 
                 IdentityResult result = await userManager.CreateAsync(admin, adminPassword);
