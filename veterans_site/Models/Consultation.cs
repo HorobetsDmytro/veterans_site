@@ -68,7 +68,7 @@ namespace veterans_site.Models
         public ConsultationMode Mode { get; set; }
 
         [Display(Name = "Місце проведення")]
-        public string Location { get; set; }
+        public string? Location { get; set; }
 
         // Валідація для місця проведення, якщо консультація офлайн
         public bool ShouldValidateLocation()

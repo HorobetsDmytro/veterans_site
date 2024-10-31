@@ -12,18 +12,25 @@ namespace veterans_site.Repositories
         }
 
         public async Task<IEnumerable<Consultation>> GetFilteredConsultationsAsync(
-            ConsultationType? type = null,
-            ConsultationFormat? format = null,
-            ConsultationStatus? status = null,
-            double? minPrice = null,
-            double? maxPrice = null,
-            string sortOrder = null,
-            int page = 1,
-            int pageSize = 6)
+        ConsultationType? type = null,
+        ConsultationFormat? format = null,
+        ConsultationStatus? status = null,
+        double? minPrice = null,
+        double? maxPrice = null,
+        string sortOrder = null,
+        int page = 1,
+        int pageSize = 6,
+        string specialistName = null)
         {
             var query = _context.Consultations.AsQueryable();
 
-            // Застосовуємо фільтри
+            // Фільтрація за спеціалістом, якщо вказано
+            if (!string.IsNullOrEmpty(specialistName))
+            {
+                query = query.Where(c => c.SpecialistName == specialistName);
+            }
+
+            // Застосовуємо інші фільтри
             if (type.HasValue)
                 query = query.Where(c => c.Type == type.Value);
 
@@ -62,9 +69,16 @@ namespace veterans_site.Repositories
             ConsultationStatus? status = null,
             double? minPrice = null,
             double? maxPrice = null,
-            int pageSize = 6)
+            int pageSize = 6,
+            string specialistName = null)
         {
             var query = _context.Consultations.AsQueryable();
+
+            // Фільтрація за спеціалістом, якщо вказано
+            if (!string.IsNullOrEmpty(specialistName))
+            {
+                query = query.Where(c => c.SpecialistName == specialistName);
+            }
 
             if (type.HasValue)
                 query = query.Where(c => c.Type == type.Value);

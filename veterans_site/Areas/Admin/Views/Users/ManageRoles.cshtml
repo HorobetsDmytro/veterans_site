@@ -48,9 +48,8 @@
 
 <script>
     document.addEventListener('DOMContentLoaded', function () {
-        var currentRole = '@Model.SelectedRole'; // Поточна роль
-
-        // При зміні вибраної ролі
+        var currentRole = '@Model.SelectedRole'; 
+        
         document.querySelector('input[name="SelectedRole"]').addEventListener('change', function (e) {
             var submitButton = document.querySelector('button[type="submit"]');
             if (e.target.value === currentRole) {

@@ -32,10 +32,8 @@
     <Folder Include="Areas\Admin\Data\" />
     <Folder Include="Areas\Admin\Models\" />
     <Folder Include="Areas\Admin\Views\Shared\" />
-    <Folder Include="Areas\Specialist\Controllers\" />
     <Folder Include="Areas\Specialist\Data\" />
     <Folder Include="Areas\Specialist\Models\" />
-    <Folder Include="Areas\Specialist\Views\" />
     <Folder Include="wwwroot\images\" />
   </ItemGroup>
 

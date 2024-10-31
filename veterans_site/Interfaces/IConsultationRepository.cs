@@ -5,15 +5,15 @@ namespace veterans_site.Interfaces
     public interface IConsultationRepository : IGenericRepository<Consultation>
     {
         Task<IEnumerable<Consultation>> GetFilteredConsultationsAsync(
-            ConsultationType? type = null,
-            ConsultationFormat? format = null,
-            ConsultationStatus? status = null,
-            double? minPrice = null,
-            double? maxPrice = null,
-            string sortOrder = null,
-            int page = 1,
-            int pageSize = 6
-        );
+        ConsultationType? type = null,
+        ConsultationFormat? format = null,
+        ConsultationStatus? status = null,
+        double? minPrice = null,
+        double? maxPrice = null,
+        string sortOrder = null,
+        int page = 1,
+        int pageSize = 6,
+        string specialistName = null);
 
         Task<int> GetTotalPagesAsync(
             ConsultationType? type = null,
@@ -21,8 +21,8 @@ namespace veterans_site.Interfaces
             ConsultationStatus? status = null,
             double? minPrice = null,
             double? maxPrice = null,
-            int pageSize = 6
-        );
+            int pageSize = 6,
+            string specialistName = null);
 
         Task<IEnumerable<Consultation>> GetUserConsultationsAsync(string userId);
         Task<bool> IsUserRegisteredForConsultationAsync(string userId, int consultationId);

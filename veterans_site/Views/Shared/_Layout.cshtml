@@ -55,6 +55,15 @@
                                 </a>
                             </li>
                         }
+
+                        @if (SignInManager.IsSignedIn(User) && User.IsInRole("Specialist"))
+                        {
+                            <li class="nav-item">
+                                <a class="nav-link text-dark" asp-area="Specialist" asp-controller="Consultation" asp-action="Index">
+                                    <i class="fas fa-user-md"></i> Консультації
+                                </a>
+                            </li>
+                        }
                     </ul>
                     <ul class="navbar-nav">
                         @if (SignInManager.IsSignedIn(User))

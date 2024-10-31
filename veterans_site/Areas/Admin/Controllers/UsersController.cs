@@ -232,10 +232,8 @@ namespace veterans_site.Areas.Admin.Controllers
                 return NotFound();
             }
 
-            // Отримуємо поточну роль користувача
             var currentRole = (await _userManager.GetRolesAsync(user)).FirstOrDefault();
 
-            // Перевіряємо чи нова роль відрізняється від поточної
             if (currentRole == model.SelectedRole)
             {
                 TempData["Error"] = $"Користувач вже має роль {model.SelectedRole}";
@@ -244,10 +242,8 @@ namespace veterans_site.Areas.Admin.Controllers
 
             try
             {
-                // Генеруємо токен для підтвердження
                 var token = Guid.NewGuid().ToString();
 
-                // Створюємо запит на зміну ролі
                 var roleChangeRequest = new RoleChangeRequest
                 {
                     UserId = user.Id,
@@ -257,16 +253,13 @@ namespace veterans_site.Areas.Admin.Controllers
                     IsConfirmed = false
                 };
 
-                // Зберігаємо запит
                 _context.RoleChangeRequests.Add(roleChangeRequest);
                 await _context.SaveChangesAsync();
 
-                // Формуємо посилання для підтвердження/відхилення
                 var baseUrl = $"{Request.Scheme}://{Request.Host}";
                 var confirmationLink = $"{baseUrl}/Admin/Users/ConfirmRoleChange?token={token}&confirm=true";
                 var rejectLink = $"{baseUrl}/Admin/Users/ConfirmRoleChange?token={token}&confirm=false";
 
-                // Відправляємо email
                 await _emailService.SendRoleChangeConfirmationEmailAsync(
                     user.Email,
                     $"{user.FirstName} {user.LastName}",
@@ -286,7 +279,7 @@ namespace veterans_site.Areas.Admin.Controllers
         }
 
         [AllowAnonymous]
-        [HttpGet] // Явно вказуємо, що це GET запит
+        [HttpGet]
         public async Task<IActionResult> ConfirmRoleChange(string token, bool confirm)
         {
             if (string.IsNullOrEmpty(token))

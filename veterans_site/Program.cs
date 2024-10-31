@@ -13,7 +13,6 @@ var connectionString = builder.Configuration.GetConnectionString("DefaultConnect
 
 builder.Services.AddDbContext<VeteranSupportDBContext>(options => options.UseSqlServer(connectionString));
 
-// Додаємо конфігурацію для Identity з автоматичним призначенням ролі Veteran
 builder.Services.AddDefaultIdentity<ApplicationUser>(options =>
 {
     options.SignIn.RequireConfirmedAccount = false;
@@ -28,13 +27,11 @@ builder.Services.AddDefaultIdentity<ApplicationUser>(options =>
 .AddDefaultTokenProviders()
 .AddDefaultUI();
 
-// Додаємо обробник подій для автоматичного призначення ролі Veteran
 builder.Services.Configure<IdentityOptions>(options =>
 {
     options.SignIn.RequireConfirmedAccount = false;
 });
 
-// Додаємо обробник подій для автоматичного призначення ролі Veteran при реєстрації
 builder.Services.AddScoped<IUserClaimsPrincipalFactory<ApplicationUser>, UserClaimsPrincipalFactory<ApplicationUser, IdentityRole>>();
 
 builder.Services.ConfigureApplicationCookie(options =>
@@ -46,7 +43,6 @@ builder.Services.ConfigureApplicationCookie(options =>
     options.ExpireTimeSpan = TimeSpan.FromMinutes(60);
 });
 
-// Реєструємо обробник подій для автоматичного призначення ролі
 builder.Services.Configure<IdentityOptions>(options => { });
 builder.Services.AddScoped<IUserClaimsPrincipalFactory<ApplicationUser>, CustomUserClaimsPrincipalFactory>();
 
@@ -88,8 +84,6 @@ using (var scope = app.Services.CreateScope())
     }
 }
 
-// Решта коду залишається без змін
-
 // Configure the HTTP request pipeline.
 if (!app.Environment.IsDevelopment())
 {
@@ -117,9 +111,5 @@ app.MapControllerRoute(
 
 app.MapDefaultControllerRoute();
 app.MapRazorPages();
-
-//app.MapControllerRoute(
-//    name: "default",
-//    pattern: "{controller=Home}/{action=Index}/{id?}");
 
 app.Run();
