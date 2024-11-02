@@ -36,22 +36,6 @@
                         </div>
 
                         <div class="mb-3">
-                            <label asp-for="DateTime" class="form-label"></label>
-                            <input type="datetime-local" class="form-control"
-                                   name="DateTime"
-                                   value="@Model.DateTime.ToString("yyyy-MM-ddTHH:mm")" />
-                            <span asp-validation-for="DateTime" class="text-danger"></span>
-                        </div>
-
-
-                        <div class="mb-3">
-                            <label asp-for="Duration" class="form-label"></label>
-                            <input asp-for="Duration" type="number" min="1" max="480" class="form-control" />
-                            <span asp-validation-for="Duration" class="text-danger"></span>
-                            <small class="text-muted">Введіть тривалість у хвилинах (від 1 до 480)</small>
-                        </div>
-
-                        <div class="mb-3">
                             <label asp-for="Type" class="form-label"></label>
                             <select asp-for="Type" class="form-select" asp-items="Html.GetEnumSelectList<ConsultationType>()">
                                 <option value="">Виберіть тип консультації</option>
@@ -61,26 +45,20 @@
 
                         <div class="mb-3">
                             <label asp-for="Format" class="form-label"></label>
-                            <select asp-for="Format" class="form-select" asp-items="Html.GetEnumSelectList<ConsultationFormat>()">
+                            <select asp-for="Format" class="form-select" id="consultationFormat">
                                 <option value="">Виберіть формат консультації</option>
+                                <option value="0">Індивідуальна</option>
+                                <option value="1">Групова</option>
                             </select>
                             <span asp-validation-for="Format" class="text-danger"></span>
                         </div>
 
                         <div class="mb-3">
-                            <label asp-for="Status" class="form-label"></label>
-                            <select asp-for="Status" class="form-select" asp-items="Html.GetEnumSelectList<ConsultationStatus>()">
-                                <option value="">Виберіть статус</option>
-                            </select>
-                            <span asp-validation-for="Status" class="text-danger"></span>
-                        </div>
-                    </div>
-
-                    <div class="col-md-6">
-                        <div class="mb-3">
                             <label asp-for="Mode" class="form-label">Формат проведення</label>
-                            <select asp-for="Mode" class="form-select" asp-items="Html.GetEnumSelectList<ConsultationMode>()" id="consultationMode">
+                            <select asp-for="Mode" class="form-select" id="consultationMode">
                                 <option value="">Виберіть формат проведення</option>
+                                <option value="0">Онлайн</option>
+                                <option value="1">Офлайн</option>
                             </select>
                             <span asp-validation-for="Mode" class="text-danger"></span>
                         </div>
@@ -96,17 +74,56 @@
                             <input asp-for="Price" type="number" step="0.01" min="0" class="form-control" />
                             <span asp-validation-for="Price" class="text-danger"></span>
                         </div>
+                    </div>
 
-                        <div class="mb-3">
-                            <label asp-for="MaxParticipants" class="form-label"></label>
-                            <input asp-for="MaxParticipants" type="number" class="form-control" />
-                            <span asp-validation-for="MaxParticipants" class="text-danger"></span>
+                    <div class="col-md-6">
+                        <!-- Поля для індивідуальних консультацій -->
+                        <div id="individualFields" style="display: none;">
+                            <div class="mb-3">
+                                <label asp-for="DateTime" class="form-label">Час початку прийому</label>
+                                <input asp-for="DateTime" type="datetime-local" class="form-control" id="startTime" />
+                                <span asp-validation-for="DateTime" class="text-danger"></span>
+                            </div>
+
+                            <div class="mb-3">
+                                <label asp-for="EndDateTime" class="form-label">Час завершення прийому</label>
+                                <input asp-for="EndDateTime" type="datetime-local" class="form-control" id="endTime" />
+                                <span asp-validation-for="EndDateTime" class="text-danger"></span>
+                            </div>
+
+                            <div class="mb-3">
+                                <label asp-for="Duration" class="form-label">Тривалість одного слоту (хв)</label>
+                                <input asp-for="Duration" type="number" min="10" max="180" class="form-control" id="Duration" />
+                                <span asp-validation-for="Duration" class="text-danger"></span>
+                                <small class="text-muted">Тривалість одного прийому (від 10 до 180 хвилин)</small>
+                            </div>
+
+                            <div class="alert alert-info" id="slotsInfo">
+                                Виберіть час початку, завершення та тривалість слоту
+                            </div>
                         </div>
 
-                        <div class="mb-3">
-                            <label asp-for="SpecialistName" class="form-label"></label>
-                            <input asp-for="SpecialistName" class="form-control" readonly />
-                            <span asp-validation-for="SpecialistName" class="text-danger"></span>
+                        <!-- Поля для групових консультацій -->
+                        <div id="groupFields" style="display: none;">
+                            <div class="mb-3">
+                                <label asp-for="DateTime" class="form-label">Час проведення</label>
+                                <input asp-for="DateTime" type="datetime-local" class="form-control" id="groupDateTime" />
+                                <span asp-validation-for="DateTime" class="text-danger"></span>
+                            </div>
+
+                            <div class="mb-3">
+                                <label asp-for="Duration" class="form-label">Тривалість (хв)</label>
+                                <input asp-for="Duration" type="number" min="10" max="180" class="form-control" id="groupDuration" />
+                                <span asp-validation-for="Duration" class="text-danger"></span>
+                                <small class="text-muted">Загальна тривалість групової консультації</small>
+                            </div>
+
+                            <div class="mb-3">
+                                <label asp-for="MaxParticipants" class="form-label">Максимум учасників</label>
+                                <input asp-for="MaxParticipants" type="number" class="form-control" min="2" />
+                                <span asp-validation-for="MaxParticipants" class="text-danger"></span>
+                                <small class="text-muted">Мінімальна кількість учасників: 2</small>
+                            </div>
                         </div>
 
                         <div class="mb-3">
@@ -115,13 +132,10 @@
                             <span asp-validation-for="Description" class="text-danger"></span>
                         </div>
 
-                        @if (Model?.Format == ConsultationFormat.Group)
-                        {
-                            <div class="mb-3">
-                                <label asp-for="BookedParticipants" class="form-label"></label>
-                                <input asp-for="BookedParticipants" class="form-control" readonly />
-                            </div>
-                        }
+                        <div class="mb-3">
+                            <label asp-for="SpecialistName" class="form-label"></label>
+                            <input asp-for="SpecialistName" class="form-control" readonly />
+                        </div>
                     </div>
                 </div>
 
@@ -141,12 +155,73 @@
 
     <script>
         document.addEventListener('DOMContentLoaded', function () {
+            const formatSelect = document.getElementById('consultationFormat');
+            const individualFields = document.getElementById('individualFields');
+            const groupFields = document.getElementById('groupFields');
+            const startTime = document.getElementById('startTime');
+            const endTime = document.getElementById('endTime');
+            const individualDuration = document.getElementById('Duration');
+            const groupDuration = document.getElementById('groupDuration');
+            const groupDateTime = document.getElementById('groupDateTime');
             const modeSelect = document.getElementById('consultationMode');
             const locationInput = document.getElementById('locationInput');
             const locationGroup = document.getElementById('locationGroup');
-            const formatSelect = document.getElementById('Format');
-            const maxParticipantsGroup = document.getElementById('MaxParticipants');
 
+            // Функція для встановлення значень за замовчуванням
+            function setDefaultValues() {
+                if (formatSelect.value === '1') { // Групова
+                    if (groupDuration) {
+                        groupDuration.value = ''; // Порожнє значення для тривалості
+                    }
+                    // Встановлюємо поточний час для групової консультації
+                    if (groupDateTime) {
+                        const now = new Date();
+                        // Округляємо до хвилин
+                        now.setSeconds(0);
+                        now.setMilliseconds(0);
+                        groupDateTime.value = now.toISOString().slice(0, 16);
+                    }
+                } else if (formatSelect.value === '0') { // Індивідуальна
+                    if (individualDuration) {
+                        individualDuration.value = ''; // Порожнє значення для тривалості
+                    }
+                    if (endTime) {
+                        endTime.value = ''; // Порожнє значення для часу завершення
+                    }
+                    // Час початку встановлюється з контролера
+                }
+            }
+
+            // Функція для синхронізації значень між груповими та індивідуальними полями
+            function syncFields() {
+                if (formatSelect.value === '1') { // Якщо вибрана групова консультація
+                    const dateTimeValue = groupDateTime.value;
+                    const durationValue = groupDuration.value;
+
+                    // Оновлюємо приховані поля для індивідуальної консультації
+                    if (startTime) startTime.value = dateTimeValue;
+                    if (individualDuration) individualDuration.value = durationValue;
+                }
+            }
+
+            // Управління полями форми в залежності від формату консультації
+            function updateFormFields() {
+                if (formatSelect.value === '0') { // Individual
+                    individualFields.style.display = 'block';
+                    groupFields.style.display = 'none';
+                }
+                else if (formatSelect.value === '1') { // Group
+                    individualFields.style.display = 'none';
+                    groupFields.style.display = 'block';
+                }
+                else {
+                    individualFields.style.display = 'none';
+                    groupFields.style.display = 'none';
+                }
+                setDefaultValues();
+            }
+
+            // Управління полем локації в залежності від формату проведення
             function updateLocationField() {
                 if (modeSelect.value === '0') { // Online
                     locationInput.disabled = true;
@@ -160,37 +235,112 @@
                 }
             }
 
-            function updateMaxParticipantsField() {
-                const maxParticipantsInput = document.querySelector('input[name="MaxParticipants"]');
-                const maxParticipantsDiv = maxParticipantsInput.closest('.mb-3');
+            // Обчислення кількості слотів для індивідуальних консультацій
+            function calculateSlots() {
+                if (startTime.value && endTime.value && individualDuration.value) {
+                    const start = new Date(startTime.value);
+                    const end = new Date(endTime.value);
+                    const duration = parseInt(individualDuration.value);
 
-                if (formatSelect.value === '1') { // Group
-                    maxParticipantsDiv.style.display = 'block';
-                    maxParticipantsInput.required = true;
-                } else {
-                    maxParticipantsDiv.style.display = 'none';
-                    maxParticipantsInput.required = false;
-                    maxParticipantsInput.value = '';
+                    if (end <= start) {
+                        document.getElementById('slotsInfo').textContent =
+                            'Час завершення має бути пізніше часу початку';
+                        document.getElementById('slotsInfo').classList.remove('alert-info');
+                        document.getElementById('slotsInfo').classList.add('alert-danger');
+                        return;
+                    }
+
+                    const totalMinutes = (end - start) / (1000 * 60);
+                    const slots = Math.floor(totalMinutes / duration);
+
+                    if (slots <= 0) {
+                        document.getElementById('slotsInfo').textContent =
+                            'Недостатньо часу для створення слотів';
+                        document.getElementById('slotsInfo').classList.remove('alert-info');
+                        document.getElementById('slotsInfo').classList.add('alert-danger');
+                        return;
+                    }
+
+                    document.getElementById('slotsInfo').textContent =
+                        `Буде створено ${slots} слотів для запису тривалістю ${duration} хвилин кожен`;
+                    document.getElementById('slotsInfo').classList.remove('alert-danger');
+                    document.getElementById('slotsInfo').classList.add('alert-info');
+                }
+            }
+
+            // Валідація тривалості
+            function validateDuration(input) {
+                let value = parseInt(input.value);
+                if (isNaN(value) || value < 10) {
+                    input.value = '10';
+                } else if (value > 180) {
+                    input.value = '180';
                 }
             }
 
             // Встановлюємо початковий стан
+            updateFormFields();
             updateLocationField();
-            updateMaxParticipantsField();
 
             // Додаємо обробники подій
+            formatSelect.addEventListener('change', updateFormFields);
             modeSelect.addEventListener('change', updateLocationField);
-            formatSelect.addEventListener('change', updateMaxParticipantsField);
+            startTime.addEventListener('change', calculateSlots);
+            endTime.addEventListener('change', calculateSlots);
+
+            if (individualDuration) {
+                individualDuration.addEventListener('change', function () {
+                    validateDuration(this);
+                    calculateSlots();
+                });
+            }
+
+            if (groupDuration) {
+                groupDuration.addEventListener('change', function () {
+                    validateDuration(this);
+                    syncFields();
+                });
+            }
+
+            if (groupDateTime) {
+                groupDateTime.addEventListener('change', syncFields);
+            }
 
             // Обробка форми перед відправкою
             document.querySelector('form').addEventListener('submit', function (e) {
                 if (modeSelect.value === '0') { // Online
-                    locationInput.value = ''; // Очищаємо значення для онлайн режиму
+                    locationInput.value = '';
                 }
-                if (formatSelect.value === '0') { // Individual
-                    document.querySelector('input[name="MaxParticipants"]').value = '';
+
+                // Синхронізуємо значення перед відправкою
+                syncFields();
+
+                if (formatSelect.value === '1') { // Group
+                    // Валідація для групової консультації
+                    if (!groupDateTime.value || !groupDuration.value) {
+                        e.preventDefault();
+                        alert('Будь ласка, заповніть всі обов\'язкові поля');
+                        return false;
+                    }
+                } else if (formatSelect.value === '0') { // Individual
+                    if (startTime.value && endTime.value && individualDuration.value) {
+                        const start = new Date(startTime.value);
+                        const end = new Date(endTime.value);
+                        if (end <= start) {
+                            e.preventDefault();
+                            alert('Час завершення має бути пізніше часу початку');
+                            return false;
+                        }
+                    }
                 }
             });
+
+            // Встановлення мінімальної дати для datetime-local полів
+            const now = new Date();
+            const minDateTime = now.toISOString().slice(0, 16);
+            if (startTime) startTime.min = minDateTime;
+            if (endTime) endTime.min = minDateTime;
+            if (groupDateTime) groupDateTime.min = minDateTime;
         });
     </script>
 }

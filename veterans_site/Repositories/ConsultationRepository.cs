@@ -7,30 +7,35 @@ namespace veterans_site.Repositories
 {
     public class ConsultationRepository : GenericRepository<Consultation>, IConsultationRepository
     {
-        public ConsultationRepository(VeteranSupportDBContext context) : base(context)
+        private readonly ILogger<ConsultationRepository> _logger;
+        public ConsultationRepository(VeteranSupportDBContext context, ILogger<ConsultationRepository> logger) : base(context)
         {
+            _logger = logger;
         }
 
         public async Task<IEnumerable<Consultation>> GetFilteredConsultationsAsync(
-        ConsultationType? type = null,
-        ConsultationFormat? format = null,
-        ConsultationStatus? status = null,
-        double? minPrice = null,
-        double? maxPrice = null,
-        string sortOrder = null,
-        int page = 1,
-        int pageSize = 6,
-        string specialistName = null)
+        ConsultationType? type,
+        ConsultationFormat? format,
+        ConsultationStatus? status,
+        DateTime? startDate,
+        DateTime? endDate,
+        string sortOrder,
+        int page,
+        int pageSize,
+        string specialistName,
+        bool parentOnly = true)
         {
-            var query = _context.Consultations.AsQueryable();
+            var query = _context.Consultations
+                .Include(c => c.Slots)
+                .Where(c => c.SpecialistName == specialistName);
 
-            // Фільтрація за спеціалістом, якщо вказано
-            if (!string.IsNullOrEmpty(specialistName))
+            if (parentOnly)
             {
-                query = query.Where(c => c.SpecialistName == specialistName);
+                query = query.Where(c =>
+                    (c.Format == ConsultationFormat.Individual && c.IsParent) ||
+                    c.Format == ConsultationFormat.Group);
             }
 
-            // Застосовуємо інші фільтри
             if (type.HasValue)
                 query = query.Where(c => c.Type == type.Value);
 
@@ -40,23 +45,19 @@ namespace veterans_site.Repositories
             if (status.HasValue)
                 query = query.Where(c => c.Status == status.Value);
 
-            if (minPrice.HasValue)
-                query = query.Where(c => c.Price >= minPrice.Value);
+            if (startDate.HasValue)
+                query = query.Where(c => c.DateTime >= startDate.Value);
 
-            if (maxPrice.HasValue)
-                query = query.Where(c => c.Price <= maxPrice.Value);
+            if (endDate.HasValue)
+                query = query.Where(c => c.DateTime <= endDate.Value);
 
             // Сортування
             query = sortOrder switch
             {
                 "date_desc" => query.OrderByDescending(c => c.DateTime),
-                "date_asc" => query.OrderBy(c => c.DateTime),
-                "price_desc" => query.OrderByDescending(c => c.Price),
-                "price_asc" => query.OrderBy(c => c.Price),
-                _ => query.OrderBy(c => c.DateTime)
+                "date_asc" or _ => query.OrderBy(c => c.DateTime)
             };
 
-            // Пагінація
             return await query
                 .Skip((page - 1) * pageSize)
                 .Take(pageSize)
@@ -64,20 +65,22 @@ namespace veterans_site.Repositories
         }
 
         public async Task<int> GetTotalPagesAsync(
-            ConsultationType? type = null,
-            ConsultationFormat? format = null,
-            ConsultationStatus? status = null,
-            double? minPrice = null,
-            double? maxPrice = null,
-            int pageSize = 6,
-            string specialistName = null)
+            ConsultationType? type,
+            ConsultationFormat? format,
+            ConsultationStatus? status,
+            DateTime? startDate,
+            DateTime? endDate,
+            int pageSize,
+            string specialistName,
+            bool parentOnly = true)
         {
-            var query = _context.Consultations.AsQueryable();
+            var query = _context.Consultations.Where(c => c.SpecialistName == specialistName);
 
-            // Фільтрація за спеціалістом, якщо вказано
-            if (!string.IsNullOrEmpty(specialistName))
+            if (parentOnly)
             {
-                query = query.Where(c => c.SpecialistName == specialistName);
+                query = query.Where(c =>
+                    (c.Format == ConsultationFormat.Individual && c.IsParent) ||
+                    c.Format == ConsultationFormat.Group);
             }
 
             if (type.HasValue)
@@ -89,29 +92,38 @@ namespace veterans_site.Repositories
             if (status.HasValue)
                 query = query.Where(c => c.Status == status.Value);
 
-            if (minPrice.HasValue)
-                query = query.Where(c => c.Price >= minPrice.Value);
+            if (startDate.HasValue)
+                query = query.Where(c => c.DateTime >= startDate.Value);
 
-            if (maxPrice.HasValue)
-                query = query.Where(c => c.Price <= maxPrice.Value);
+            if (endDate.HasValue)
+                query = query.Where(c => c.DateTime <= endDate.Value);
 
-            var total = await query.CountAsync();
-            return (int)Math.Ceiling(total / (double)pageSize);
+            var totalItems = await query.CountAsync();
+            return (int)Math.Ceiling(totalItems / (double)pageSize);
+        }
+
+        public async Task<Consultation> GetByIdWithSlotsAsync(int id)
+        {
+            return await _context.Consultations
+                .Include(c => c.Slots)
+                    .ThenInclude(s => s.User)
+                .Include(c => c.Bookings)
+                    .ThenInclude(b => b.User)
+                .FirstOrDefaultAsync(c => c.Id == id);
         }
 
         public async Task<IEnumerable<Consultation>> GetUserConsultationsAsync(string userId)
         {
-            var individualConsultations = await _context.Consultations
-                .Where(c => c.UserId == userId)
+            var consultations = await _context.Consultations
+                .Include(c => c.Slots)
+                .Include(c => c.Bookings)
+                .Where(c =>
+                    (c.Format == ConsultationFormat.Group && c.Bookings.Any(b => b.UserId == userId)) ||
+                    (c.Format == ConsultationFormat.Individual && c.Slots.Any(s => s.UserId == userId && s.IsBooked)))
+                .OrderByDescending(c => c.DateTime)
                 .ToListAsync();
 
-            var groupConsultations = await _context.ConsultationBookings
-                .Where(b => b.UserId == userId)
-                .Select(b => b.Consultation)
-                .ToListAsync();
-
-            return individualConsultations.Concat(groupConsultations)
-                .OrderBy(c => c.DateTime);
+            return consultations;
         }
 
         public async Task<bool> IsUserRegisteredForConsultationAsync(string userId, int consultationId)
@@ -237,16 +249,25 @@ namespace veterans_site.Repositories
         public async Task<bool> IsUserBookedForConsultationAsync(int consultationId, string userId)
         {
             var consultation = await _context.Consultations
-                .Include(c => c.Bookings)
+                .Include(c => c.Slots)
                 .FirstOrDefaultAsync(c => c.Id == consultationId);
 
             if (consultation == null)
                 return false;
 
             if (consultation.Format == ConsultationFormat.Individual)
-                return consultation.UserId == userId;
-
-            return consultation.Bookings.Any(b => b.UserId == userId);
+            {
+                return await _context.ConsultationSlots
+                    .AnyAsync(s => s.ConsultationId == consultationId &&
+                                  s.UserId == userId &&
+                                  s.IsBooked);
+            }
+            else
+            {
+                return await _context.ConsultationBookings
+                    .AnyAsync(b => b.ConsultationId == consultationId &&
+                                  b.UserId == userId);
+            }
         }
 
         public async Task RemoveBookingAsync(int consultationId, string userId)
@@ -280,7 +301,6 @@ namespace veterans_site.Repositories
                 _context.ConsultationBookings.RemoveRange(bookings);
             }
 
-            // Оновлюємо лічильники учасників
             var groupConsultations = await _context.Consultations
                 .Where(c => c.Format == ConsultationFormat.Group && c.Bookings.Any(b => b.UserId == userId))
                 .ToListAsync();
@@ -290,7 +310,6 @@ namespace veterans_site.Repositories
                 consultation.BookedParticipants--;
             }
 
-            // Очищаємо індивідуальні консультації
             var individualConsultations = await _context.Consultations
                 .Where(c => c.Format == ConsultationFormat.Individual && c.UserId == userId)
                 .ToListAsync();
@@ -302,24 +321,6 @@ namespace veterans_site.Repositories
             }
 
             await _context.SaveChangesAsync();
-        }
-
-        public async Task<IEnumerable<Consultation>> GetUserConsultationsAsync(string userId, bool includeBookings = false)
-        {
-            IQueryable<Consultation> query = _context.Consultations;
-
-            if (includeBookings)
-            {
-                query = query.Include(c => c.Bookings);
-            }
-
-            // Отримуємо як індивідуальні, так і групові консультації
-            var consultations = await query
-                .Where(c => c.UserId == userId || c.Bookings.Any(b => b.UserId == userId))
-                .OrderByDescending(c => c.DateTime)
-                .ToListAsync();
-
-            return consultations;
         }
 
         public async Task CancelConsultationAsync(int consultationId, string userId)
@@ -356,6 +357,59 @@ namespace veterans_site.Repositories
                     (c.UserId == userId || c.Bookings.Any(b => b.UserId == userId)) &&
                     c.DateTime > DateTime.Now &&
                     c.Status != ConsultationStatus.Cancelled);
+        }
+
+        public async Task<bool> BookConsultationSlotAsync(int consultationId, int slotId, string userId)
+        {
+            try
+            {
+                var slot = await _context.ConsultationSlots
+                    .Include(s => s.Consultation)
+                    .FirstOrDefaultAsync(s => s.Id == slotId && s.ConsultationId == consultationId);
+
+                if (slot == null || slot.IsBooked)
+                {
+                    return false;
+                }
+
+                slot.IsBooked = true;
+                slot.UserId = userId;
+
+                var booking = new ConsultationBooking
+                {
+                    ConsultationId = consultationId,
+                    UserId = userId,
+                    BookingTime = DateTime.Now
+                };
+
+                _context.ConsultationBookings.Add(booking);
+
+                var consultation = await _context.Consultations
+                    .FindAsync(consultationId);
+
+                if (consultation != null)
+                {
+                    consultation.BookedParticipants++;
+                }
+
+                await _context.SaveChangesAsync();
+                return true;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError($"Error booking consultation slot: {ex.Message}");
+                return false;
+            }
+        }
+
+        public async Task<IEnumerable<Consultation>> GetUserConsultationsWithSlotsAsync(string userId)
+        {
+            return await _context.Consultations
+                .Include(c => c.Slots)
+                .Where(c => c.UserId == userId ||
+                            c.Slots.Any(s => s.UserId == userId) ||
+                            c.Bookings.Any(b => b.UserId == userId))
+                .ToListAsync();
         }
     }
 }

@@ -1,5 +1,6 @@
 ﻿@model veterans_site.Models.Consultation
 @using veterans_site.Extensions
+
 @{
     ViewData["Title"] = "Деталі консультації";
 }
@@ -7,63 +8,155 @@
 <div class="container mt-5">
     <div class="card shadow-sm">
         <div class="card-body">
-            <h1 class="h3 mb-4">@Model.Title</h1>
 
-            <div class="row g-4">
-                <div class="col-md-6">
-                    <h2 class="h5 mb-3">Деталі консультації</h2>
-                    <ul class="list-unstyled">
-                        <li class="mb-2">
-                            <strong>Дата та час:</strong>
-                            @Model.DateTime.ToString("dd.MM.yyyy HH:mm")
-                        </li>
-                        <li class="mb-2">
-                            <strong>Тривалість:</strong>
-                            @Model.Duration хв
-                        </li>
-                        <li class="mb-2">
-                            <strong>Тип консультації:</strong>
-                            @Model.Type.GetDisplayName()
-                        </li>
-                        <li class="mb-2">
-                            <strong>Формат:</strong>
-                            @Model.Format.GetDisplayName()
-                        </li>
-                        <li class="mb-2">
-                            <strong>Спеціаліст:</strong>
-                            @Model.SpecialistName
-                        </li>
-                        <li class="mb-2">
-                            <strong>Ціна:</strong>
-                            @Model.Price.ToString("C")
-                        </li>
-                        @if (Model.MaxParticipants.HasValue)
-                        {
-                            <li class="mb-2">
-                                <strong>Максимум учасників:</strong>
-                                @Model.MaxParticipants
-                            </li>
-                        }
-                        <li class="mb-2">
-                            <strong>Статус:</strong> @Model.Status.GetDisplayName()
-                        </li>
-                        <li class="mb-2">
-                            <i class="fas fa-desktop"></i>
-                            <strong>Формат проведення:</strong> @Model.Mode.GetDisplayName()
-                        </li>
-                        @if (Model.Mode == ConsultationMode.Offline)
-                        {
-                            <li class="mb-2">
-                                <i class="fas fa-map-marker-alt"></i>
-                                <strong>Місце проведення:</strong> @Model.Location
-                            </li>
-                        }
-                    </ul>
-                </div>
+            <div class="row">
+                <div class="col-md-8">
+                    <h1 class="h2 mb-4">@Model.Title</h1>
 
-                <div class="col-md-6">
-                    <h2 class="h5 mb-3">Опис</h2>
-                    <p class="text-muted">@Model.Description</p>
+                    <div class="mb-4">
+                        <h5 class="text-muted mb-3">Опис консультації</h5>
+                        <p>@Model.Description</p>
+                    </div>
+
+                    <div class="row mb-4">
+                        <div class="col-md-6">
+                            <h5 class="text-muted mb-3">Основна інформація</h5>
+                            <ul class="list-unstyled">
+                                <li class="mb-2">
+                                    <i class="far fa-calendar-alt"></i>
+                                    <strong>Дата та час:</strong> @Model.DateTime.ToString("dd.MM.yyyy HH:mm")
+                                </li>
+                                <li class="mb-2">
+                                    <i class="far fa-clock"></i>
+                                    <strong>Тривалість:</strong> @Model.Duration хв
+                                </li>
+                                <li class="mb-2">
+                                    <i class="fas fa-tag"></i>
+                                    <strong>Тип:</strong> @Model.Type.GetDisplayName()
+                                </li>
+                                <li class="mb-2">
+                                    <i class="fas fa-users"></i>
+                                    <strong>Формат:</strong> @Model.Format.GetDisplayName()
+                                </li>
+                                <li class="mb-2">
+                                    <i class="fas fa-desktop"></i>
+                                    <strong>Формат проведення:</strong> @Model.Mode.GetDisplayName()
+                                </li>
+                                @if (Model.Mode == ConsultationMode.Offline)
+                                {
+                                    <li class="mb-2">
+                                        <i class="fas fa-map-marker-alt"></i>
+                                        <strong>Місце проведення:</strong> @Model.Location
+                                    </li>
+                                }
+                                <li class="mb-2">
+                                    <i class="fas fa-money-bill-wave"></i>
+                                    <strong>Ціна:</strong> @Model.Price.ToString("C")
+                                </li>
+                            </ul>
+                        </div>
+
+                        <div class="col-md-6">
+                            <h5 class="text-muted mb-3">Додаткова інформація</h5>
+                            <ul class="list-unstyled">
+                                @if (Model.Format == ConsultationFormat.Group)
+                                {
+                                    <li class="mb-2">
+                                        <i class="fas fa-users"></i>
+                                        <strong>Максимум учасників:</strong> @Model.MaxParticipants
+                                    </li>
+                                    <li class="mb-2">
+                                        <i class="fas fa-user-check"></i>
+                                        <strong>Зареєстровано учасників:</strong> @Model.BookedParticipants
+                                    </li>
+                                    <li class="mb-2">
+                                        <i class="fas fa-user-plus"></i>
+                                        <strong>Вільних місць:</strong> @(Model.MaxParticipants - Model.BookedParticipants)
+                                    </li>
+                                }
+                                <li class="mb-2">
+                                    <i class="fas fa-info-circle"></i>
+                                    <strong>Статус консультації:</strong>
+                                    <span class="badge @(Model.Status switch
+                                    {
+                                        ConsultationStatus.Planned => "bg-primary",
+                                        ConsultationStatus.InProgress => "bg-success",
+                                        ConsultationStatus.Completed => "bg-secondary",
+                                        ConsultationStatus.Cancelled => "bg-danger",
+                                        _ => "bg-secondary"
+                                    })">
+                                        @Model.Status.GetDisplayName()
+                                    </span>
+                                </li>
+                            </ul>
+                        </div>
+                    </div>
+
+
+                    @if (Model.Format == ConsultationFormat.Individual && Model.Slots.Any())
+                    {
+                        <div class="mt-4">
+                            <h4>Слоти консультації</h4>
+                            <div class="table-responsive">
+                                <table class="table table-striped">
+                                    <thead>
+                                        <tr>
+                                            <th>Час</th>
+                                            <th>Статус</th>
+                                            <th>Клієнт</th>
+                                            <th>Дії</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        @foreach (var slot in Model.Slots.OrderBy(s => s.DateTime))
+                                        {
+                                            <tr>
+                                                <td>@slot.DateTime.ToString("dd.MM.yyyy HH:mm")</td>
+                                                <td>
+                                                    @if (slot.IsBooked)
+                                                    {
+                                                        <span class="badge bg-success">Заброньовано</span>
+                                                    }
+                                                    else
+                                                    {
+                                                        <span class="badge bg-secondary">Вільно</span>
+                                                    }
+                                                </td>
+                                                <td>
+                                                    @if (slot.IsBooked && slot.User != null)
+                                                    {
+                                                        <div class="d-flex align-items-center gap-2">
+                                                            <span>@slot.User.FirstName @slot.User.LastName</span>
+                                                        </div>
+                                                    }
+                                                    else
+                                                    {
+                                                        <span>-</span>
+                                                    }
+                                                </td>
+                                                <td>
+                                                    @if (!slot.IsBooked)
+                                                    {
+                                                        <form asp-action="DeleteSlot" method="post" style="display: inline;">
+                                                            @Html.AntiForgeryToken()
+                                                            <input type="hidden" name="id" value="@slot.Id" />
+                                                            <button type="submit"
+                                                                    class="btn btn-danger btn-sm"
+                                                                    onclick="return confirm('Ви впевнені, що хочете видалити цей слот?')"
+                                                                    data-bs-toggle="tooltip"
+                                                                    title="Видалити слот">
+                                                                <i class="fas fa-trash"></i>
+                                                            </button>
+                                                        </form>
+                                                    }
+                                                </td>
+                                            </tr>
+                                        }
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    }
                 </div>
             </div>
 
@@ -74,3 +167,26 @@
         </div>
     </div>
 </div>
+
+@section Scripts {
+    <script>
+        function deleteSlot(slotId) {
+            if (confirm('Ви впевнені, що хочете видалити цей слот?')) {
+                $.ajax({
+                    url: '@Url.Action("DeleteSlot", "Consultation")/' + slotId,
+                    type: 'POST',
+                    success: function (result) {
+                        if (result.success) {
+                            location.reload();
+                        } else {
+                            alert('Помилка при видаленні слоту: ' + result.message);
+                        }
+                    },
+                    error: function () {
+                        alert('Виникла помилка при видаленні слоту');
+                    }
+                });
+            }
+        }
+    </script>
+}

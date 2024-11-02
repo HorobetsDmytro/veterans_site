@@ -15,7 +15,6 @@
                 </div>
                 <div class="card-body">
                     <form method="get" asp-action="Index">
-                        <!-- Тип консультації -->
                         <div class="mb-3">
                             <label class="form-label">Тип консультації</label>
                             <select name="type" class="form-select" onchange="this.form.submit()">
@@ -34,7 +33,6 @@
                             </select>
                         </div>
 
-                        <!-- Формат консультації -->
                         <div class="mb-3">
                             <label class="form-label">Формат консультації</label>
                             <select name="format" class="form-select" onchange="this.form.submit()">
@@ -53,7 +51,6 @@
                             </select>
                         </div>
 
-                        <!-- Статус консультації -->
                         <div class="mb-3">
                             <label class="form-label">Статус</label>
                             <select name="status" class="form-select" onchange="this.form.submit()">
@@ -86,19 +83,12 @@
                 <!-- Сортування -->
                 <div class="btn-group me-3">
                     <a class="btn btn-secondary dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown">
-                        Сортувати за:
-                        @switch (Model.CurrentSort)
+                        Сортувати за: @(Model.CurrentSort switch
                         {
-                            case "date_desc":
-                                @:Дата за спаданням
-                                break;
-                            case "date_asc":
-                                @:Дата за зростанням
-                                break;
-                            default:
-                                @:Дата за зростанням
-                                break;
-                        }
+                            "date_desc" => "Дата за спаданням",
+                            "date_asc" => "Дата за зростанням",
+                            _ => "Дата за зростанням"
+                        })
                     </a>
                     <ul class="dropdown-menu">
                         <li><a class="dropdown-item" asp-action="Index" asp-route-sortOrder="date_asc">Дата за зростанням</a></li>
@@ -118,19 +108,33 @@
                             <div class="card-body">
                                 <h5 class="card-title">@item.Title</h5>
                                 <ul class="list-unstyled text-muted mb-4">
-                                    <li><i class="far fa-calendar-alt"></i> Дата: @item.DateTime.ToString("dd.MM.yyyy HH:mm")</li>
+                                    <li>
+                                        <i class="far fa-calendar-alt"></i>
+                                        @if (item.Format == ConsultationFormat.Individual)
+                                        {
+                                            <span>Період: @item.DateTime.ToString("dd.MM.yyyy HH:mm") - @item.EndDateTime?.ToString("dd.MM.yyyy HH:mm")</span>
+                                            <br />
+                                            <span>Кількість слотів: @item.Slots.Count()</span>
+                                            <br />
+                                            <span>Заброньовано: @item.Slots.Count(s => s.IsBooked)</span>
+                                        }
+                                        else
+                                        {
+                                            <span>Дата: @item.DateTime.ToString("dd.MM.yyyy HH:mm")</span>
+                                        }
+                                    </li>
                                     <li><i class="far fa-clock"></i> Тривалість: @item.Duration хв</li>
                                     <li><i class="fas fa-tag"></i> Тип: @item.Type.GetDisplayName()</li>
                                     <li><i class="fas fa-users"></i> Формат: @item.Format.GetDisplayName()</li>
                                     <li><i class="fas fa-desktop"></i> Формат проведення: @item.Mode.GetDisplayName()</li>
-                                    @if (item.Mode == ConsultationMode.Offline && !string.IsNullOrEmpty(item.Location))
+                                    @if (item.Mode == ConsultationMode.Offline)
                                     {
                                         <li><i class="fas fa-map-marker-alt"></i> Місце: @item.Location</li>
                                     }
                                     @if (item.Format == ConsultationFormat.Group)
                                     {
                                         <li>
-                                            <i class="fas fa-user-friends"></i> 
+                                            <i class="fas fa-user-friends"></i>
                                             Учасники: @item.BookedParticipants / @item.MaxParticipants
                                         </li>
                                     }

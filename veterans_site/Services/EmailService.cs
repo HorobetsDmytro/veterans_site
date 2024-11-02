@@ -3,6 +3,7 @@ using Microsoft.Extensions.Options;
 using MimeKit;
 using veterans_site.Models;
 using MailKit.Net.Smtp;
+using veterans_site.Extensions;
 
 namespace veterans_site.Services
 {
@@ -102,7 +103,6 @@ namespace veterans_site.Services
             }
         }
 
-        // Services/EmailService.cs
         public async Task SendRoleChangeConfirmationEmailAsync(string toEmail, string userName, string newRole, string confirmationLink, string rejectLink)
         {
             var email = new MimeMessage();
@@ -177,6 +177,198 @@ namespace veterans_site.Services
             await smtp.SendAsync(email);
             await smtp.DisconnectAsync(true);
         }
-    }
 
+        public async Task SendNewConsultationNotificationAsync(string toEmail, string veteranName, Consultation consultation)
+        {
+            try
+            {
+                var email = new MimeMessage();
+                email.From.Add(MailboxAddress.Parse(_emailSettings.FromEmail));
+                email.To.Add(MailboxAddress.Parse(toEmail));
+                email.Subject = "Нова консультація доступна";
+
+                var locationHtml = consultation.Mode == ConsultationMode.Offline
+                    ? $"<li style='margin-bottom: 8px;'><strong>Місце проведення:</strong> {consultation.Location}</li>"
+                    : "";
+
+                // Генеруємо HTML для слотів, якщо консультація індивідуальна
+                var slotsHtml = "";
+                if (consultation.Format == ConsultationFormat.Individual && consultation.Slots != null && consultation.Slots.Any())
+                {
+                    var slotsTable = @"
+                <div style='margin-top: 15px;'>
+                    <h4 style='color: #2c3e50; margin-bottom: 10px;'>Доступні слоти:</h4>
+                    <table style='width: 100%; border-collapse: collapse; background-color: white;'>
+                        <thead>
+                            <tr style='background-color: #f8f9fa;'>
+                                <th style='padding: 10px; border: 1px solid #dee2e6; text-align: left;'>Дата та час</th>
+                            </tr>
+                        </thead>
+                        <tbody>";
+
+                    foreach (var slot in consultation.Slots.OrderBy(s => s.DateTime))
+                    {
+                        if (!slot.IsBooked)
+                        {
+                            slotsTable += $@"
+                        <tr>
+                            <td style='padding: 10px; border: 1px solid #dee2e6;'>{slot.DateTime:dd.MM.yyyy HH:mm}</td>
+                        </tr>";
+                        }
+                    }
+
+                    slotsTable += @"
+                        </tbody>
+                    </table>
+                </div>";
+
+                    slotsHtml = slotsTable;
+                }
+
+                var builder = new BodyBuilder();
+                builder.HtmlBody = $@"
+            <html>
+            <body style='font-family: Arial, sans-serif; margin: 0; padding: 20px;'>
+                <div style='background-color: #f8f9fa; padding: 20px; border-radius: 5px;'>
+                    <h2 style='color: #2c3e50;'>Вітаємо, {veteranName}!</h2>
+                    <p>Доступна нова консультація:</p>
+                    
+                    <div style='background-color: white; padding: 15px; border-radius: 5px; margin: 15px 0;'>
+                        <h3 style='color: #2c3e50; margin-top: 0;'>{consultation.Title}</h3>
+                        <p style='color: #34495e;'>{consultation.Description}</p>
+                        
+                        <ul style='list-style: none; padding: 0;'>
+                            <li style='margin-bottom: 8px;'>
+                                <strong>Спеціаліст:</strong> {consultation.SpecialistName}
+                            </li>
+                            <li style='margin-bottom: 8px;'>
+                                <strong>Тип консультації:</strong> {consultation.Type.GetDisplayName()}
+                            </li>
+                            <li style='margin-bottom: 8px;'>
+                                <strong>Формат проведення:</strong> 
+                                <span style='display: inline-block; padding: 3px 8px; border-radius: 3px; {(consultation.Mode == ConsultationMode.Online ? "background-color: #e8f5e9; color: #2e7d32;" : "background-color: #fff3e0; color: #f57c00;")}'>{consultation.Mode.GetDisplayName()}</span>
+                            </li>
+                            <li style='margin-bottom: 8px;'>
+                                <strong>Формат консультації:</strong> {consultation.Format.GetDisplayName()}
+                            </li>
+                            <li style='margin-bottom: 8px;'>
+                                <strong>Тривалість:</strong> {consultation.Duration} хвилин
+                            </li>
+                            <li style='margin-bottom: 8px;'>
+                                <strong>Ціна:</strong> {consultation.Price:C}
+                            </li>
+                            {locationHtml}
+                        </ul>
+
+                        {slotsHtml}
+                    </div>
+
+                    <div style='background-color: #e3f2fd; padding: 15px; border-radius: 5px; margin-top: 20px;'>
+                        <p style='margin: 0; color: #1976d2;'>
+                            <strong>Примітка:</strong> Для запису на консультацію, будь ласка, відвідайте наш веб-сайт.
+                        </p>
+                    </div>
+
+                    <br>
+                    <p style='color: #7f8c8d;'>З повагою,<br>Команда підтримки ветеранів</p>
+                </div>
+            </body>
+            </html>";
+
+                email.Body = builder.ToMessageBody();
+
+                using var smtp = new SmtpClient();
+                await smtp.ConnectAsync(_emailSettings.SmtpServer, _emailSettings.SmtpPort, SecureSocketOptions.StartTls);
+                await smtp.AuthenticateAsync(_emailSettings.FromEmail, _emailSettings.Password);
+                await smtp.SendAsync(email);
+                await smtp.DisconnectAsync(true);
+
+                _logger.LogInformation($"Notification about new consultation sent to {toEmail}");
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError($"Error sending new consultation notification: {ex.Message}");
+                throw;
+            }
+        }
+
+        public async Task SendBookingRequestToSpecialistAsync(string specialistEmail, string specialistName,
+        string userFullName, string consultationTitle, DateTime consultationTime,
+        string confirmLink, string rejectLink)
+        {
+            try
+            {
+                var email = new MimeMessage();
+                email.From.Add(MailboxAddress.Parse(_emailSettings.FromEmail));
+                email.To.Add(MailboxAddress.Parse(specialistEmail));
+                email.Subject = "Новий запит на консультацію";
+
+                var builder = new BodyBuilder();
+                builder.HtmlBody = $@"
+                <html>
+                <body style='font-family: Arial, sans-serif; margin: 0; padding: 20px;'>
+                    <div style='background-color: #f8f9fa; padding: 20px; border-radius: 5px;'>
+                        <h2 style='color: #2c3e50;'>Вітаємо, {specialistName}!</h2>
+                        <p>Користувач <strong>{userFullName}</strong> бажає записатись на вашу консультацію:</p>
+                        
+                        <div style='background-color: white; padding: 15px; border-radius: 5px; margin: 15px 0;'>
+                            <h3 style='color: #2c3e50; margin-top: 0;'>{consultationTitle}</h3>
+                            <p><strong>Дата та час:</strong> {consultationTime:dd.MM.yyyy HH:mm}</p>
+                        </div>
+
+                        <div style='margin: 20px 0; text-align: center;'>
+                            <a href='{confirmLink}' style='display: inline-block; margin: 10px; padding: 10px 20px; background-color: #28a745; color: white; text-decoration: none; border-radius: 5px;'>Підтвердити запис</a>
+                            <a href='{rejectLink}' style='display: inline-block; margin: 10px; padding: 10px 20px; background-color: #dc3545; color: white; text-decoration: none; border-radius: 5px;'>Відхилити запит</a>
+                        </div>
+
+                        <p style='color: #7f8c8d;'>З повагою,<br>Система підтримки ветеранів</p>
+                    </div>
+                </body>
+                </html>";
+
+                email.Body = builder.ToMessageBody();
+
+                using var smtp = new SmtpClient();
+                await smtp.ConnectAsync(_emailSettings.SmtpServer, _emailSettings.SmtpPort, SecureSocketOptions.StartTls);
+                await smtp.AuthenticateAsync(_emailSettings.FromEmail, _emailSettings.Password);
+                await smtp.SendAsync(email);
+                await smtp.DisconnectAsync(true);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError($"Error sending booking request email: {ex.Message}");
+                throw;
+            }
+        }
+
+        public async Task SendBookingRejectedEmailAsync(string userEmail, string userName, string consultationTitle)
+        {
+            var email = new MimeMessage();
+            email.From.Add(MailboxAddress.Parse(_emailSettings.FromEmail));
+            email.To.Add(MailboxAddress.Parse(userEmail));
+            email.Subject = "Запит на консультацію відхилено";
+
+            var builder = new BodyBuilder();
+            builder.HtmlBody = $@"
+            <html>
+            <body style='font-family: Arial, sans-serif; margin: 0; padding: 20px;'>
+                <div style='background-color: #f8f9fa; padding: 20px; border-radius: 5px;'>
+                    <h2 style='color: #2c3e50;'>Вітаємо, {userName}!</h2>
+                    <p>На жаль, ваш запит на консультацію ""{consultationTitle}"" було відхилено.</p>
+                    <p>Будь ласка, спробуйте записатись на інший час або зв'яжіться зі спеціалістом для отримання додаткової інформації.</p>
+                    <br>
+                    <p style='color: #7f8c8d;'>З повагою,<br>Система підтримки ветеранів</p>
+                </div>
+            </body>
+            </html>";
+
+            email.Body = builder.ToMessageBody();
+
+            using var smtp = new SmtpClient();
+            await smtp.ConnectAsync(_emailSettings.SmtpServer, _emailSettings.SmtpPort, SecureSocketOptions.StartTls);
+            await smtp.AuthenticateAsync(_emailSettings.FromEmail, _emailSettings.Password);
+            await smtp.SendAsync(email);
+            await smtp.DisconnectAsync(true);
+        }
+    }
 }

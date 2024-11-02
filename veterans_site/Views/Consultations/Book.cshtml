@@ -16,10 +16,18 @@
                         <ul class="list-unstyled">
                             <li class="mb-2"><strong>Назва:</strong> @Model.Title</li>
                             <li class="mb-2"><strong>Спеціаліст:</strong> @Model.SpecialistName</li>
-                            <li class="mb-2"><strong>Дата та час:</strong> @Model.DateTime.ToString("dd.MM.yyyy HH:mm")</li>
+                            @if (Model.Format != ConsultationFormat.Individual)
+                            {
+                                <li class="mb-2"><strong>Дата та час:</strong> @Model.DateTime.ToString("dd.MM.yyyy HH:mm")</li>
+                            }
                             <li class="mb-2"><strong>Тривалість:</strong> @Model.Duration хв</li>
                             <li class="mb-2"><strong>Тип:</strong> @Model.Type.GetDisplayName()</li>
                             <li class="mb-2"><strong>Формат:</strong> @Model.Format.GetDisplayName()</li>
+                            <li class="mb-2"><strong>Формат проведення:</strong> @Model.Mode.GetDisplayName()</li>
+                            @if (Model.Mode == ConsultationMode.Offline)
+                            {
+                                <li class="mb-2"><strong>Місце проведення:</strong> @Model.Location</li>
+                            }
                             @if (Model.Format == ConsultationFormat.Group)
                             {
                                 <li class="mb-2"><strong>Вільних місць:</strong> @(Model.MaxParticipants - Model.BookedParticipants) з @Model.MaxParticipants</li>
@@ -32,9 +40,42 @@
                         <p class="mb-0">@Model.Description</p>
                     </div>
 
-                    <form asp-action="BookConfirm" method="post" class="mt-4">
+                    @if (Model.Format == ConsultationFormat.Individual && Model.Slots.Any())
+                    {
+                        <div class="mb-4">
+                            <h5 class="mb-3">Доступні слоти:</h5>
+                            <div class="table-responsive">
+                                <table class="table table-hover">
+                                    <thead>
+                                        <tr>
+                                            <th>Дата та час</th>
+                                            <th class="text-center">Вибір</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        @foreach (var slot in Model.Slots.Where(s => !s.IsBooked).OrderBy(s => s.DateTime))
+                                        {
+                                            <tr>
+                                                <td>@slot.DateTime.ToString("dd.MM.yyyy HH:mm")</td>
+                                                <td class="text-center">
+                                                    <input type="radio" name="slotId" value="@slot.Id" class="form-check-input" required>
+                                                </td>
+                                            </tr>
+                                        }
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    }
+
+                    <form asp-action="BookConfirm" method="post" class="mt-4" id="bookingForm">
                         @Html.AntiForgeryToken()
                         <input type="hidden" name="id" value="@Model.Id" />
+
+                        @if (Model.Format == ConsultationFormat.Individual)
+                        {
+                            <input type="hidden" name="slotId" id="selectedSlotId" />
+                        }
 
                         <div class="form-check mb-3">
                             <input class="form-check-input" type="checkbox" id="confirmCheck" required>
@@ -53,3 +94,50 @@
         </div>
     </div>
 </div>
+
+@section Scripts {
+    @if (Model.Format == ConsultationFormat.Individual)
+    {
+        <script>
+            document.getElementById('bookingForm').addEventListener('submit', function (e) {
+                e.preventDefault(); // Спочатку запобігаємо стандартній відправці
+
+                // Перевіряємо чи вибрано слот
+                const selectedSlot = document.querySelector('input[name="slotId"]:checked');
+                if (!selectedSlot) {
+                    alert('Будь ласка, виберіть слот для запису');
+                    return;
+                }
+
+                // Перевіряємо чи встановлено чекбокс
+                const confirmCheck = document.getElementById('confirmCheck');
+                if (!confirmCheck.checked) {
+                    alert('Будь ласка, підтвердіть свою згоду');
+                    return;
+                }
+
+                // Встановлюємо значення вибраного слоту
+                document.getElementById('selectedSlotId').value = selectedSlot.value;
+
+                // Якщо всі перевірки пройдені, відправляємо форму
+                this.submit();
+            });
+        </script>
+    }
+    else
+    {
+        <script>
+            document.getElementById('bookingForm').addEventListener('submit', function (e) {
+                e.preventDefault();
+
+                const confirmCheck = document.getElementById('confirmCheck');
+                if (!confirmCheck.checked) {
+                    alert('Будь ласка, підтвердіть свою згоду');
+                    return;
+                }
+
+                this.submit();
+            });
+        </script>
+    }
+}

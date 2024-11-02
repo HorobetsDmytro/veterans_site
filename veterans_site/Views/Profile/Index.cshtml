@@ -74,6 +74,8 @@
                         </li>
                     </ul>
 
+                    @* ... інший код залишається таким самим ... *@
+
                     <div class="tab-content">
                         <div class="tab-pane fade show active" id="upcoming">
                             @if (Model.UpcomingConsultations.Any())
@@ -84,22 +86,71 @@
                                         <div class="list-group-item">
                                             <div class="d-flex w-100 justify-content-between align-items-center">
                                                 <div>
-                                                    <h5 class="mb-1">@consultation.Title</h5>
+                                                    <div class="d-flex align-items-center gap-2 mb-2">
+                                                        <h5 class="mb-0">@consultation.Title</h5>
+                                                        <span class="badge @(consultation.Format == ConsultationFormat.Individual ? "bg-info" : "bg-primary")">
+                                                            @consultation.Format.GetDisplayName()
+                                                        </span>
+                                                        <span class="badge @(consultation.Mode == ConsultationMode.Online ? "bg-success" : "bg-warning")">
+                                                            @consultation.Mode.GetDisplayName()
+                                                        </span>
+                                                    </div>
                                                     <p class="mb-1">
-                                                        <i class="far fa-calendar-alt"></i> @consultation.DateTime.ToString("dd.MM.yyyy HH:mm")<br />
+                                                        <i class="far fa-calendar-alt"></i>
+                                                        @if (consultation.Format == ConsultationFormat.Individual && consultation.Slots != null)
+                                                        {
+                                                            var bookedSlot = consultation.Slots.FirstOrDefault(s => s.IsBooked && s.UserId == Model.User.Id);
+                                                            if (bookedSlot != null)
+                                                            {
+                                                                @bookedSlot.DateTime.ToString("dd.MM.yyyy HH:mm")
+                                                            }
+                                                            else
+                                                            {
+                                                                @consultation.DateTime.ToString("dd.MM.yyyy HH:mm")
+                                                            }
+                                                        }
+                                                        else
+                                                        {
+                                                            @consultation.DateTime.ToString("dd.MM.yyyy HH:mm")
+                                                        }
+                                                        <br />
+                                                        <i class="far fa-clock"></i> Тривалість: @consultation.Duration хв<br />
                                                         <i class="fas fa-user-md"></i> @consultation.SpecialistName<br />
-                                                        <i class="fas fa-tag"></i> @consultation.Type.GetDisplayName()
+                                                        <i class="fas fa-tag"></i> @consultation.Type.GetDisplayName()<br />
+                                                        @if (consultation.Mode == ConsultationMode.Offline)
+                                                        {
+                                                            <i class="fas fa-map-marker-alt"></i> @consultation.Location
+
+                                                            <br />
+                                                        }
                                                     </p>
+                                                    <div class="mt-2">
+                                                        <span class="badge @(consultation.Status switch
+                                    {
+                                        ConsultationStatus.Planned => "bg-primary",
+                                        ConsultationStatus.InProgress => "bg-success",
+                                        ConsultationStatus.Completed => "bg-secondary",
+                                        ConsultationStatus.Cancelled => "bg-danger",
+                                        _ => "bg-secondary"
+                                    })">
+                                                            @consultation.Status.GetDisplayName()
+                                                        </span>
+                                                    </div>
                                                 </div>
                                                 <div class="d-flex flex-column gap-2">
-                                                    <form asp-controller="Consultations" asp-action="Cancel" method="post" onsubmit="return confirm('Ви впевнені, що хочете скасувати запис на консультацію?');">
-                                                        @Html.AntiForgeryToken()
-                                                        <input type="hidden" name="consultationId" value="@consultation.Id" />
-                                                        <button type="submit" class="btn btn-danger btn-sm">
-                                                            <i class="fas fa-times"></i> Скасувати
-                                                        </button>
-                                                    </form>
-                                                    <a asp-action="ConsultationDetails" asp-route-id="@consultation.Id" class="btn btn-outline-primary btn-sm">
+                                                    @if (consultation.Status != ConsultationStatus.Cancelled)
+                                                    {
+                                                        <form asp-controller="Consultations" asp-action="Cancel" method="post"
+                                                              onsubmit="return confirm('Ви впевнені, що хочете скасувати запис на консультацію?');">
+                                                            @Html.AntiForgeryToken()
+                                                            <input type="hidden" name="consultationId" value="@consultation.Id" />
+                                                            <button type="submit" class="btn btn-danger btn-sm">
+                                                                <i class="fas fa-times"></i> Скасувати
+                                                            </button>
+                                                        </form>
+                                                    }
+                                                    <a asp-action="ConsultationDetails" asp-route-id="@consultation.Id"
+                                                       class="btn btn-outline-primary btn-sm">
                                                         <i class="fas fa-info-circle"></i> Деталі
                                                     </a>
                                                 </div>
@@ -122,14 +173,59 @@
                                         <div class="list-group-item">
                                             <div class="d-flex w-100 justify-content-between align-items-center">
                                                 <div>
-                                                    <h5 class="mb-1">@consultation.Title</h5>
+                                                    <div class="d-flex align-items-center gap-2 mb-2">
+                                                        <h5 class="mb-0">@consultation.Title</h5>
+                                                        <span class="badge @(consultation.Format == ConsultationFormat.Individual ? "bg-info" : "bg-primary")">
+                                                            @consultation.Format.GetDisplayName()
+                                                        </span>
+                                                        <span class="badge @(consultation.Mode == ConsultationMode.Online ? "bg-success" : "bg-warning")">
+                                                            @consultation.Mode.GetDisplayName()
+                                                        </span>
+                                                    </div>
                                                     <p class="mb-1">
-                                                        <i class="far fa-calendar-alt"></i> @consultation.DateTime.ToString("dd.MM.yyyy HH:mm")<br />
+                                                        <i class="far fa-calendar-alt"></i>
+                                                        @if (consultation.Format == ConsultationFormat.Individual && consultation.Slots != null)
+                                                        {
+                                                            var bookedSlot = consultation.Slots.FirstOrDefault(s => s.IsBooked && s.UserId == Model.User.Id);
+                                                            if (bookedSlot != null)
+                                                            {
+                                                                @bookedSlot.DateTime.ToString("dd.MM.yyyy HH:mm")
+                                                            }
+                                                            else
+                                                            {
+                                                                @consultation.DateTime.ToString("dd.MM.yyyy HH:mm")
+                                                            }
+                                                        }
+                                                        else
+                                                        {
+                                                            @consultation.DateTime.ToString("dd.MM.yyyy HH:mm")
+                                                        }
+                                                        <br />
+                                                        <i class="far fa-clock"></i> Тривалість: @consultation.Duration хв<br />
                                                         <i class="fas fa-user-md"></i> @consultation.SpecialistName<br />
-                                                        <i class="fas fa-tag"></i> @consultation.Type.GetDisplayName()
+                                                        <i class="fas fa-tag"></i> @consultation.Type.GetDisplayName()<br />
+                                                        @if (consultation.Mode == ConsultationMode.Offline)
+                                                        {
+                                                            <i class="fas fa-map-marker-alt"></i> @consultation.Location
+
+                                                            <br />
+                                                        }
                                                     </p>
+                                                    <div class="mt-2">
+                                                        <span class="badge @(consultation.Status switch
+                                    {
+                                        ConsultationStatus.Planned => "bg-primary",
+                                        ConsultationStatus.InProgress => "bg-success",
+                                        ConsultationStatus.Completed => "bg-secondary",
+                                        ConsultationStatus.Cancelled => "bg-danger",
+                                        _ => "bg-secondary"
+                                    })">
+                                                            @consultation.Status.GetDisplayName()
+                                                        </span>
+                                                    </div>
                                                 </div>
-                                                <a asp-action="ConsultationDetails" asp-route-id="@consultation.Id" class="btn btn-outline-primary btn-sm">
+                                                <a asp-action="ConsultationDetails" asp-route-id="@consultation.Id"
+                                                   class="btn btn-outline-primary btn-sm">
                                                     <i class="fas fa-info-circle"></i> Деталі
                                                 </a>
                                             </div>

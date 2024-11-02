@@ -21,7 +21,7 @@ namespace veterans_site.Models
         public DateTime DateTime { get; set; }
 
         [Required(ErrorMessage = "Поле Тривалість є обов'язковим")]
-        [Range(1, 480, ErrorMessage = "Тривалість повинна бути від 1 до 480 хвилин")]
+        [Range(10, 180, ErrorMessage = "Тривалість повинна бути від 10 до 180 хвилин")]
         [Display(Name = "Тривалість (хв)")]
         public int Duration { get; set; }
 
@@ -46,15 +46,21 @@ namespace veterans_site.Models
         [Display(Name = "Ім'я спеціаліста")]
         public string SpecialistName { get; set; }
 
+        [Display(Name = "Час завершення")]
+        public DateTime? EndDateTime { get; set; }
+
+        // Для групових консультацій
         [Display(Name = "Максимум учасників")]
         public int? MaxParticipants { get; set; }
+
+        // Для індивідуальних консультацій
+        [Display(Name = "Кількість слотів")]
+        public int? SlotsCount { get; set; }
 
         public string? UserId { get; set; }
 
         [ForeignKey("UserId")]
         public ApplicationUser? User { get; set; }
-
-        public DateTime? BookingTime { get; set; }
 
         public bool IsBooked { get; set; } = false;
 
@@ -70,13 +76,13 @@ namespace veterans_site.Models
         [Display(Name = "Місце проведення")]
         public string? Location { get; set; }
 
-        // Валідація для місця проведення, якщо консультація офлайн
-        public bool ShouldValidateLocation()
-        {
-            return Mode == ConsultationMode.Offline;
-        }
+        public ICollection<ConsultationSlot> Slots { get; set; } = new List<ConsultationSlot>();
+
+        // Для індивідуальних консультацій з кількома слотами
+        public bool IsParent { get; set; } = false;
     }
 
+    // Models/Enums.cs
     public enum ConsultationType
     {
         [Display(Name = "Медична")]
@@ -113,5 +119,12 @@ namespace veterans_site.Models
         Online,
         [Display(Name = "Офлайн")]
         Offline
+    }
+
+    public class TimeSlot
+    {
+        public DateTime StartTime { get; set; }
+        public DateTime EndTime { get; set; }
+        public bool IsAvailable { get; set; }
     }
 }

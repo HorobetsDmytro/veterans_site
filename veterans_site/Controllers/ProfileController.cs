@@ -32,8 +32,8 @@ namespace veterans_site.Controllers
                 return NotFound();
             }
 
-            // Отримуємо консультації користувача
-            var userConsultations = await _consultationRepository.GetUserConsultationsAsync(user.Id);
+            // Отримуємо консультації користувача зі слотами
+            var userConsultations = await _consultationRepository.GetUserConsultationsWithSlotsAsync(user.Id);
             var currentDate = DateTime.Now;
 
             var upcomingConsultations = userConsultations

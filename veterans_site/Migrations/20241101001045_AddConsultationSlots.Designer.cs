@@ -3,6 +3,7 @@ using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using veterans_site.Data;
 
@@ -11,9 +12,11 @@ using veterans_site.Data;
 namespace veterans_site.Migrations
 {
     [DbContext(typeof(VeteranSupportDBContext))]
-    partial class VeteranSupportDBContextModelSnapshot : ModelSnapshot
+    [Migration("20241101001045_AddConsultationSlots")]
+    partial class AddConsultationSlots
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -349,48 +352,6 @@ namespace veterans_site.Migrations
                     b.ToTable("ConsultationBookings");
                 });
 
-            modelBuilder.Entity("veterans_site.Models.ConsultationBookingRequest", b =>
-                {
-                    b.Property<int>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("int");
-
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
-
-                    b.Property<int>("ConsultationId")
-                        .HasColumnType("int");
-
-                    b.Property<DateTime>("ExpiryTime")
-                        .HasColumnType("datetime2");
-
-                    b.Property<bool?>("IsApproved")
-                        .HasColumnType("bit");
-
-                    b.Property<DateTime>("RequestTime")
-                        .HasColumnType("datetime2");
-
-                    b.Property<int?>("SlotId")
-                        .HasColumnType("int");
-
-                    b.Property<string>("Token")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<string>("UserId")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(450)");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("ConsultationId");
-
-                    b.HasIndex("SlotId");
-
-                    b.HasIndex("UserId");
-
-                    b.ToTable("ConsultationBookingRequests");
-                });
-
             modelBuilder.Entity("veterans_site.Models.ConsultationSlot", b =>
                 {
                     b.Property<int>("Id")
@@ -643,7 +604,7 @@ namespace veterans_site.Migrations
                     b.HasOne("veterans_site.Models.Consultation", "Consultation")
                         .WithMany("Bookings")
                         .HasForeignKey("ConsultationId")
-                        .OnDelete(DeleteBehavior.ClientCascade)
+                        .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
                     b.HasOne("veterans_site.Models.ApplicationUser", "User")
@@ -653,30 +614,6 @@ namespace veterans_site.Migrations
                         .IsRequired();
 
                     b.Navigation("Consultation");
-
-                    b.Navigation("User");
-                });
-
-            modelBuilder.Entity("veterans_site.Models.ConsultationBookingRequest", b =>
-                {
-                    b.HasOne("veterans_site.Models.Consultation", "Consultation")
-                        .WithMany()
-                        .HasForeignKey("ConsultationId")
-                        .IsRequired();
-
-                    b.HasOne("veterans_site.Models.ConsultationSlot", "Slot")
-                        .WithMany()
-                        .HasForeignKey("SlotId");
-
-                    b.HasOne("veterans_site.Models.ApplicationUser", "User")
-                        .WithMany()
-                        .HasForeignKey("UserId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.Navigation("Consultation");
-
-                    b.Navigation("Slot");
 
                     b.Navigation("User");
                 });

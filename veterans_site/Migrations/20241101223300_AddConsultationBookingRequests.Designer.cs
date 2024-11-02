@@ -3,6 +3,7 @@ using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using veterans_site.Data;
 
@@ -11,9 +12,11 @@ using veterans_site.Data;
 namespace veterans_site.Migrations
 {
     [DbContext(typeof(VeteranSupportDBContext))]
-    partial class VeteranSupportDBContextModelSnapshot : ModelSnapshot
+    [Migration("20241101223300_AddConsultationBookingRequests")]
+    partial class AddConsultationBookingRequests
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -643,7 +646,7 @@ namespace veterans_site.Migrations
                     b.HasOne("veterans_site.Models.Consultation", "Consultation")
                         .WithMany("Bookings")
                         .HasForeignKey("ConsultationId")
-                        .OnDelete(DeleteBehavior.ClientCascade)
+                        .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
                     b.HasOne("veterans_site.Models.ApplicationUser", "User")
@@ -662,16 +665,18 @@ namespace veterans_site.Migrations
                     b.HasOne("veterans_site.Models.Consultation", "Consultation")
                         .WithMany()
                         .HasForeignKey("ConsultationId")
+                        .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
                     b.HasOne("veterans_site.Models.ConsultationSlot", "Slot")
                         .WithMany()
-                        .HasForeignKey("SlotId");
+                        .HasForeignKey("SlotId")
+                        .OnDelete(DeleteBehavior.Restrict);
 
                     b.HasOne("veterans_site.Models.ApplicationUser", "User")
                         .WithMany()
                         .HasForeignKey("UserId")
-                        .OnDelete(DeleteBehavior.Cascade)
+                        .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
                     b.Navigation("Consultation");

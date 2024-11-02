@@ -1,5 +1,6 @@
 ﻿@model veterans_site.Models.Consultation
 @using veterans_site.Extensions
+
 @{
     ViewData["Title"] = "Видалення консультації";
 }
@@ -10,33 +11,151 @@
             <h1 class="h3 mb-4">Видалення консультації</h1>
 
             <div class="alert alert-danger">
+                <i class="fas fa-exclamation-triangle"></i>
                 <strong>Увага!</strong> Ви впевнені, що хочете видалити цю консультацію?
+                @if (Model.BookedParticipants > 0)
+                {
+                    <p class="mt-2">
+                        <strong>Важливо:</strong> На цю консультацію вже записані учасники (@Model.BookedParticipants).
+                        Видалення призведе до скасування їх записів.
+                    </p>
+                }
             </div>
 
             <div class="mb-4">
-                <h2 class="h5">@Model.Title</h2>
-                <p>@Model.Description</p>
+                <h2 class="h5 mb-3">@Model.Title</h2>
+                <p class="text-muted">@Model.Description</p>
 
-                <div class="text-muted">
-                    <p><strong>Дата та час:</strong> @Model.DateTime.ToString("dd.MM.yyyy HH:mm")</p>
-                    <p><strong>Тривалість:</strong> @Model.Duration хв</p>
-                    <p><strong>Тип:</strong> @Model.Type.GetDisplayName()</p>
-                    <p><strong>Формат:</strong> @Model.Format.GetDisplayName()</p>
-                    <p><strong>Спеціаліст:</strong> @Model.SpecialistName</p>
-                    <p><strong>Ціна:</strong> @Model.Price.ToString("C")</p>
-                    @if (Model.MaxParticipants.HasValue)
-                    {
-                        <p><strong>Максимум учасників:</strong> @Model.MaxParticipants</p>
-                    }
-                    <p><strong>Статус:</strong> @Model.Status.GetDisplayName()</p>
+                <div class="row">
+                    <div class="col-md-6">
+                        <ul class="list-unstyled">
+                            <li class="mb-2">
+                                <i class="far fa-calendar-alt"></i>
+                                <strong>Дата та час:</strong> @Model.DateTime.ToString("dd.MM.yyyy HH:mm")
+                            </li>
+                            <li class="mb-2">
+                                <i class="far fa-clock"></i>
+                                <strong>Тривалість:</strong> @Model.Duration хв
+                            </li>
+                            <li class="mb-2">
+                                <i class="fas fa-tag"></i>
+                                <strong>Тип:</strong> @Model.Type.GetDisplayName()
+                            </li>
+                            <li class="mb-2">
+                                <i class="fas fa-users"></i>
+                                <strong>Формат:</strong> @Model.Format.GetDisplayName()
+                            </li>
+                            <li class="mb-2">
+                                <i class="fas fa-desktop"></i>
+                                <strong>Формат проведення:</strong> @Model.Mode.GetDisplayName()
+                            </li>
+                            @if (Model.Mode == ConsultationMode.Offline)
+                            {
+                                <li class="mb-2">
+                                    <i class="fas fa-map-marker-alt"></i>
+                                    <strong>Місце проведення:</strong> @Model.Location
+                                </li>
+                            }
+                        </ul>
+                    </div>
+                    <div class="col-md-6">
+                        <ul class="list-unstyled">
+                            <li class="mb-2">
+                                <i class="fas fa-money-bill-wave"></i>
+                                <strong>Ціна:</strong> @Model.Price.ToString("C")
+                            </li>
+                            @if (Model.Format == ConsultationFormat.Group)
+                            {
+                                <li class="mb-2">
+                                    <i class="fas fa-users"></i>
+                                    <strong>Учасники:</strong> @Model.BookedParticipants / @Model.MaxParticipants
+                                </li>
+                            }
+                            <li class="mb-2">
+                                <i class="fas fa-info-circle"></i>
+                                <strong>Статус:</strong>
+                                <span class="badge @(Model.Status switch
+                                {
+                                    ConsultationStatus.Planned => "bg-primary",
+                                    ConsultationStatus.InProgress => "bg-success",
+                                    ConsultationStatus.Completed => "bg-secondary",
+                                    ConsultationStatus.Cancelled => "bg-danger",
+                                    _ => "bg-secondary"
+                                })">
+                                    @Model.Status.GetDisplayName()
+                                </span>
+                            </li>
+                        </ul>
+                    </div>
                 </div>
+
+                @if (Model.Format == ConsultationFormat.Individual && Model.Slots.Any())
+                {
+                    <div class="mt-4">
+                        <h4>Слоти консультації</h4>
+                        <div class="table-responsive">
+                            <table class="table table-striped">
+                                <thead>
+                                    <tr>
+                                        <th>Час</th>
+                                        <th>Статус</th>
+                                        <th>Клієнт</th>
+                                        <th>Дії</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    @foreach (var slot in Model.Slots.OrderBy(s => s.DateTime))
+                                    {
+                                        <tr>
+                                            <td>@slot.DateTime.ToString("dd.MM.yyyy HH:mm")</td>
+                                            <td>
+                                                @if (slot.IsBooked)
+                                                {
+                                                    <span class="badge bg-success">Заброньовано</span>
+                                                }
+                                                else
+                                                {
+                                                    <span class="badge bg-secondary">Вільно</span>
+                                                }
+                                            </td>
+                                            <td>
+                                                @if (slot.IsBooked && slot.User != null)
+                                                {
+                                                    <span>@($"{slot.User.FirstName} {slot.User.LastName}")</span>
+                                                }
+                                                else
+                                                {
+                                                    <span>-</span>
+                                                }
+                                            </td>
+                                            <td>
+                                                @if (!slot.IsBooked)
+                                                {
+                                                    <form asp-action="DeleteSlot" method="post" style="display:inline;">
+                                                        @Html.AntiForgeryToken()
+                                                        <input type="hidden" name="id" value="@slot.Id" />
+                                                        <button type="submit" class="btn btn-danger btn-sm"
+                                                                onclick="return confirm('Ви впевнені, що хочете видалити цей слот?')"
+                                                                data-bs-toggle="tooltip" title="Видалити слот">
+                                                            <i class="fas fa-trash"></i>
+                                                        </button>
+                                                    </form>
+                                                }
+                                            </td>
+                                        </tr>
+                                    }
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                }
             </div>
 
-            <form asp-action="Delete">
+            <form asp-action="Delete" method="post">
                 <input type="hidden" asp-for="Id" />
-                <div class="d-flex gap-3">
-                    <button type="submit" class="btn btn-danger">Видалити</button>
-                    <a asp-action="Index" class="btn btn-secondary">Назад до списку</a>
+                <div class="btn-group">
+                    <button type="submit" class="btn btn-danger">Підтвердити видалення</button>
+                    <a asp-action="Index" class="btn btn-secondary">Скасувати</a>
                 </div>
             </form>
         </div>

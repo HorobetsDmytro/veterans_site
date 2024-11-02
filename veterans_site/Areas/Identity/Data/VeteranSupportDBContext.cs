@@ -19,7 +19,10 @@ public class VeteranSupportDBContext : IdentityDbContext<ApplicationUser>
     public DbSet<EventParticipant> EventParticipants { get; set; }
     public DbSet<ConsultationBooking> ConsultationBookings { get; set; }
     public DbSet<RoleChangeRequest> RoleChangeRequests { get; set; }
-    
+    public DbSet<ConsultationSlot> ConsultationSlots { get; set; }
+    public DbSet<ConsultationBookingRequest> ConsultationBookingRequests { get; set; }
+
+
     protected override void OnModelCreating(ModelBuilder builder)
     {
         base.OnModelCreating(builder);
@@ -37,7 +40,8 @@ public class VeteranSupportDBContext : IdentityDbContext<ApplicationUser>
         builder.Entity<ConsultationBooking>()
             .HasOne(cb => cb.Consultation)
             .WithMany(c => c.Bookings)
-            .HasForeignKey(cb => cb.ConsultationId);
+            .HasForeignKey(cb => cb.ConsultationId)
+            .OnDelete(DeleteBehavior.ClientCascade);
 
         builder.Entity<ConsultationBooking>()
             .HasOne(cb => cb.User)
@@ -51,5 +55,34 @@ public class VeteranSupportDBContext : IdentityDbContext<ApplicationUser>
         builder.Entity<ApplicationUser>()
             .Property(u => u.RegistrationDate)
             .HasDefaultValueSql("GETUTCDATE()");
+
+        builder.Entity<ConsultationSlot>()
+            .HasOne(cs => cs.Consultation)
+            .WithMany(c => c.Slots)
+            .HasForeignKey(cs => cs.ConsultationId)
+            .OnDelete(DeleteBehavior.Cascade);
+
+        builder.Entity<ConsultationSlot>()
+            .HasOne(cs => cs.User)
+            .WithMany()
+            .HasForeignKey(cs => cs.UserId)
+            .OnDelete(DeleteBehavior.SetNull);
+
+        builder.Entity<ConsultationBookingRequest>()
+            .HasOne(r => r.Consultation)
+            .WithMany()
+            .HasForeignKey(r => r.ConsultationId)
+            .OnDelete(DeleteBehavior.ClientSetNull);
+
+        builder.Entity<ConsultationBookingRequest>()
+            .HasOne(r => r.Slot)
+            .WithMany()
+            .HasForeignKey(r => r.SlotId)
+            .OnDelete(DeleteBehavior.ClientSetNull);
+
+        builder.Entity<ConsultationBookingRequest>()
+            .HasOne(r => r.User)
+            .WithMany()
+            .HasForeignKey(r => r.UserId);
     }
 }

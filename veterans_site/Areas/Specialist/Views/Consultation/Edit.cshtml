@@ -1,4 +1,5 @@
 ﻿@model veterans_site.Models.Consultation
+@using veterans_site.Extensions;
 @{
     ViewData["Title"] = "Редагування консультації";
 }
@@ -8,34 +9,76 @@
         <div class="card-body">
             <h1 class="card-title">Редагування консультації</h1>
 
+            @if (!ViewData.ModelState.IsValid)
+            {
+                <div class="alert alert-danger">
+                    <ul>
+                        @foreach (var modelState in ViewData.ModelState.Values)
+                        {
+                            foreach (var error in modelState.Errors)
+                            {
+                                <li>@error.ErrorMessage</li>
+                            }
+                        }
+                    </ul>
+                </div>
+            }
+
             <form asp-action="Edit" method="post">
+                @Html.AntiForgeryToken()
                 <div asp-validation-summary="ModelOnly" class="text-danger mb-3"></div>
                 <input type="hidden" asp-for="Id" />
+                <input type="hidden" asp-for="Format" />
+                <input type="hidden" asp-for="IsBooked" />
+                <input type="hidden" asp-for="BookedParticipants" />
                 <input type="hidden" asp-for="SpecialistName" />
+                <input type="hidden" asp-for="IsParent" />
 
                 <div class="row">
                     <div class="col-md-6">
                         <div class="mb-3">
-                            <label asp-for="Title" class="form-label">Назва</label>
+                            <label asp-for="Title" class="form-label"></label>
                             <input asp-for="Title" class="form-control" />
                             <span asp-validation-for="Title" class="text-danger"></span>
                         </div>
 
+                        @if (Model.Format == ConsultationFormat.Individual)
+                        {
+                            <div class="mb-3">
+                                <label class="form-label">Період консультацій</label>
+                                <div class="alert alert-info">
+                                    Початок: @Model.DateTime.ToString("dd.MM.yyyy HH:mm")
+                                    <br />
+                                    Кінець: @Model.EndDateTime?.ToString("dd.MM.yyyy HH:mm")
+                                </div>
+                            </div>
+                        }
+                        else
+                        {
+                            <div class="mb-3">
+                                <label asp-for="DateTime" class="form-label"></label>
+                                <input asp-for="DateTime" type="datetime-local" class="form-control" />
+                                <span asp-validation-for="DateTime" class="text-danger"></span>
+                            </div>
+                        }
+
                         <div class="mb-3">
-                            <label asp-for="DateTime" class="form-label">Дата та час</label>
-                            <input asp-for="DateTime" type="datetime-local" class="form-control" />
-                            <span asp-validation-for="DateTime" class="text-danger"></span>
+                            <label asp-for="Duration" class="form-label"></label>
+                            @if (Model.Format == ConsultationFormat.Individual && Model.Slots.Any(s => s.IsBooked))
+                            {
+                                <input asp-for="Duration" type="number" class="form-control" readonly />
+                                <small class="text-muted">Тривалість не може бути змінена, оскільки є заброньовані слоти</small>
+                            }
+                            else
+                            {
+                                <input asp-for="Duration" type="number" min="15" max="180" class="form-control" />
+                                <span asp-validation-for="Duration" class="text-danger"></span>
+                                <small class="text-muted">Введіть тривалість у хвилинах (від 15 до 180)</small>
+                            }
                         </div>
 
                         <div class="mb-3">
-                            <label asp-for="Duration" class="form-label">Тривалість (хв)</label>
-                            <input asp-for="Duration" type="number" min="1" max="480" class="form-control" />
-                            <span asp-validation-for="Duration" class="text-danger"></span>
-                            <small class="text-muted">Введіть тривалість у хвилинах (від 1 до 480)</small>
-                        </div>
-
-                        <div class="mb-3">
-                            <label asp-for="Type" class="form-label">Тип консультації</label>
+                            <label asp-for="Type" class="form-label"></label>
                             <select asp-for="Type" class="form-select" asp-items="Html.GetEnumSelectList<ConsultationType>()">
                                 <option value="">Виберіть тип консультації</option>
                             </select>
@@ -43,18 +86,18 @@
                         </div>
 
                         <div class="mb-3">
-                            <label asp-for="Format" class="form-label">Формат консультації</label>
-                            <select asp-for="Format" class="form-select" asp-items="Html.GetEnumSelectList<ConsultationFormat>()">
-                                <option value="">Виберіть формат консультації</option>
+                            <label asp-for="Status" class="form-label"></label>
+                            <select asp-for="Status" class="form-select" asp-items="Html.GetEnumSelectList<ConsultationStatus>()">
+                                <option value="">Виберіть статус</option>
                             </select>
-                            <span asp-validation-for="Format" class="text-danger"></span>
+                            <span asp-validation-for="Status" class="text-danger"></span>
                         </div>
                     </div>
 
                     <div class="col-md-6">
                         <div class="mb-3">
                             <label asp-for="Mode" class="form-label">Формат проведення</label>
-                            <select asp-for="Mode" class="form-select" asp-items="Html.GetEnumSelectList<ConsultationMode>()" id="consultationMode">
+                            <select asp-for="Mode" class="form-select" id="consultationMode" asp-items="@(Html.GetEnumSelectList<ConsultationMode>())">
                                 <option value="">Виберіть формат проведення</option>
                             </select>
                             <span asp-validation-for="Mode" class="text-danger"></span>
@@ -67,35 +110,41 @@
                         </div>
 
                         <div class="mb-3">
-                            <label asp-for="Price" class="form-label">Ціна</label>
+                            <label asp-for="Price" class="form-label"></label>
                             <input asp-for="Price" type="number" step="0.01" min="0" class="form-control" />
                             <span asp-validation-for="Price" class="text-danger"></span>
                         </div>
 
                         <div class="mb-3">
-                            <label asp-for="Status" class="form-label">Статус</label>
-                            <select asp-for="Status" class="form-select" asp-items="Html.GetEnumSelectList<ConsultationStatus>()">
-                                <option value="">Виберіть статус</option>
-                            </select>
-                            <span asp-validation-for="Status" class="text-danger"></span>
-                        </div>
-
-                        <div class="mb-3" id="maxParticipantsGroup">
-                            <label asp-for="MaxParticipants" class="form-label">Максимум учасників</label>
-                            <input asp-for="MaxParticipants" type="number" class="form-control" min="1" />
-                            <span asp-validation-for="MaxParticipants" class="text-danger"></span>
-                        </div>
-
-                        <div class="mb-3">
-                            <label asp-for="Description" class="form-label">Опис</label>
+                            <label asp-for="Description" class="form-label"></label>
                             <textarea asp-for="Description" class="form-control" rows="4"></textarea>
                             <span asp-validation-for="Description" class="text-danger"></span>
                         </div>
+
+                        <div class="mb-3">
+                            <label class="form-label">Формат консультації</label>
+                            <input class="form-control" value="@Model.Format.GetDisplayName()" readonly />
+                        </div>
+
+                        @if (Model.Format == ConsultationFormat.Group)
+                        {
+                            <div class="mb-3">
+                                <label asp-for="MaxParticipants" class="form-label"></label>
+                                <input asp-for="MaxParticipants" type="number" class="form-control" min="@Model.BookedParticipants" />
+                                <span asp-validation-for="MaxParticipants" class="text-danger"></span>
+                                <small class="text-muted">Мінімальна кількість: @Model.BookedParticipants (поточна кількість учасників)</small>
+                            </div>
+
+                            <div class="mb-3">
+                                <label class="form-label">Поточна кількість учасників</label>
+                                <input class="form-control" value="@Model.BookedParticipants" readonly />
+                            </div>
+                        }
                     </div>
                 </div>
 
                 <div class="d-flex gap-2">
-                    <button type="submit" class="btn btn-primary">Зберегти</button>
+                    <button type="submit" class="btn btn-primary">Зберегти зміни</button>
                     <a asp-action="Index" class="btn btn-secondary">Назад до списку</a>
                 </div>
             </form>
@@ -110,36 +159,35 @@
 
     <script>
         document.addEventListener('DOMContentLoaded', function () {
-            var modeSelect = document.getElementById('consultationMode');
-            var locationInput = document.getElementById('locationInput');
-            var locationGroup = document.getElementById('locationGroup');
-            var formatSelect = document.getElementById('Format');
-            var maxParticipantsGroup = document.getElementById('maxParticipantsGroup');
+            const modeSelect = document.getElementById('consultationMode');
+            const locationInput = document.getElementById('locationInput');
+            const locationGroup = document.getElementById('locationGroup');
 
-            function updateLocationVisibility() {
-                if (modeSelect.value === '1') { // Offline
-                    locationGroup.style.display = 'block';
-                    locationInput.required = true;
-                } else {
-                    locationGroup.style.display = 'none';
+            function updateLocationField() {
+                if (modeSelect.value === '0') { // Online
+                    locationInput.disabled = true;
+                    locationInput.value = '';
+                    locationGroup.style.opacity = '0.5';
                     locationInput.required = false;
+                } else if (modeSelect.value === '1') { // Offline
+                    locationInput.disabled = false;
+                    locationGroup.style.opacity = '1';
+                    locationInput.required = true;
+                }
+            }
+
+            // Встановлюємо початковий стан
+            updateLocationField();
+
+            // Додаємо обробник подій
+            modeSelect.addEventListener('change', updateLocationField);
+
+            // Обробка форми перед відправкою
+            document.querySelector('form').addEventListener('submit', function (e) {
+                if (modeSelect.value === '0') { // Online
                     locationInput.value = '';
                 }
-            }
-
-            function updateMaxParticipantsVisibility() {
-                if (formatSelect.value === '1') { // Group
-                    maxParticipantsGroup.style.display = 'block';
-                } else {
-                    maxParticipantsGroup.style.display = 'none';
-                }
-            }
-
-            updateLocationVisibility();
-            updateMaxParticipantsVisibility();
-
-            modeSelect.addEventListener('change', updateLocationVisibility);
-            formatSelect.addEventListener('change', updateMaxParticipantsVisibility);
+            });
         });
     </script>
 }
