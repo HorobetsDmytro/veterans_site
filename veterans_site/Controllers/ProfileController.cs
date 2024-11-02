@@ -133,7 +133,7 @@ namespace veterans_site.Controllers
         public async Task<IActionResult> ConsultationDetails(int id)
         {
             var userId = _userManager.GetUserId(User);
-            var consultation = await _consultationRepository.GetByIdAsync(id);
+            var consultation = await _consultationRepository.GetByIdWithSlotsAsync(id);
 
             if (consultation == null)
             {
@@ -145,6 +145,7 @@ namespace veterans_site.Controllers
                 return Forbid();
             }
 
+            ViewBag.UserId = userId;
             return View(consultation);
         }
 

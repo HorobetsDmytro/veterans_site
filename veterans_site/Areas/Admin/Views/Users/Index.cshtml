@@ -115,21 +115,22 @@
                                                        class="btn btn-outline-success btn-sm">
                                                         <i class="fas fa-user-tag"></i>
                                                     </a>
+
+                                                    <form asp-action="ToggleActive" method="post" class="d-inline">
+                                                        @Html.AntiForgeryToken()
+                                                        <input type="hidden" name="id" value="@user.Id" />
+                                                        <button type="submit" class="btn btn-outline-warning btn-sm">
+                                                            @if (user.IsActive)
+                                                            {
+                                                                <i class="fas fa-ban"></i>
+                                                            }
+                                                            else
+                                                            {
+                                                                <i class="fas fa-check"></i>
+                                                            }
+                                                        </button>
+                                                    </form>
                                                 }
-                                                <form asp-action="ToggleActive" method="post" class="d-inline">
-                                                    @Html.AntiForgeryToken()
-                                                    <input type="hidden" name="id" value="@user.Id" />
-                                                    <button type="submit" class="btn btn-outline-warning btn-sm">
-                                                        @if (user.IsActive)
-                                                        {
-                                                            <i class="fas fa-ban"></i>
-                                                        }
-                                                        else
-                                                        {
-                                                            <i class="fas fa-check"></i>
-                                                        }
-                                                    </button>
-                                                </form>
                                                 @if (!user.Roles.Contains("Admin"))
                                                 {
                                                     <form asp-action="Delete" method="post" class="d-inline"

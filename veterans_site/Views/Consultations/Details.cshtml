@@ -48,6 +48,14 @@
                                     <i class="fas fa-users"></i>
                                     <strong>Формат:</strong> @Model.Format.GetDisplayName()
                                 </li>
+                                <li class="mb-2">
+                                    <i class="fas fa-desktop"></i>
+                                    Формат проведення: @Model.Mode.GetDisplayName()
+                                </li>
+                                @if (Model.Mode == ConsultationMode.Offline)
+                                {
+                                    <li><i class="fas fa-map-marker-alt"></i> Місце: @Model.Location</li>
+                                }
                                 @if (Model.Format == ConsultationFormat.Group)
                                 {
                                     <li class="mb-2">

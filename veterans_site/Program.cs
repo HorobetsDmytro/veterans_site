@@ -67,9 +67,10 @@ builder.Services.AddAuthorization(options =>
     options.AddPolicy("RequireSpecialistRole", policy => policy.RequireRole("Specialist"));
 });
 
-var app = builder.Build();
+builder.Services.AddHostedService<ConsultationBackgroundService>();
 
-// Ініціалізація ролей та адміністратора
+var app = builder.Build();
+    
 using (var scope = app.Services.CreateScope())
 {
     var services = scope.ServiceProvider;

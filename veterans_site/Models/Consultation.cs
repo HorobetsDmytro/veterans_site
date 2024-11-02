@@ -49,11 +49,9 @@ namespace veterans_site.Models
         [Display(Name = "Час завершення")]
         public DateTime? EndDateTime { get; set; }
 
-        // Для групових консультацій
         [Display(Name = "Максимум учасників")]
         public int? MaxParticipants { get; set; }
 
-        // Для індивідуальних консультацій
         [Display(Name = "Кількість слотів")]
         public int? SlotsCount { get; set; }
 
@@ -78,11 +76,23 @@ namespace veterans_site.Models
 
         public ICollection<ConsultationSlot> Slots { get; set; } = new List<ConsultationSlot>();
 
-        // Для індивідуальних консультацій з кількома слотами
         public bool IsParent { get; set; } = false;
+
+        public bool NotificationSent { get; set; } = false;
+
+        [NotMapped]
+        public DateTime? EndTime
+        {
+            get
+            {
+                if (Format == ConsultationFormat.Individual)
+                    return EndDateTime;
+
+                return DateTime > DateTime.MinValue ? DateTime.AddMinutes(Duration) : null;
+            }
+        }
     }
 
-    // Models/Enums.cs
     public enum ConsultationType
     {
         [Display(Name = "Медична")]

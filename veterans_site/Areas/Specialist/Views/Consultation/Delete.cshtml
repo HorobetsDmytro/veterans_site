@@ -13,13 +13,6 @@
             <div class="alert alert-danger">
                 <i class="fas fa-exclamation-triangle"></i>
                 <strong>Увага!</strong> Ви впевнені, що хочете видалити цю консультацію?
-                @if (Model.BookedParticipants > 0)
-                {
-                    <p class="mt-2">
-                        <strong>Важливо:</strong> На цю консультацію вже записані учасники (@Model.BookedParticipants).
-                        Видалення призведе до скасування їх записів.
-                    </p>
-                }
             </div>
 
             <div class="mb-4">
@@ -88,72 +81,11 @@
                         </ul>
                     </div>
                 </div>
-
-                @if (Model.Format == ConsultationFormat.Individual && Model.Slots.Any())
-                {
-                    <div class="mt-4">
-                        <h4>Слоти консультації</h4>
-                        <div class="table-responsive">
-                            <table class="table table-striped">
-                                <thead>
-                                    <tr>
-                                        <th>Час</th>
-                                        <th>Статус</th>
-                                        <th>Клієнт</th>
-                                        <th>Дії</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    @foreach (var slot in Model.Slots.OrderBy(s => s.DateTime))
-                                    {
-                                        <tr>
-                                            <td>@slot.DateTime.ToString("dd.MM.yyyy HH:mm")</td>
-                                            <td>
-                                                @if (slot.IsBooked)
-                                                {
-                                                    <span class="badge bg-success">Заброньовано</span>
-                                                }
-                                                else
-                                                {
-                                                    <span class="badge bg-secondary">Вільно</span>
-                                                }
-                                            </td>
-                                            <td>
-                                                @if (slot.IsBooked && slot.User != null)
-                                                {
-                                                    <span>@($"{slot.User.FirstName} {slot.User.LastName}")</span>
-                                                }
-                                                else
-                                                {
-                                                    <span>-</span>
-                                                }
-                                            </td>
-                                            <td>
-                                                @if (!slot.IsBooked)
-                                                {
-                                                    <form asp-action="DeleteSlot" method="post" style="display:inline;">
-                                                        @Html.AntiForgeryToken()
-                                                        <input type="hidden" name="id" value="@slot.Id" />
-                                                        <button type="submit" class="btn btn-danger btn-sm"
-                                                                onclick="return confirm('Ви впевнені, що хочете видалити цей слот?')"
-                                                                data-bs-toggle="tooltip" title="Видалити слот">
-                                                            <i class="fas fa-trash"></i>
-                                                        </button>
-                                                    </form>
-                                                }
-                                            </td>
-                                        </tr>
-                                    }
-                                </tbody>
-                            </table>
-                        </div>
-                    </div>
-                }
             </div>
 
             <form asp-action="Delete" method="post">
                 <input type="hidden" asp-for="Id" />
-                <div class="btn-group">
+                <div class="d-flex gap-3">
                     <button type="submit" class="btn btn-danger">Підтвердити видалення</button>
                     <a asp-action="Index" class="btn btn-secondary">Скасувати</a>
                 </div>

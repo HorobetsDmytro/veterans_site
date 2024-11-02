@@ -14,27 +14,21 @@ namespace veterans_site.Repositories
         }
 
         public async Task<IEnumerable<Consultation>> GetFilteredConsultationsAsync(
-        ConsultationType? type,
-        ConsultationFormat? format,
-        ConsultationStatus? status,
-        DateTime? startDate,
-        DateTime? endDate,
-        string sortOrder,
-        int page,
-        int pageSize,
-        string specialistName,
-        bool parentOnly = true)
+        ConsultationType? type = null,
+        ConsultationFormat? format = null,
+        ConsultationStatus? status = null,
+        double? minPrice = null,
+        double? maxPrice = null,
+        string sortOrder = null,
+        int page = 1,
+        int pageSize = 10,
+        string specialistName = null,
+        bool parentOnly = false)
         {
             var query = _context.Consultations
                 .Include(c => c.Slots)
-                .Where(c => c.SpecialistName == specialistName);
-
-            if (parentOnly)
-            {
-                query = query.Where(c =>
-                    (c.Format == ConsultationFormat.Individual && c.IsParent) ||
-                    c.Format == ConsultationFormat.Group);
-            }
+                .Include(c => c.Bookings)
+                .AsQueryable();
 
             if (type.HasValue)
                 query = query.Where(c => c.Type == type.Value);
@@ -45,17 +39,24 @@ namespace veterans_site.Repositories
             if (status.HasValue)
                 query = query.Where(c => c.Status == status.Value);
 
-            if (startDate.HasValue)
-                query = query.Where(c => c.DateTime >= startDate.Value);
+            if (minPrice.HasValue)
+                query = query.Where(c => c.Price >= minPrice.Value);
 
-            if (endDate.HasValue)
-                query = query.Where(c => c.DateTime <= endDate.Value);
+            if (maxPrice.HasValue)
+                query = query.Where(c => c.Price <= maxPrice.Value);
 
-            // Сортування
+            if (!string.IsNullOrEmpty(specialistName))
+                query = query.Where(c => c.SpecialistName == specialistName);
+
+            if (parentOnly)
+                query = query.Where(c => c.IsParent);
+
             query = sortOrder switch
             {
                 "date_desc" => query.OrderByDescending(c => c.DateTime),
-                "date_asc" or _ => query.OrderBy(c => c.DateTime)
+                "price_asc" => query.OrderBy(c => c.Price),
+                "price_desc" => query.OrderByDescending(c => c.Price),
+                _ => query.OrderBy(c => c.DateTime)
             };
 
             return await query
@@ -65,23 +66,16 @@ namespace veterans_site.Repositories
         }
 
         public async Task<int> GetTotalPagesAsync(
-            ConsultationType? type,
-            ConsultationFormat? format,
-            ConsultationStatus? status,
-            DateTime? startDate,
-            DateTime? endDate,
-            int pageSize,
-            string specialistName,
-            bool parentOnly = true)
+            ConsultationType? type = null,
+            ConsultationFormat? format = null,
+            ConsultationStatus? status = null,
+            double? minPrice = null,
+            double? maxPrice = null,
+            int pageSize = 10,
+            string specialistName = null,
+            bool parentOnly = false)
         {
-            var query = _context.Consultations.Where(c => c.SpecialistName == specialistName);
-
-            if (parentOnly)
-            {
-                query = query.Where(c =>
-                    (c.Format == ConsultationFormat.Individual && c.IsParent) ||
-                    c.Format == ConsultationFormat.Group);
-            }
+            var query = _context.Consultations.AsQueryable();
 
             if (type.HasValue)
                 query = query.Where(c => c.Type == type.Value);
@@ -92,14 +86,20 @@ namespace veterans_site.Repositories
             if (status.HasValue)
                 query = query.Where(c => c.Status == status.Value);
 
-            if (startDate.HasValue)
-                query = query.Where(c => c.DateTime >= startDate.Value);
+            if (minPrice.HasValue)
+                query = query.Where(c => c.Price >= minPrice.Value);
 
-            if (endDate.HasValue)
-                query = query.Where(c => c.DateTime <= endDate.Value);
+            if (maxPrice.HasValue)
+                query = query.Where(c => c.Price <= maxPrice.Value);
 
-            var totalItems = await query.CountAsync();
-            return (int)Math.Ceiling(totalItems / (double)pageSize);
+            if (!string.IsNullOrEmpty(specialistName))
+                query = query.Where(c => c.SpecialistName == specialistName);
+
+            if (parentOnly)
+                query = query.Where(c => c.IsParent);
+
+            var total = await query.CountAsync();
+            return (int)Math.Ceiling(total / (double)pageSize);
         }
 
         public async Task<Consultation> GetByIdWithSlotsAsync(int id)
@@ -153,23 +153,18 @@ namespace veterans_site.Repositories
         }
 
         public async Task<IEnumerable<Consultation>> GetAvailableConsultationsAsync(
-        ConsultationType? type = null,
-        ConsultationFormat? format = null,
-        double? minPrice = null,
-        double? maxPrice = null,
-        string sortOrder = null,
-        int page = 1,
-        int pageSize = 6)
+            ConsultationType? type = null,
+            ConsultationFormat? format = null,
+            double? minPrice = null,
+            double? maxPrice = null,
+            string sortOrder = null,
+            int page = 1,
+            int pageSize = 6)
         {
-            var query = _context.Consultations.AsQueryable();
+            var query = _context.Consultations
+                .Include(c => c.Slots)
+                .Where(c => c.Status == ConsultationStatus.Planned);
 
-            // Фільтруємо недоступні консультації
-            query = query.Where(c =>
-                (c.Format == ConsultationFormat.Individual && !c.IsBooked) || // Індивідуальні незаброньовані
-                (c.Format == ConsultationFormat.Group && c.BookedParticipants < c.MaxParticipants) // Групові з вільними місцями
-            );
-
-            // Застосовуємо фільтри
             if (type.HasValue)
                 query = query.Where(c => c.Type == type.Value);
 

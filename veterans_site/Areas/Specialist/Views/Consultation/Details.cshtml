@@ -91,8 +91,6 @@
                             </ul>
                         </div>
                     </div>
-
-
                     @if (Model.Format == ConsultationFormat.Individual && Model.Slots.Any())
                     {
                         <div class="mt-4">
@@ -110,7 +108,7 @@
                                     <tbody>
                                         @foreach (var slot in Model.Slots.OrderBy(s => s.DateTime))
                                         {
-                                            <tr>
+                                            <tr id="slot-@slot.Id">
                                                 <td>@slot.DateTime.ToString("dd.MM.yyyy HH:mm")</td>
                                                 <td>
                                                     @if (slot.IsBooked)
@@ -137,17 +135,13 @@
                                                 <td>
                                                     @if (!slot.IsBooked)
                                                     {
-                                                        <form asp-action="DeleteSlot" method="post" style="display: inline;">
-                                                            @Html.AntiForgeryToken()
-                                                            <input type="hidden" name="id" value="@slot.Id" />
-                                                            <button type="submit"
-                                                                    class="btn btn-danger btn-sm"
-                                                                    onclick="return confirm('Ви впевнені, що хочете видалити цей слот?')"
-                                                                    data-bs-toggle="tooltip"
-                                                                    title="Видалити слот">
-                                                                <i class="fas fa-trash"></i>
-                                                            </button>
-                                                        </form>
+                                                        <button type="button"
+                                                                class="btn btn-danger btn-sm delete-slot"
+                                                                data-slot-id="@slot.Id"
+                                                                data-bs-toggle="tooltip"
+                                                                title="Видалити слот">
+                                                            <i class="fas fa-trash"></i>
+                                                        </button>
                                                     }
                                                 </td>
                                             </tr>
@@ -155,6 +149,71 @@
                                     </tbody>
                                 </table>
                             </div>
+                        </div>
+                    }
+                    else if (Model.Format == ConsultationFormat.Group)
+                    {
+                        <div class="mt-4">
+                            <div class="d-flex justify-content-between align-items-center mb-3">
+                                <h4>Зареєстровані учасники</h4>
+                                <div class="d-flex align-items-center gap-2">
+                                    <span class="badge bg-primary">Всього місць: @Model.MaxParticipants</span>
+                                    <span class="badge @(Model.BookedParticipants >= Model.MaxParticipants ? "bg-danger" : "bg-success")">
+                                        Зайнято місць: @Model.BookedParticipants
+                                    </span>
+                                    <span class="badge bg-info">
+                                        Вільно місць: @(Model.MaxParticipants - Model.BookedParticipants)
+                                    </span>
+                                </div>
+                            </div>
+
+                            @if (Model.Bookings != null && Model.Bookings.Any())
+                            {
+                                <div class="table-responsive">
+                                    <table class="table table-striped">
+                                        <thead>
+                                            <tr>
+                                                <th>№</th>
+                                                <th>Ім'я та прізвище</th>
+                                                <th>Email</th>
+                                                <th>Дата реєстрації</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            @{
+                                                int index = 1;
+                                            }
+                                            @foreach (var booking in Model.Bookings.OrderBy(b => b.BookingTime))
+                                            {
+                                                <tr>
+                                                    <td>@(index++)</td>
+                                                    <td>
+                                                        @if (booking.User != null)
+                                                        {
+                                                            <span>@booking.User.FirstName @booking.User.LastName</span>
+                                                        }
+                                                    </td>
+                                                    <td>
+                                                        @if (booking.User != null)
+                                                        {
+                                                            <div class="d-flex align-items-center gap-2">
+                                                                <span>@booking.User.Email</span>
+                                                            </div>
+                                                        }
+                                                    </td>
+                                                    <td>@booking.BookingTime.ToString("dd.MM.yyyy HH:mm")</td>
+                                                </tr>
+                                            }
+                                        </tbody>
+                                    </table>
+                                </div>
+                            }
+                            else
+                            {
+                                <div class="alert alert-info">
+                                    Поки що немає зареєстрованих учасників.
+                                </div>
+                            }
                         </div>
                     }
                 </div>
@@ -168,25 +227,79 @@
     </div>
 </div>
 
+
 @section Scripts {
     <script>
-        function deleteSlot(slotId) {
-            if (confirm('Ви впевнені, що хочете видалити цей слот?')) {
-                $.ajax({
-                    url: '@Url.Action("DeleteSlot", "Consultation")/' + slotId,
-                    type: 'POST',
-                    success: function (result) {
+        var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'))
+        var tooltipList = tooltipTriggerList.map(function (tooltipTriggerEl) {
+            return new bootstrap.Tooltip(tooltipTriggerEl)
+        });
+
+        document.querySelectorAll('.delete-slot').forEach(button => {
+            button.addEventListener('click', async function () {
+                if (confirm('Ви впевнені, що хочете видалити цей слот?')) {
+                    const slotId = this.getAttribute('data-slot-id');
+
+                    try {
+                        const response = await fetch('/Specialist/Consultation/DeleteSlot', {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json',
+                                'RequestVerificationToken': document.querySelector('input[name="__RequestVerificationToken"]').value
+                            },
+                            body: JSON.stringify({ id: slotId })
+                        });
+
+                        const result = await response.json();
+
                         if (result.success) {
-                            location.reload();
+                            document.getElementById(`slot-${slotId}`).remove();
+                            showAlert('success', 'Слот успішно видалено');
                         } else {
-                            alert('Помилка при видаленні слоту: ' + result.message);
+                            showAlert('danger', result.message);
                         }
-                    },
-                    error: function () {
-                        alert('Виникла помилка при видаленні слоту');
+                    } catch (error) {
+                        console.error('Error:', error);
+                        showAlert('danger', 'Виникла помилка при видаленні слоту');
                     }
-                });
+                }
+            });
+        });
+
+        async function cancelBooking(bookingId) {
+            if (confirm('Ви впевнені, що хочете скасувати реєстрацію цього учасника?')) {
+                try {
+                    const response = await fetch('/Specialist/Consultation/CancelBooking', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'RequestVerificationToken': document.querySelector('input[name="__RequestVerificationToken"]').value
+                        },
+                        body: JSON.stringify({ id: bookingId })
+                    });
+
+                    const result = await response.json();
+
+                    if (result.success) {
+                        location.reload(); 
+                    } else {
+                        showAlert('danger', result.message || 'Виникла помилка при скасуванні реєстрації');
+                    }
+                } catch (error) {
+                    console.error('Error:', error);
+                    showAlert('danger', 'Виникла помилка при скасуванні реєстрації');
+                }
             }
+        }
+
+        function showAlert(type, message) {
+            const alert = document.createElement('div');
+            alert.className = `alert alert-${type} alert-dismissible fade show mt-3`;
+            alert.innerHTML = `
+                                                    ${message}
+                                                    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                                                `;
+            document.querySelector('.table-responsive').insertAdjacentElement('beforebegin', alert);
         }
     </script>
 }

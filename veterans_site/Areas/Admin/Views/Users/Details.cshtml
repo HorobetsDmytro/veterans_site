@@ -93,6 +93,8 @@
                                         <th>Назва</th>
                                         <th>Дата</th>
                                         <th>Тип</th>
+                                        <th>Формат консультації</th>
+                                        <th>Формат проведення</th>
                                         <th>Спеціаліст</th>
                                         <th>Статус</th>
                                     </tr>
@@ -104,6 +106,8 @@
                                             <td>@consultation.Title</td>
                                             <td>@consultation.DateTime.ToString("dd.MM.yyyy HH:mm")</td>
                                             <td>@consultation.Type.GetDisplayName()</td>
+                                            <td>@consultation.Format.GetDisplayName()</td>
+                                            <td>@consultation.Mode.GetDisplayName()</td>
                                             <td>@consultation.SpecialistName</td>
                                             <td>
                                                 <span class="badge @(consultation.Status switch

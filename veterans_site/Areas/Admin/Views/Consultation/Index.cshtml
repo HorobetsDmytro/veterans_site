@@ -1,5 +1,4 @@
-﻿@* Views/Consultation/Index.cshtml *@
-@model veterans_site.ViewModels.ConsultationIndexViewModel
+﻿@model veterans_site.ViewModels.ConsultationIndexViewModel
 @using veterans_site.Extensions
 
 @{
@@ -125,7 +124,7 @@
                     </ul>
                 </div>
 
-                <a class="btn btn-primary" asp-action="Create">Створити нову консультацію</a>
+                @* <a class="btn btn-primary" asp-action="Create">Створити нову консультацію</a> *@
             </div>
 
             <!-- Картки консультацій -->
@@ -139,29 +138,72 @@
                                     <h5 class="card-title">@item.Title</h5>
                                 </div>
                                 <ul class="list-unstyled text-muted mb-4">
-                                    <li><i class="far fa-calendar-alt"></i> Дата: @item.DateTime.ToString("dd.MM.yyyy HH:mm")</li>
-                                    <li><i class="far fa-clock"></i> Тривалість: @item.Duration хв</li>
-                                    <li><i class="fas fa-user-md"></i> Спеціаліст: @item.SpecialistName</li>
-                                    <li><i class="fas fa-tag"></i> Тип: @item.Type.GetDisplayName()</li>
-                                    <li><i class="fas fa-users"></i> Формат: @item.Format.GetDisplayName()</li>
-                                    @if (item.MaxParticipants.HasValue)
+                                    @if (item.Format == ConsultationFormat.Individual)
                                     {
-                                        <li><i class="fas fa-user-friends"></i> Максимум учасників: @item.MaxParticipants</li>
+                                        <li>
+                                            <i class="far fa-calendar-alt"></i>
+                                            <strong>Період:</strong> @item.DateTime.ToString("dd.MM.yyyy HH:mm") - @item.EndDateTime?.ToString("dd.MM.yyyy HH:mm")<br />
+                                            <strong>Кількість слотів:</strong> @(item.Slots?.Count() ?? 0)<br />
+                                            <strong>Заброньовано:</strong> @(item.Slots?.Count(s => s.IsBooked) ?? 0)
+                                        </li>
                                     }
-                                    <li><i class="fas fa-money-bill-wave"></i> Ціна: @item.Price.ToString("C")</li>
+                                    else
+                                    {
+                                        <li>
+                                            <i class="far fa-calendar-alt"></i>
+                                            <strong>Дата та час:</strong> @item.DateTime.ToString("dd.MM.yyyy HH:mm")<br />
+                                            <strong>Учасники:</strong> @item.BookedParticipants / @item.MaxParticipants
+                                        </li>
+                                    }
+                                    <li>
+                                        <i class="far fa-clock"></i>
+                                        <strong>Тривалість:</strong> @item.Duration хв
+                                    </li>
+                                    <li>
+                                        <i class="fas fa-user-md"></i>
+                                        <strong>Спеціаліст:</strong> @item.SpecialistName
+                                    </li>
+                                    <li>
+                                        <i class="fas fa-tag"></i>
+                                        <strong>Тип:</strong> @item.Type.GetDisplayName()
+                                    </li>
+                                    <li>
+                                        <i class="fas fa-users"></i>
+                                        <strong>Формат:</strong> @item.Format.GetDisplayName()
+                                    </li>
+                                    <li>
+                                        <i class="fas fa-desktop"></i>
+                                        <strong>Формат проведення:</strong> @item.Mode.GetDisplayName()
+                                    </li>
+                                    @if (item.Mode == ConsultationMode.Offline)
+                                    {
+                                        <li>
+                                            <i class="fas fa-map-marker-alt"></i>
+                                            <strong>Місце проведення:</strong> @item.Location
+                                        </li>
+                                    }
+                                    <li>
+                                        <i class="fas fa-money-bill-wave"></i>
+                                        <strong>Ціна:</strong> @item.Price.ToString("C")
+                                    </li>
                                 </ul>
-                                <span class="badge @(item.Status switch
-                                {
-                                    ConsultationStatus.Planned => "bg-primary",
-                                    ConsultationStatus.InProgress => "bg-success",
-                                    ConsultationStatus.Completed => "bg-secondary",
-                                    ConsultationStatus.Cancelled => "bg-danger",
-                                    _ => "bg-secondary"
-                                })" style="font-size: 1rem; font-weight: normal;">@item.Status.GetDisplayName()</span>
-                                <div class="d-flex gap-2 mt-2">
-                                    <a asp-action="Details" asp-route-id="@item.Id" class="btn btn-outline-primary btn-sm">Деталі</a>
-                                    <a asp-action="Edit" asp-route-id="@item.Id" class="btn btn-outline-success btn-sm">Редагувати</a>
-                                    <a asp-action="Delete" asp-route-id="@item.Id" class="btn btn-outline-danger btn-sm">Видалити</a>
+                                <div class="d-flex justify-content-between align-items-center">
+                                    <span class="badge @(item.Status switch
+                        {
+                            ConsultationStatus.Planned => "bg-primary",
+                            ConsultationStatus.InProgress => "bg-success",
+                            ConsultationStatus.Completed => "bg-secondary",
+                            ConsultationStatus.Cancelled => "bg-danger",
+                            _ => "bg-secondary"
+                        })" style="font-size: 1rem; font-weight: normal;">
+                                        @item.Status.GetDisplayName()
+                                    </span>
+                                    <div class="d-flex gap-2">
+                                        <a asp-action="Details" asp-route-id="@item.Id"
+                                           class="btn btn-outline-primary btn-sm">
+                                            <i class="fas fa-info-circle"></i> Деталі
+                                        </a>
+                                    </div>
                                 </div>
                             </div>
                         </div>

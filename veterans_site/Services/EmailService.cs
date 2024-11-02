@@ -370,5 +370,93 @@ namespace veterans_site.Services
             await smtp.SendAsync(email);
             await smtp.DisconnectAsync(true);
         }
+
+        public async Task SendConsultationStartNotificationAsync(
+            string toEmail,
+            string userName,
+            string consultationTitle,
+            DateTime startTime,
+            bool isOnline,
+            string location = null,
+            string zoomUrl = null)
+        {
+            var email = new MimeMessage();
+            email.From.Add(MailboxAddress.Parse(_emailSettings.FromEmail));
+            email.To.Add(MailboxAddress.Parse(toEmail));
+            email.Subject = $"Нагадування про консультацію \"{consultationTitle}\"";
+
+            var builder = new BodyBuilder();
+            builder.HtmlBody = $@"
+        <html>
+        <body style='font-family: Arial, sans-serif; margin: 0; padding: 20px;'>
+            <div style='background-color: #f8f9fa; padding: 20px; border-radius: 5px;'>
+                <h2 style='color: #2c3e50;'>Вітаємо, {userName}!</h2>
+                <p>Нагадуємо, що через 5 хвилин розпочнеться ваша консультація ""{consultationTitle}"".</p>
+                
+                <div style='background-color: white; padding: 15px; border-radius: 5px; margin: 15px 0;'>
+                    <p><strong>Час початку:</strong> {startTime:dd.MM.yyyy HH:mm}</p>
+                    {(isOnline ?
+                                $@"<p>Консультація проходитиме онлайн.
+                           <br><strong>Посилання на Zoom:</strong> 
+                           <a href='{zoomUrl}' style='color: #007bff;'>{zoomUrl}</a>
+                           <br>Будь ласка, приєднайтесь за 2-3 хвилини до початку.</p>" :
+                                $"<p><strong>Місце проведення:</strong> {location}</p>")}
+                </div>
+
+                <p style='color: #7f8c8d;'>З повагою,<br>Команда підтримки ветеранів</p>
+            </div>
+        </body>
+        </html>";
+
+            email.Body = builder.ToMessageBody();
+
+            using var smtp = new SmtpClient();
+            await smtp.ConnectAsync(_emailSettings.SmtpServer, _emailSettings.SmtpPort, SecureSocketOptions.StartTls);
+            await smtp.AuthenticateAsync(_emailSettings.FromEmail, _emailSettings.Password);
+            await smtp.SendAsync(email);
+            await smtp.DisconnectAsync(true);
+        }
+
+        public async Task SendConsultationCancelledNotificationAsync(
+        string toEmail,
+        string userName,
+        string consultationTitle,
+        DateTime scheduledTime,
+        string specialistName)
+        {
+            var email = new MimeMessage();
+            email.From.Add(MailboxAddress.Parse(_emailSettings.FromEmail));
+            email.To.Add(MailboxAddress.Parse(toEmail));
+            email.Subject = $"Консультацію \"{consultationTitle}\" скасовано";
+
+            var builder = new BodyBuilder();
+            builder.HtmlBody = $@"
+            <html>
+            <body style='font-family: Arial, sans-serif; margin: 0; padding: 20px;'>
+                <div style='background-color: #f8f9fa; padding: 20px; border-radius: 5px;'>
+                    <h2 style='color: #2c3e50;'>Вітаємо, {userName}!</h2>
+                    <p>На жаль, консультацію було скасовано.</p>
+                    
+                    <div style='background-color: white; padding: 15px; border-radius: 5px; margin: 15px 0;'>
+                        <h3 style='color: #2c3e50; margin-top: 0;'>{consultationTitle}</h3>
+                        <p><strong>Спеціаліст:</strong> {specialistName}</p>
+                        <p><strong>Дата та час:</strong> {scheduledTime:dd.MM.yyyy HH:mm}</p>
+                    </div>
+
+                    <p>Ви можете записатися на іншу консультацію у нашій системі.</p>
+                    <br>
+                    <p style='color: #7f8c8d;'>З повагою,<br>Команда підтримки ветеранів</p>
+                </div>
+            </body>
+            </html>";
+
+            email.Body = builder.ToMessageBody();
+
+            using var smtp = new SmtpClient();
+            await smtp.ConnectAsync(_emailSettings.SmtpServer, _emailSettings.SmtpPort, SecureSocketOptions.StartTls);
+            await smtp.AuthenticateAsync(_emailSettings.FromEmail, _emailSettings.Password);
+            await smtp.SendAsync(email);
+            await smtp.DisconnectAsync(true);
+        }
     }
 }

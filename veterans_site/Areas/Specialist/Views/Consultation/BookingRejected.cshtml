@@ -1,6 +1,6 @@
 ﻿@{
     ViewData["Title"] = "Запит відхилено";
-    Layout = "_Layout"; // Використовуємо базовий layout
+    Layout = "_Layout";
 }
 
 <div class="container mt-5">
@@ -12,11 +12,11 @@
                         <i class="fas fa-times-circle text-danger" style="font-size: 4rem;"></i>
                     </div>
                     <h2 class="card-title">Запит на консультацію відхилено</h2>
-                    <p class="card-text mb-4">
+                    @* <p class="card-text mb-4">
                         Користувача було повідомлено про відхилення запиту.
-                    </p>
+                    </p> *@
                     <div class="text-center">
-                        <a href="/Specialist/Consultation" class="btn btn-primary">Повернутися до консультацій</a>
+                        <a href="/Home" class="btn btn-primary">На головну</a>
                     </div>
                 </div>
             </div>

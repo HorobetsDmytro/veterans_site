@@ -7,9 +7,8 @@
 
 <div class="container-fluid mt-4">
     <div class="row">
-        <!-- Фільтри -->
         <div class="col-md-3">
-            <div class="card">
+            <div class="card mb-4">
                 <div class="card-header">
                     <h5 class="mb-0">Фільтри</h5>
                 </div>
@@ -21,7 +20,7 @@
                                 <option value="">Всі типи</option>
                                 @foreach (ConsultationType type in Enum.GetValues(typeof(ConsultationType)))
                                 {
-                                    if (Model.CurrentType == type)
+                                    @if (Model.CurrentType == type)
                                     {
                                         <option value="@type" selected>@type.GetDisplayName()</option>
                                     }
@@ -39,7 +38,7 @@
                                 <option value="">Всі формати</option>
                                 @foreach (ConsultationFormat format in Enum.GetValues(typeof(ConsultationFormat)))
                                 {
-                                    if (Model.CurrentFormat == format)
+                                    @if (Model.CurrentFormat == format)
                                     {
                                         <option value="@format" selected>@format.GetDisplayName()</option>
                                     }
@@ -57,7 +56,7 @@
                                 <option value="">Всі статуси</option>
                                 @foreach (ConsultationStatus status in Enum.GetValues(typeof(ConsultationStatus)))
                                 {
-                                    if (Model.CurrentStatus == status)
+                                    @if (Model.CurrentStatus == status)
                                     {
                                         <option value="@status" selected>@status.GetDisplayName()</option>
                                     }
@@ -69,78 +68,147 @@
                             </select>
                         </div>
 
+                        <div class="mb-3">
+                            <label class="form-label">Ціна від</label>
+                            <div class="input-group">
+                                <input type="number" name="minPrice" class="form-control" value="@Model.MinPrice" min="0" step="0.01">
+                                <span class="input-group-text">₴</span>
+                            </div>
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label">Ціна до</label>
+                            <div class="input-group">
+                                <input type="number" name="maxPrice" class="form-control" value="@Model.MaxPrice" min="0" step="0.01">
+                                <span class="input-group-text">₴</span>
+                            </div>
+                        </div>
+
                         <button type="submit" class="btn btn-primary w-100">Застосувати фільтри</button>
                     </form>
                 </div>
             </div>
         </div>
 
-        <!-- Список консультацій -->
         <div class="col-md-9">
             <div class="d-flex justify-content-between align-items-center mb-4">
                 <h1 class="h3">Мої консультації</h1>
 
-                <!-- Сортування -->
-                <div class="btn-group me-3">
-                    <a class="btn btn-secondary dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown">
+                <div class="btn-group">
+                    <button class="btn btn-secondary dropdown-toggle" type="button" data-bs-toggle="dropdown">
                         Сортувати за: @(Model.CurrentSort switch
                         {
                             "date_desc" => "Дата за спаданням",
                             "date_asc" => "Дата за зростанням",
+                            "price_desc" => "Ціна за спаданням",
+                            "price_asc" => "Ціна за зростанням",
                             _ => "Дата за зростанням"
                         })
-                    </a>
+                    </button>
                     <ul class="dropdown-menu">
-                        <li><a class="dropdown-item" asp-action="Index" asp-route-sortOrder="date_asc">Дата за зростанням</a></li>
-                        <li><a class="dropdown-item" asp-action="Index" asp-route-sortOrder="date_desc">Дата за спаданням</a></li>
+                        <li>
+                            <a class="dropdown-item @(Model.CurrentSort == "date_asc" ? "active" : "")"
+                               asp-action="Index"
+                               asp-route-sortOrder="date_asc"
+                               asp-route-type="@Model.CurrentType"
+                               asp-route-format="@Model.CurrentFormat"
+                               asp-route-status="@Model.CurrentStatus"
+                               asp-route-minPrice="@Model.MinPrice"
+                               asp-route-maxPrice="@Model.MaxPrice">
+                                <i class="fas fa-sort-numeric-down"></i> Дата за зростанням
+                            </a>
+                        </li>
+                        <li>
+                            <a class="dropdown-item @(Model.CurrentSort == "date_desc" ? "active" : "")"
+                               asp-action="Index"
+                               asp-route-sortOrder="date_desc"
+                               asp-route-type="@Model.CurrentType"
+                               asp-route-format="@Model.CurrentFormat"
+                               asp-route-status="@Model.CurrentStatus"
+                               asp-route-minPrice="@Model.MinPrice"
+                               asp-route-maxPrice="@Model.MaxPrice">
+                                <i class="fas fa-sort-numeric-up"></i> Дата за спаданням
+                            </a>
+                        </li>
+                        <li><hr class="dropdown-divider"></li>
+                        <li>
+                            <a class="dropdown-item @(Model.CurrentSort == "price_asc" ? "active" : "")"
+                               asp-action="Index"
+                               asp-route-sortOrder="price_asc"
+                               asp-route-type="@Model.CurrentType"
+                               asp-route-format="@Model.CurrentFormat"
+                               asp-route-status="@Model.CurrentStatus"
+                               asp-route-minPrice="@Model.MinPrice"
+                               asp-route-maxPrice="@Model.MaxPrice">
+                                <i class="fas fa-sort-amount-down"></i> Ціна за зростанням
+                            </a>
+                        </li>
+                        <li>
+                            <a class="dropdown-item @(Model.CurrentSort == "price_desc" ? "active" : "")"
+                               asp-action="Index"
+                               asp-route-sortOrder="price_desc"
+                               asp-route-type="@Model.CurrentType"
+                               asp-route-format="@Model.CurrentFormat"
+                               asp-route-status="@Model.CurrentStatus"
+                               asp-route-minPrice="@Model.MinPrice"
+                               asp-route-maxPrice="@Model.MaxPrice">
+                                <i class="fas fa-sort-amount-up"></i> Ціна за спаданням
+                            </a>
+                        </li>
                     </ul>
                 </div>
-
                 <a class="btn btn-primary" asp-action="Create">Створити нову консультацію</a>
             </div>
 
-            <!-- Картки консультацій -->
-            <div class="row">
-                @foreach (var item in Model.Consultations)
-                {
-                    <div class="col-md-6 mb-4">
-                        <div class="card h-100 shadow-sm">
-                            <div class="card-body">
-                                <h5 class="card-title">@item.Title</h5>
-                                <ul class="list-unstyled text-muted mb-4">
-                                    <li>
-                                        <i class="far fa-calendar-alt"></i>
-                                        @if (item.Format == ConsultationFormat.Individual)
-                                        {
-                                            <span>Період: @item.DateTime.ToString("dd.MM.yyyy HH:mm") - @item.EndDateTime?.ToString("dd.MM.yyyy HH:mm")</span>
-                                            <br />
-                                            <span>Кількість слотів: @item.Slots.Count()</span>
-                                            <br />
-                                            <span>Заброньовано: @item.Slots.Count(s => s.IsBooked)</span>
-                                        }
-                                        else
-                                        {
-                                            <span>Дата: @item.DateTime.ToString("dd.MM.yyyy HH:mm")</span>
-                                        }
-                                    </li>
-                                    <li><i class="far fa-clock"></i> Тривалість: @item.Duration хв</li>
-                                    <li><i class="fas fa-tag"></i> Тип: @item.Type.GetDisplayName()</li>
-                                    <li><i class="fas fa-users"></i> Формат: @item.Format.GetDisplayName()</li>
-                                    <li><i class="fas fa-desktop"></i> Формат проведення: @item.Mode.GetDisplayName()</li>
-                                    @if (item.Mode == ConsultationMode.Offline)
-                                    {
-                                        <li><i class="fas fa-map-marker-alt"></i> Місце: @item.Location</li>
-                                    }
-                                    @if (item.Format == ConsultationFormat.Group)
-                                    {
+            @if (!Model.Consultations.Any())
+            {
+                <div class="alert alert-info">
+                    <i class="fas fa-info-circle"></i> У вас поки немає створених консультацій.
+                </div>
+            }
+            else
+            {
+                <div class="row">
+                    @foreach (var item in Model.Consultations)
+                    {
+                        <div class="col-md-6 mb-4">
+                            <div class="card h-100 shadow-sm">
+                                <div class="card-body">
+                                    <h5 class="card-title">@item.Title</h5>
+                                    <ul class="list-unstyled text-muted mb-4">
                                         <li>
-                                            <i class="fas fa-user-friends"></i>
-                                            Учасники: @item.BookedParticipants / @item.MaxParticipants
+                                            <i class="far fa-calendar-alt"></i>
+                                            @if (item.Format == ConsultationFormat.Individual)
+                                            {
+                                                <span>Період: @item.DateTime.ToString("dd.MM.yyyy HH:mm") - @item.EndDateTime?.ToString("dd.MM.yyyy HH:mm")</span>
+                                                <br />
+                                                <span>Кількість слотів: @item.Slots.Count()</span>
+                                                <br />
+                                                <span>Заброньовано: @item.Slots.Count(s => s.IsBooked)</span>
+                                            }
+                                            else
+                                            {
+                                                <span>Дата: @item.DateTime.ToString("dd.MM.yyyy HH:mm")</span>
+                                            }
                                         </li>
-                                    }
-                                    <li><i class="fas fa-money-bill-wave"></i> Ціна: @item.Price.ToString("C")</li>
-                                </ul>
-                                <span class="badge @(item.Status switch
+                                        <li><i class="far fa-clock"></i> Тривалість: @item.Duration хв</li>
+                                        <li><i class="fas fa-tag"></i> Тип: @item.Type.GetDisplayName()</li>
+                                        <li><i class="fas fa-users"></i> Формат: @item.Format.GetDisplayName()</li>
+                                        <li><i class="fas fa-desktop"></i> Формат проведення: @item.Mode.GetDisplayName()</li>
+                                        @if (item.Mode == ConsultationMode.Offline)
+                                        {
+                                            <li><i class="fas fa-map-marker-alt"></i> Місце: @item.Location</li>
+                                        }
+                                        @if (item.Format == ConsultationFormat.Group)
+                                        {
+                                            <li>
+                                                <i class="fas fa-user-friends"></i>
+                                                Учасники: @item.BookedParticipants / @item.MaxParticipants
+                                            </li>
+                                        }
+                                        <li><i class="fas fa-money-bill-wave"></i> Ціна: @item.Price.ToString("C")</li>
+                                    </ul>
+                                    <span class="badge @(item.Status switch
                                 {
                                     ConsultationStatus.Planned => "bg-primary",
                                     ConsultationStatus.InProgress => "bg-success",
@@ -148,20 +216,21 @@
                                     ConsultationStatus.Cancelled => "bg-danger",
                                     _ => "bg-secondary"
                                 })" style="font-size: 1rem; font-weight: normal;">
-                                    @item.Status.GetDisplayName()
-                                </span>
-                                <div class="d-flex gap-2 mt-3">
-                                    <a asp-action="Details" asp-route-id="@item.Id" class="btn btn-outline-primary btn-sm">Деталі</a>
-                                    <a asp-action="Edit" asp-route-id="@item.Id" class="btn btn-outline-success btn-sm">Редагувати</a>
-                                    <a asp-action="Delete" asp-route-id="@item.Id" class="btn btn-outline-danger btn-sm">Видалити</a>
+                                        @item.Status.GetDisplayName()
+                                    </span>
+                                    <div class="d-flex gap-2 mt-3">
+                                        <a asp-action="Details" asp-route-id="@item.Id" class="btn btn-outline-primary btn-sm">Деталі</a>
+                                        <a asp-action="Edit" asp-route-id="@item.Id" class="btn btn-outline-success btn-sm">Редагувати</a>
+                                        <a asp-action="Delete" asp-route-id="@item.Id" class="btn btn-outline-danger btn-sm">Видалити</a>
+                                    </div>
                                 </div>
                             </div>
                         </div>
-                    </div>
-                }
-            </div>
+                    }
+                </div>
 
-            <!-- Пагінація -->
+            }
+
             @if (Model.TotalPages > 1)
             {
                 <nav aria-label="Page navigation" class="mt-4">

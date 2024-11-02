@@ -36,15 +36,18 @@ namespace veterans_site.Controllers
         }
 
         public async Task<IActionResult> Index(
-            ConsultationType? type = null,
-            ConsultationFormat? format = null,
-            double? minPrice = null,
-            double? maxPrice = null,
-            string sortOrder = null,
-            int page = 1)
+    ConsultationType? type = null,
+    ConsultationFormat? format = null,
+    double? minPrice = null,
+    double? maxPrice = null,
+    string sortOrder = null,
+    int page = 1)
         {
             var consultations = await _consultationRepository.GetAvailableConsultationsAsync(
                 type, format, minPrice, maxPrice, sortOrder, page, PageSize);
+
+            // Фільтруємо тільки заплановані консультації
+            consultations = consultations.Where(c => c.Status == ConsultationStatus.Planned);
 
             if (User.Identity.IsAuthenticated)
             {
@@ -55,9 +58,6 @@ namespace veterans_site.Controllers
                 }
             }
 
-            //var totalPages = await _consultationRepository.GetTotalPagesAsync(
-            //    type, format, null, minPrice, maxPrice, PageSize, true);
-
             var viewModel = new PublicConsultationIndexViewModel
             {
                 Consultations = consultations,
@@ -65,7 +65,6 @@ namespace veterans_site.Controllers
                 CurrentFormat = format,
                 CurrentSort = sortOrder,
                 CurrentPage = page,
-                //TotalPages = totalPages,
                 MinPrice = minPrice,
                 MaxPrice = maxPrice
             };
