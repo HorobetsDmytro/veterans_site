@@ -104,6 +104,7 @@
                                 </div>
                                 <ul class="list-unstyled text-muted mb-4">
                                     <li><i class="far fa-calendar-alt"></i> Дата проведення: @item.Date.ToString("dd.MM.yyyy HH:mm")</li>
+                                    <li><i class="far fa-clock"></i> Тривалість: @item.Duration.ToString() хв</li>
                                     <li><i class="fas fa-map-marker-alt"></i> Місце проведення: @item.Location</li>
                                     @if (item.MaxParticipants.HasValue)
                                     {

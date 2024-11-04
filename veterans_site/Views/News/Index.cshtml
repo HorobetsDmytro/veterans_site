@@ -3,34 +3,111 @@
     ViewData["Title"] = "Новини";
 }
 
+<style>
+    .search-card {
+        border: none;
+        border-radius: 1rem;
+        transition: all 0.3s ease;
+    }
+
+    .news-card {
+        border: none;
+        border-radius: 1rem;
+        overflow: hidden;
+        transition: all 0.3s ease;
+    }
+
+        .news-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 20px rgba(0,0,0,0.1) !important;
+        }
+
+    .news-image {
+        height: 200px;
+        object-fit: cover;
+        transition: transform 0.3s ease;
+    }
+
+    .news-card:hover .news-image {
+        transform: scale(1.05);
+    }
+
+    .news-date {
+        font-size: 0.9rem;
+        color: #6c757d;
+    }
+
+    .news-title {
+        color: #2d3748;
+        font-weight: 600;
+        margin-bottom: 1rem;
+    }
+
+    .news-content {
+        color: #4a5568;
+        line-height: 1.6;
+    }
+
+    .btn-primary {
+        padding: 0.5rem 1.5rem;
+        border-radius: 0.5rem;
+        transition: all 0.3s ease;
+    }
+
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(13, 110, 253, 0.2);
+        }
+
+    .pagination .page-link {
+        border: none;
+        padding: 0.5rem 1rem;
+        margin: 0 0.2rem;
+        border-radius: 0.5rem;
+        color: #2d3748;
+        transition: all 0.3s ease;
+    }
+
+    .pagination .page-item.active .page-link {
+        background-color: #0d6efd;
+        color: white;
+    }
+
+    .pagination .page-link:hover {
+        background-color: #e9ecef;
+        transform: translateY(-2px);
+    }
+</style>
+
 <div class="container mt-5">
     <nav aria-label="breadcrumb" class="mb-4">
         <ol class="breadcrumb">
-            <li class="breadcrumb-item"><a asp-controller="Home" asp-action="Index">Головна</a></li>
-            <li class="breadcrumb-item active" aria-current="page">Новини</li>
+            <li class="breadcrumb-item"><a asp-controller="Home" asp-action="Index" class="text-decoration-none">Головна</a></li>
+            <li class="breadcrumb-item active">Новини</li>
         </ol>
     </nav>
 
-    <div class="row">
+    <div class="row g-4">
         <div class="col-md-3">
-            <div class="card shadow-sm mb-4">
-                <div class="card-body">
-                    <h5 class="card-title mb-3">Пошук</h5>
+            <div class="search-card card shadow-sm">
+                <div class="card-body p-4">
+                    <h5 class="fw-bold mb-4">Пошук новин</h5>
                     <form method="get" asp-action="Index">
-                        <div class="mb-3">
-                            <label class="form-label">Пошук за заголовком</label>
-                            <input type="text" name="searchTitle" class="form-control" placeholder="Введіть текст..." value="@ViewBag.CurrentSearch">
+                        <div class="mb-4">
+                            <label class="form-label text-muted">Пошук за заголовком</label>
+                            <input type="text" name="searchTitle" class="form-control border-0 bg-light"
+                                   placeholder="Введіть текст..." value="@ViewBag.CurrentSearch">
                         </div>
-
-                        <div class="mb-3">
-                            <label class="form-label">Сортувати за</label>
-                            <select name="sortOrder" class="form-select">
+                        <div class="mb-4">
+                            <label class="form-label text-muted">Сортувати за</label>
+                            <select name="sortOrder" class="form-select border-0 bg-light">
                                 <option value="latest" selected>Найновіші</option>
                                 <option value="oldest">Найстаріші</option>
                             </select>
                         </div>
-
-                        <button type="submit" class="btn btn-primary w-100">Застосувати</button>
+                        <button type="submit" class="btn btn-primary w-100">
+                            <i class="fas fa-search me-2"></i>Застосувати
+                        </button>
                     </form>
                 </div>
             </div>
@@ -41,24 +118,28 @@
                 @foreach (var news in Model)
                 {
                     <div class="col-md-6">
-                        <div class="card h-100 shadow-sm">
+                        <div class="news-card card h-100 shadow-sm">
                             @if (!string.IsNullOrEmpty(news.ImagePath))
                             {
-                                <img src="@news.ImagePath" class="card-img-top" alt="@news.Title" style="height: 200px; object-fit: cover;">
+                                <div class="overflow-hidden">
+                                    <img src="@news.ImagePath" class="news-image card-img-top" alt="@news.Title">
+                                </div>
                             }
-                            <div class="card-body">
-                                <h5 class="card-title">@news.Title</h5>
-                                <p class="text-muted">
-                                    <i class="far fa-calendar-alt"></i>
+                            <div class="card-body p-4">
+                                <div class="news-date mb-2">
+                                    <i class="far fa-calendar-alt me-2"></i>
                                     @news.PublishDate.ToString("dd MMMM yyyy")
-                                </p>
-                                <p class="card-text">
+                                </div>
+                                <h5 class="news-title">@news.Title</h5>
+                                <p class="news-content mb-4">
                                     @(news.Content.Length > 150
                                         ? news.Content.Substring(0, 147) + "..."
                                         : news.Content)
                                 </p>
-                                <a asp-action="Details" asp-route-id="@news.Id" class="btn btn-primary">
+                                <a asp-action="Details" asp-route-id="@news.Id"
+                                   class="btn btn-primary">
                                     Читати далі
+                                    <i class="fas fa-arrow-right ms-2"></i>
                                 </a>
                             </div>
                         </div>
@@ -68,12 +149,12 @@
 
             @if (ViewBag.TotalPages > 1)
             {
-                <nav class="mt-4" aria-label="Page navigation">
+                <nav class="mt-5" aria-label="Page navigation">
                     <ul class="pagination justify-content-center">
                         @for (int i = 1; i <= ViewBag.TotalPages; i++)
                         {
                             <li class="page-item @(i == ViewBag.CurrentPage ? "active" : "")">
-                                <a class="page-link"
+                                <a class="page-link shadow-sm"
                                    asp-action="Index"
                                    asp-route-page="@i"
                                    asp-route-searchTitle="@ViewBag.CurrentSearch"

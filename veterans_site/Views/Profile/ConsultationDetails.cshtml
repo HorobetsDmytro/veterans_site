@@ -4,20 +4,123 @@
     ViewData["Title"] = "Деталі консультації";
 }
 
-<div class="container mt-5">
-    <div class="card shadow-sm">
-        <div class="card-body">
-            <nav aria-label="breadcrumb" class="mb-4">
-                <ol class="breadcrumb">
-                    <li class="breadcrumb-item"><a asp-action="Index">Мій профіль</a></li>
-                    <li class="breadcrumb-item active">Деталі консультації</li>
-                </ol>
-            </nav>
+<style>
+    .consultation-details {
+        padding: 2rem 0;
+        background-color: #f8fafc;
+    }
 
-            <div class="mb-4">
-                <h2 class="mb-4">@Model.Title</h2>
+    .details-card {
+        border: none;
+        border-radius: 1rem;
+        box-shadow: 0 0 30px rgba(0,0,0,0.05);
+    }
 
-                <div class="alert @(Model.Status switch
+    .breadcrumb {
+        margin: 0;
+        padding: 0;
+    }
+
+    .breadcrumb-item a {
+        color: #0d6efd;
+        text-decoration: none;
+        transition: all 0.3s ease;
+    }
+
+        .breadcrumb-item a:hover {
+            color: #0a58ca;
+        }
+
+    .consultation-title {
+        font-size: 2rem;
+        font-weight: 700;
+        color: #1e293b;
+        margin-bottom: 1.5rem;
+    }
+
+    .status-alert {
+        border: none;
+        border-radius: 1rem;
+        padding: 1.5rem;
+    }
+
+    .info-section {
+        background: #f8fafc;
+        border-radius: 1rem;
+        padding: 1.5rem;
+        margin-bottom: 1.5rem;
+    }
+
+    .info-title {
+        color: #0d6efd;
+        font-size: 1.1rem;
+        font-weight: 600;
+        margin-bottom: 1rem;
+    }
+
+    .info-list li {
+        padding: 0.75rem 0;
+        border-bottom: 1px solid rgba(0,0,0,0.05);
+    }
+
+        .info-list li:last-child {
+            border-bottom: none;
+        }
+
+    .info-list i {
+        width: 24px;
+        color: #0d6efd;
+    }
+
+    .badge {
+        padding: 0.5rem 1rem;
+        border-radius: 2rem;
+        font-weight: 500;
+    }
+
+    .description-section {
+        background: #f8fafc;
+        border-radius: 1rem;
+        padding: 1.5rem;
+    }
+
+    .btn {
+        padding: 0.75rem 1.5rem;
+        border-radius: 0.5rem;
+        font-weight: 500;
+        transition: all 0.3s ease;
+    }
+
+        .btn:hover {
+            transform: translateY(-2px);
+        }
+
+    .btn-cancel {
+        background-color: #dc3545;
+        color: white;
+        border: none;
+    }
+
+        .btn-cancel:hover {
+            background-color: #bb2d3b;
+            box-shadow: 0 5px 15px rgba(220, 53, 69, 0.2);
+        }
+</style>
+
+<div class="consultation-details">
+    <div class="container">
+        <div class="details-card card">
+            <div class="card-body p-4">
+                <nav aria-label="breadcrumb" class="mb-4">
+                    <ol class="breadcrumb">
+                        <li class="breadcrumb-item"><a asp-action="Index">Мій профіль</a></li>
+                        <li class="breadcrumb-item active">Деталі консультації</li>
+                    </ol>
+                </nav>
+
+                <h1 class="consultation-title">@Model.Title</h1>
+
+                <div class="status-alert alert @(Model.Status switch
                 {
                     ConsultationStatus.Planned => "alert-primary",
                     ConsultationStatus.InProgress => "alert-success",
@@ -25,102 +128,120 @@
                     ConsultationStatus.Cancelled => "alert-danger",
                     _ => "alert-secondary"
                 })">
-                    <h5 class="alert-heading">Статус консультації:</h5>
-                    <p class="mb-0">@Model.Status.GetDisplayName()</p>
-                </div>
-
-                <div class="row mt-4">
-                    <div class="col-md-6">
-                        <h5 class="text-muted mb-3">Основна інформація</h5>
-                        <ul class="list-unstyled">
-                            <li class="mb-3">
-                                <i class="fas fa-calendar-alt fa-fw text-primary"></i>
-                                <strong>Дата та час:</strong>
-                                @if (Model.Format == ConsultationFormat.Individual && Model.Slots != null)
-                                {
-                                    var userSlot = Model.Slots.FirstOrDefault(s => s.UserId == ViewBag.UserId && s.IsBooked);
-                                    if (userSlot != null)
-                                    {
-                                        @userSlot.DateTime.ToString("dd.MM.yyyy HH:mm")
-                                    }
-                                }
-                                else
-                                {
-                                    @Model.DateTime.ToString("dd.MM.yyyy HH:mm")
-                                }
-                            </li>
-                            <li class="mb-3">
-                                <i class="fas fa-clock fa-fw text-primary"></i>
-                                <strong>Тривалість:</strong> @Model.Duration хв
-                            </li>
-                            <li class="mb-3">
-                                <i class="fas fa-user-md fa-fw text-primary"></i>
-                                <strong>Спеціаліст:</strong> @Model.SpecialistName
-                            </li>
-                        </ul>
-                    </div>
-                    <div class="col-md-6">
-                        <h5 class="text-muted mb-3">Додаткова інформація</h5>
-                        <ul class="list-unstyled">
-                            <li class="mb-3">
-                                <i class="fas fa-tag fa-fw text-primary"></i>
-                                <strong>Тип консультації:</strong> @Model.Type.GetDisplayName()
-                            </li>
-                            <li class="mb-3">
-                                <i class="fas fa-users fa-fw text-primary"></i>
-                                <strong>Формат:</strong> @Model.Format.GetDisplayName()
-                            </li>
-                            <li class="mb-3">
-                                <i class="fas fa-desktop fa-fw text-primary"></i>
-                                <strong>Формат проведення:</strong>
-                                <span class="badge @(Model.Mode == ConsultationMode.Online ? "bg-success" : "bg-warning")">
-                                    @Model.Mode.GetDisplayName()
-                                </span>
-                            </li>
-                            @if (Model.Mode == ConsultationMode.Offline)
-                            {
-                                <li class="mb-3">
-                                    <i class="fas fa-map-marker-alt fa-fw text-primary"></i>
-                                    <strong>Місце проведення:</strong> @Model.Location
-                                </li>
-                            }
-                            <li class="mb-3">
-                                <i class="fas fa-money-bill fa-fw text-primary"></i>
-                                <strong>Вартість:</strong> @Model.Price.ToString("C")
-                            </li>
-                        </ul>
-                    </div>
-                </div>
-
-                <div class="mt-4">
-                    <h5 class="text-muted mb-3">Опис консультації</h5>
-                    <p>@Model.Description</p>
-                </div>
-
-                @* @if (Model.Format == ConsultationFormat.Group)
-                {
-                    <div class="mt-4">
-                        <h5 class="text-muted mb-3">Інформація про групу</h5>
-                        <div class="d-flex gap-3">
-                            <span class="badge bg-primary">Всього місць: @Model.MaxParticipants</span>
-                            <span class="badge bg-success">Зареєстровано: @Model.BookedParticipants</span>
-                            <span class="badge bg-info">Вільно місць: @(Model.MaxParticipants - Model.BookedParticipants)</span>
+                    <div class="d-flex align-items-center">
+                        <i class="@(Model.Status switch
+                        {
+                            ConsultationStatus.Planned => "fas fa-clock",
+                            ConsultationStatus.InProgress => "fas fa-play",
+                            ConsultationStatus.Completed => "fas fa-check",
+                            ConsultationStatus.Cancelled => "fas fa-times",
+                            _ => "fas fa-info-circle"
+                        }) fa-2x me-3"></i>
+                        <div>
+                            <h5 class="alert-heading mb-1">Статус консультації</h5>
+                            <p class="mb-0">@Model.Status.GetDisplayName()</p>
                         </div>
                     </div>
-                } *@
+                </div>
 
-                <div class="mt-4">
+                <div class="row g-4 mt-4">
+                    <div class="col-md-6">
+                        <div class="info-section">
+                            <h5 class="info-title">
+                                <i class="fas fa-info-circle me-2"></i>
+                                Основна інформація
+                            </h5>
+                            <ul class="info-list list-unstyled mb-0">
+                                <li class="d-flex align-items-center">
+                                    <i class="fas fa-calendar-alt me-3"></i>
+                                    <div>
+                                        <strong>Дата та час:</strong><br>
+                                        <span>@Model.DateTime.ToString("dd.MM.yyyy HH:mm")</span>
+                                    </div>
+                                </li>
+                                <li class="d-flex align-items-center">
+                                    <i class="fas fa-clock me-3"></i>
+                                    <div>
+                                        <strong>Тривалість:</strong><br>
+                                        <span>@Model.Duration хвилин</span>
+                                    </div>
+                                </li>
+                                <li class="d-flex align-items-center">
+                                    <i class="fas fa-user-md me-3"></i>
+                                    <div>
+                                        <strong>Спеціаліст:</strong><br>
+                                        <span>@Model.SpecialistName</span>
+                                    </div>
+                                </li>
+                            </ul>
+                        </div>
+                    </div>
+
+                    <div class="col-md-6">
+                        <div class="info-section">
+                            <h5 class="info-title">
+                                <i class="fas fa-cog me-2"></i>
+                                Додаткова інформація
+                            </h5>
+                            <ul class="info-list list-unstyled mb-0">
+                                <li class="d-flex align-items-center">
+                                    <i class="fas fa-tag me-3"></i>
+                                    <div>
+                                        <strong>Тип консультації:</strong><br>
+                                        <span>@Model.Type.GetDisplayName()</span>
+                                    </div>
+                                </li>
+                                <li class="d-flex align-items-center">
+                                    <i class="fas fa-users me-3"></i>
+                                    <div>
+                                        <strong>Формат:</strong><br>
+                                        <span>@Model.Format.GetDisplayName()</span>
+                                    </div>
+                                </li>
+                                @if (Model.Mode == ConsultationMode.Offline)
+                                {
+                                    <li class="d-flex align-items-center">
+                                        <i class="fas fa-map-marker-alt me-3"></i>
+                                        <div>
+                                            <strong>Місце проведення:</strong><br>
+                                            <span>@Model.Location</span>
+                                        </div>
+                                    </li>
+                                }
+                                <li class="d-flex align-items-center">
+                                    <i class="fas fa-money-bill me-3"></i>
+                                    <div>
+                                        <strong>Вартість:</strong><br>
+                                        <span>@Model.Price.ToString("C")</span>
+                                    </div>
+                                </li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="description-section mt-4">
+                    <h5 class="info-title">
+                        <i class="fas fa-align-left me-2"></i>
+                        Опис консультації
+                    </h5>
+                    <p class="mb-0">@Model.Description</p>
+                </div>
+
+                <div class="mt-4 d-flex gap-3">
                     <a asp-action="Index" class="btn btn-secondary">
-                        <i class="fas fa-arrow-left"></i> Повернутися до профілю
+                        <i class="fas fa-arrow-left me-2"></i>
+                        Повернутися до профілю
                     </a>
                     @if (Model.Status != ConsultationStatus.Cancelled && Model.Status != ConsultationStatus.Completed)
                     {
-                        <form asp-controller="Consultations" asp-action="Cancel" method="post" class="d-inline-block ms-2">
+                        <form asp-controller="Consultations" asp-action="Cancel" method="post" class="d-inline-block">
                             @Html.AntiForgeryToken()
                             <input type="hidden" name="consultationId" value="@Model.Id" />
-                            <button type="submit" class="btn btn-danger"
+                            <button type="submit" class="btn btn-cancel"
                                     onclick="return confirm('Ви впевнені, що хочете скасувати запис на консультацію?')">
-                                <i class="fas fa-times"></i> Скасувати запис
+                                <i class="fas fa-times me-2"></i>
+                                Скасувати запис
                             </button>
                         </form>
                     }

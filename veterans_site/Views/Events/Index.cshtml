@@ -1,0 +1,228 @@
+﻿@* /Views/Events/Index.cshtml *@
+@model veterans_site.ViewModels.EventIndexViewModel
+@using veterans_site.Extensions
+
+<style>
+    .event-section {
+        padding: 2rem 0;
+        background-color: #f8fafc;
+    }
+
+    .filter-card {
+        border: none;
+        border-radius: 1rem;
+        box-shadow: 0 0 30px rgba(0,0,0,0.05);
+    }
+
+    .event-card {
+        border: none;
+        border-radius: 1rem;
+        box-shadow: 0 0 30px rgba(0,0,0,0.05);
+        transition: all 0.3s ease;
+        height: 100%;
+    }
+
+    .event-card:hover {
+        transform: translateY(-5px);
+    }
+
+    .category-badge {
+        padding: 0.5rem 1rem;
+        border-radius: 2rem;
+        font-weight: 500;
+    }
+
+    .status-badge {
+        padding: 0.5rem 1rem;
+        border-radius: 2rem;
+        font-weight: 500;
+    }
+
+    .btn-register {
+        padding: 0.5rem 1.5rem;
+        border-radius: 0.5rem;
+        font-weight: 500;
+        transition: all 0.3s ease;
+    }
+
+    .btn-register:hover {
+        transform: translateY(-2px);
+    }
+
+    .search-section {
+        background: linear-gradient(45deg, #0d6efd, #0a58ca);
+        padding: 3rem 0;
+        margin-bottom: 2rem;
+        border-radius: 1rem;
+    }
+
+    .search-title {
+        color: white;
+        font-size: 2rem;
+        font-weight: 700;
+        margin-bottom: 1.5rem;
+    }
+
+    .search-subtitle {
+        color: rgba(255, 255, 255, 0.8);
+        font-size: 1.1rem;
+        margin-bottom: 2rem;
+    }
+</style>
+
+<div class="event-section">
+    <div class="container">
+        <div class="search-section text-center">
+            <h1 class="search-title">Події та заходи для ветеранів</h1>
+            <p class="search-subtitle">Знайдіть та зареєструйтеся на цікаві для вас події</p>
+        </div>
+
+        @if (TempData["Success"] != null)
+        {
+            <div class="alert alert-success alert-dismissible fade show mb-4" role="alert">
+                <i class="fas fa-check-circle me-2"></i>
+                @TempData["Success"]
+                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+            </div>
+        }
+
+        @if (TempData["Error"] != null)
+        {
+            <div class="alert alert-danger alert-dismissible fade show mb-4" role="alert">
+                <i class="fas fa-exclamation-circle me-2"></i>
+                @TempData["Error"]
+                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+            </div>
+        }
+
+        <div class="row g-4">
+            <!-- Фільтри -->
+            <div class="col-lg-3">
+                <div class="filter-card card">
+                    <div class="card-body">
+                        <h5 class="card-title mb-4">Фільтри</h5>
+                        <form method="get" asp-action="Index">
+                            @* Частина /Views/Events/Index.cshtml, що потребує виправлення *@
+
+                            <!-- Сортування -->
+                            <div class="mb-4">
+                                <label class="form-label">Сортування</label>
+                                <select name="sortOrder" class="form-select" onchange="this.form.submit()">
+                                    <option value="date_asc" selected="@(Model.CurrentSort == "date_asc")">
+                                        Дата (за зростанням)
+                                    </option>
+                                    <option value="date_desc" selected="@(Model.CurrentSort == "date_desc")">
+                                        Дата (за спаданням)
+                                    </option>
+                                    <option value="participants_asc" selected="@(Model.CurrentSort == "participants_asc")">
+                                        Учасники (за зростанням)
+                                    </option>
+                                    <option value="participants_desc" selected="@(Model.CurrentSort == "participants_desc")">
+                                        Учасники (за спаданням)
+                                    </option>
+                                </select>
+                            </div>
+
+                            <!-- Категорії -->
+                            <div class="mb-4">
+                                <label class="form-label">Категорія</label>
+                                <select name="category" class="form-select" onchange="this.form.submit()">
+                                    <option value="">Всі категорії</option>
+                                    @foreach (EventCategory category in Enum.GetValues(typeof(EventCategory)))
+                                    {
+                                        <option value="@category" selected="@(Model.CurrentCategory == category)">
+                                            @category.GetDisplayName()
+                                        </option>
+                                    }
+                                </select>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Список подій -->
+            <div class="col-lg-9">
+                <div class="row g-4">
+                    @foreach (var evt in Model.Events)
+                    {
+                        <div class="col-md-6">
+                            <div class="event-card card">
+                                <div class="card-body p-4">
+                                    <div class="d-flex justify-content-between mb-3">
+                                        <span class="category-badge bg-primary bg-opacity-10 text-primary">
+                                            @evt.Category.GetDisplayName()
+                                        </span>
+                                        <span class="status-badge @(evt.Status switch {
+                                            EventStatus.Planned => "bg-primary bg-opacity-10 text-primary",
+                                            EventStatus.InProgress => "bg-success bg-opacity-10 text-success",
+                                            EventStatus.Completed => "bg-secondary bg-opacity-10 text-secondary",
+                                            EventStatus.Cancelled => "bg-danger bg-opacity-10 text-danger",
+                                            _ => ""
+                                        })">
+                                            @evt.Status.GetDisplayName()
+                                        </span>
+                                    </div>
+
+                                    <h5 class="card-title mb-3">@evt.Title</h5>
+
+                                    <div class="mb-4">
+                                        <p class="text-muted mb-2">
+                                            <i class="far fa-calendar-alt me-2"></i>
+                                            @evt.Date.ToString("dd.MM.yyyy HH:mm") - @evt.EndTime.ToString("HH:mm")
+                                        </p>
+                                        <p class="text-muted mb-2">
+                                            <i class="far fa-clock me-2"></i>
+                                            Тривалість: @evt.Duration хв
+                                        </p>
+                                        @if (evt.MaxParticipants.HasValue)
+                                        {
+                                            <p class="text-muted mb-0">
+                                                <i class="fas fa-users me-2"></i>
+                                                @evt.EventParticipants.Count / @evt.MaxParticipants місць зайнято
+                                            </p>
+                                        }
+                                    </div>
+
+                                    <div class="d-flex gap-2">
+                                        <a asp-action="Details" asp-route-id="@evt.Id" 
+                                           class="btn btn-outline-primary btn-register">
+                                            <i class="fas fa-info-circle me-2"></i>Деталі
+                                        </a>
+                                        @if (evt.Status == EventStatus.Planned && evt.CanRegister)
+                                        {
+                                            <a asp-action="Book" asp-route-id="@evt.Id"
+                                               class="btn btn-primary btn-register">
+                                                <i class="fas fa-user-plus me-2"></i>Зареєструватися
+                                            </a>
+                                        }
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    }
+                </div>
+
+                <!-- Пагінація -->
+                @if (Model.TotalPages > 1)
+                {
+                    <nav class="mt-4">
+                        <ul class="pagination justify-content-center">
+                            @for (int i = 1; i <= Model.TotalPages; i++)
+                            {
+                                <li class="page-item @(Model.CurrentPage == i ? "active" : "")">
+                                    <a class="page-link" asp-action="Index"
+                                       asp-route-page="@i"
+                                       asp-route-category="@Model.CurrentCategory"
+                                       asp-route-sortOrder="@Model.CurrentSort">
+                                        @i
+                                    </a>
+                                </li>
+                            }
+                        </ul>
+                    </nav>
+                }
+            </div>
+        </div>
+    </div>
+</div>

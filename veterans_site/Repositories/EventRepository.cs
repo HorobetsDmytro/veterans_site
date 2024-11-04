@@ -143,5 +143,13 @@ namespace veterans_site.Repositories
                 .ThenInclude(ep => ep.User)
                 .FirstOrDefaultAsync(e => e.Id == eventId);
         }
+
+        public async Task<ICollection<EventParticipant>> GetEventParticipantsAsync(int eventId)
+        {
+            return await _context.EventParticipants
+                .Include(ep => ep.User)
+                .Where(ep => ep.EventId == eventId)
+                .ToListAsync();
+        }
     }
 }

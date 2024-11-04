@@ -27,6 +27,12 @@
                         </div>
 
                         <div class="mb-3">
+                            <label asp-for="Duration" class="form-label">Тривалість (хв)</label>
+                            <input asp-for="Duration" type="number" class="form-control" min="10" max="480" />
+                            <span asp-validation-for="Duration" class="text-danger"></span>
+                        </div>
+
+                        <div class="mb-3">
                             <label asp-for="Location" class="form-label">Місце проведення</label>
                             <input asp-for="Location" class="form-control" />
                             <span asp-validation-for="Location" class="text-danger"></span>

@@ -4,15 +4,74 @@
     ViewData["Title"] = "Запис на консультацію";
 }
 
-<div class="container mt-5">
-    <div class="row justify-content-center">
-        <div class="col-md-8">
-            <div class="card shadow">
-                <div class="card-body">
-                    <h2 class="card-title text-center mb-4">Запис на консультацію</h2>
+<style>
+    .booking-section {
+        padding: 3rem 0;
+        background-color: #f8fafc;
+    }
 
-                    <div class="alert alert-info">
-                        <h5 class="mb-3">Деталі консультації:</h5>
+    .booking-card {
+        border: none;
+        border-radius: 1rem;
+        box-shadow: 0 0 30px rgba(0,0,0,0.05);
+    }
+
+    .booking-title {
+        color: #2d3748;
+        font-size: 1.75rem;
+        font-weight: 700;
+        text-align: center;
+        margin-bottom: 2rem;
+    }
+
+    .info-alert {
+        background: rgba(49,130,206,0.1);
+        border: none;
+        border-radius: 0.5rem;
+        padding: 1.5rem;
+    }
+
+        .info-alert h5 {
+            color: #2b6cb0;
+        }
+
+    .slots-table {
+        border-radius: 0.5rem;
+        overflow: hidden;
+    }
+
+        .slots-table th {
+            background: #f7fafc;
+            font-weight: 600;
+        }
+
+    .form-check-input {
+        cursor: pointer;
+    }
+
+    .confirm-checkbox {
+        padding: 1rem;
+        background: #f7fafc;
+        border-radius: 0.5rem;
+        margin: 1.5rem 0;
+    }
+
+    .action-buttons {
+        display: grid;
+        gap: 1rem;
+    }
+</style>
+
+<div class="booking-section">
+    <div class="container">
+        <div class="row justify-content-center">
+            <div class="col-lg-8">
+                <div class="booking-card card">
+                    <div class="card-body p-4">
+                        <h2 class="booking-title">Запис на консультацію</h2>
+
+                        <div class="info-alert mb-4">
+                            <h5 class="mb-3">Деталі консультації</h5>
                         <ul class="list-unstyled">
                             <li class="mb-2"><strong>Назва:</strong> @Model.Title</li>
                             <li class="mb-2"><strong>Спеціаліст:</strong> @Model.SpecialistName</li>
@@ -42,33 +101,33 @@
 
                     @if (Model.Format == ConsultationFormat.Individual && Model.Slots.Any())
                     {
-                        <div class="mb-4">
-                            <h5 class="mb-3">Доступні слоти:</h5>
+                        <div class="slots-section mb-4">
+                            <h5 class="text-primary mb-3">Доступні слоти</h5>
                             <div class="table-responsive">
-                                <table class="table table-hover">
-                                    <thead>
+                                <table class="table table-hover slots-table">
+                                <thead>
+                                    <tr>
+                                        <th>Дата та час</th>
+                                        <th class="text-center">Вибір</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    @foreach (var slot in Model.Slots.Where(s => !s.IsBooked).OrderBy(s => s.DateTime))
+                                    {
                                         <tr>
-                                            <th>Дата та час</th>
-                                            <th class="text-center">Вибір</th>
+                                            <td>@slot.DateTime.ToString("dd.MM.yyyy HH:mm")</td>
+                                            <td class="text-center">
+                                                <input type="radio" name="slotId" value="@slot.Id" class="form-check-input" required>
+                                            </td>
                                         </tr>
-                                    </thead>
-                                    <tbody>
-                                        @foreach (var slot in Model.Slots.Where(s => !s.IsBooked).OrderBy(s => s.DateTime))
-                                        {
-                                            <tr>
-                                                <td>@slot.DateTime.ToString("dd.MM.yyyy HH:mm")</td>
-                                                <td class="text-center">
-                                                    <input type="radio" name="slotId" value="@slot.Id" class="form-check-input" required>
-                                                </td>
-                                            </tr>
-                                        }
-                                    </tbody>
-                                </table>
-                            </div>
+                                    }
+                                </tbody>
+                            </table>
                         </div>
+                    </div>
                     }
 
-                    <form asp-action="BookConfirm" method="post" class="mt-4" id="bookingForm">
+                    <form asp-action="BookConfirm" method="post" id="bookingForm">
                         @Html.AntiForgeryToken()
                         <input type="hidden" name="id" value="@Model.Id" />
 
@@ -77,16 +136,22 @@
                             <input type="hidden" name="slotId" id="selectedSlotId" />
                         }
 
-                        <div class="form-check mb-3">
-                            <input class="form-check-input" type="checkbox" id="confirmCheck" required>
-                            <label class="form-check-label" for="confirmCheck">
-                                Я підтверджую запис на консультацію та згоден з умовами
-                            </label>
+                        <div class="confirm-checkbox">
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" id="confirmCheck" required>
+                                <label class="form-check-label" for="confirmCheck">
+                                    Я підтверджую запис на консультацію та згоден з умовами
+                                </label>
+                            </div>
                         </div>
 
-                        <div class="d-grid gap-2">
-                            <button type="submit" class="btn btn-primary">Підтвердити запис</button>
-                            <a asp-action="Index" class="btn btn-outline-secondary">Скасувати</a>
+                        <div class="action-buttons">
+                            <button type="submit" class="btn btn-primary">
+                                <i class="fas fa-check me-2"></i>Підтвердити запис
+                            </button>
+                            <a asp-action="Index" class="btn btn-secondary">
+                                <i class="fas fa-times me-2"></i>Скасувати
+                            </a>
                         </div>
                     </form>
                 </div>

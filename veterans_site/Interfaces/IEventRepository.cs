@@ -19,5 +19,6 @@ namespace veterans_site.Interfaces
         Task CancelEventParticipationAsync(int eventId, string userId);
         Task<bool> HasActiveEventsAsync(string userId);
         Task<Event> GetByIdWithParticipantsAsync(int eventId);
+        Task<ICollection<EventParticipant>> GetEventParticipantsAsync(int eventId);
     }
 }

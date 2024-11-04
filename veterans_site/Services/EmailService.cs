@@ -458,5 +458,115 @@ namespace veterans_site.Services
             await smtp.SendAsync(email);
             await smtp.DisconnectAsync(true);
         }
+
+        public async Task SendEventRegistrationConfirmationAsync(string toEmail, string userName, Event evt)
+        {
+            var email = new MimeMessage();
+            email.From.Add(MailboxAddress.Parse(_emailSettings.FromEmail));
+            email.To.Add(MailboxAddress.Parse(toEmail));
+            email.Subject = $"Підтвердження реєстрації на подію \"{evt.Title}\"";
+
+            var builder = new BodyBuilder();
+            builder.HtmlBody = $@"
+        <html>
+        <body style='font-family: Arial, sans-serif; margin: 0; padding: 20px;'>
+            <div style='background-color: #f8f9fa; padding: 20px; border-radius: 5px;'>
+                <h2 style='color: #2c3e50;'>Вітаємо, {userName}!</h2>
+                <p>Ви успішно зареєструвалися на подію ""{evt.Title}"".</p>
+                
+                <div style='background-color: white; padding: 15px; border-radius: 5px; margin: 15px 0;'>
+                    <p><strong>Дата та час:</strong> {evt.Date:dd.MM.yyyy HH:mm}</p>
+                    <p><strong>Місце проведення:</strong> {evt.Location}</p>
+                    <p><strong>Категорія:</strong> {evt.Category.GetDisplayName()}</p>
+                </div>
+
+                <p>Не забудьте прийти вчасно!</p>
+                <br>
+                <p style='color: #7f8c8d;'>З повагою,<br>Команда підтримки ветеранів</p>
+            </div>
+        </body>
+        </html>";
+
+            email.Body = builder.ToMessageBody();
+
+            using var smtp = new SmtpClient();
+            await smtp.ConnectAsync(_emailSettings.SmtpServer, _emailSettings.SmtpPort, SecureSocketOptions.StartTls);
+            await smtp.AuthenticateAsync(_emailSettings.FromEmail, _emailSettings.Password);
+            await smtp.SendAsync(email);
+            await smtp.DisconnectAsync(true);
+        }
+
+        public async Task SendEventCancellationNotificationAsync(string toEmail, string userName, Event evt)
+        {
+            var email = new MimeMessage();
+            email.From.Add(MailboxAddress.Parse(_emailSettings.FromEmail));
+            email.To.Add(MailboxAddress.Parse(toEmail));
+            email.Subject = $"Скасування реєстрації на подію \"{evt.Title}\"";
+
+            var builder = new BodyBuilder();
+            builder.HtmlBody = $@"
+        <html>
+        <body style='font-family: Arial, sans-serif; margin: 0; padding: 20px;'>
+            <div style='background-color: #f8f9fa; padding: 20px; border-radius: 5px;'>
+                <h2 style='color: #2c3e50;'>Вітаємо, {userName}!</h2>
+                <p>Вашу реєстрацію на подію ""{evt.Title}"" було скасовано.</p>
+                
+                <div style='background-color: white; padding: 15px; border-radius: 5px; margin: 15px 0;'>
+                    <p><strong>Дата та час:</strong> {evt.Date:dd.MM.yyyy HH:mm}</p>
+                    <p><strong>Місце проведення:</strong> {evt.Location}</p>
+                </div>
+
+                <p>Ви можете зареєструватися на інші доступні події в нашій системі.</p>
+                <br>
+                <p style='color: #7f8c8d;'>З повагою,<br>Команда підтримки ветеранів</p>
+            </div>
+        </body>
+        </html>";
+
+            email.Body = builder.ToMessageBody();
+
+            using var smtp = new SmtpClient();
+            await smtp.ConnectAsync(_emailSettings.SmtpServer, _emailSettings.SmtpPort, SecureSocketOptions.StartTls);
+            await smtp.AuthenticateAsync(_emailSettings.FromEmail, _emailSettings.Password);
+            await smtp.SendAsync(email);
+            await smtp.DisconnectAsync(true);
+        }
+
+        public async Task SendEventReminderAsync(string toEmail, string userName, Event evt)
+        {
+            var email = new MimeMessage();
+            email.From.Add(MailboxAddress.Parse(_emailSettings.FromEmail));
+            email.To.Add(MailboxAddress.Parse(toEmail));
+            email.Subject = $"Нагадування про подію \"{evt.Title}\"";
+
+            var builder = new BodyBuilder();
+            builder.HtmlBody = $@"
+        <html>
+        <body style='font-family: Arial, sans-serif; margin: 0; padding: 20px;'>
+            <div style='background-color: #f8f9fa; padding: 20px; border-radius: 5px;'>
+                <h2 style='color: #2c3e50;'>Вітаємо, {{userName}}!</h2>
+                <p>Нагадуємо, що завтра відбудеться подія """"{{evt.Title}}"""".</p>
+                
+                <div style='background-color: white; padding: 15px; border-radius: 5px; margin: 15px 0;'>
+                    <p><strong>Дата та час:</strong> {{evt.Date:dd.MM.yyyy HH:mm}}</p>
+                    <p><strong>Місце проведення:</strong> {{evt.Location}}</p>
+                    <p><strong>Категорія:</strong> {{evt.Category.GetDisplayName()}}</p>
+                </div>
+
+                <p>Чекаємо на вас!</p>
+                <br>
+                <p style='color: #7f8c8d;'>З повагою,<br>Команда підтримки ветеранів</p>
+            </div>
+        </body>
+        </html>";
+
+            email.Body = builder.ToMessageBody();
+
+            using var smtp = new SmtpClient();
+            await smtp.ConnectAsync(_emailSettings.SmtpServer, _emailSettings.SmtpPort, SecureSocketOptions.StartTls);
+            await smtp.AuthenticateAsync(_emailSettings.FromEmail, _emailSettings.Password);
+            await smtp.SendAsync(email);
+            await smtp.DisconnectAsync(true);
+        }
     }
 }

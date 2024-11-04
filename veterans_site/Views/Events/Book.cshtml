@@ -1,0 +1,154 @@
+﻿@* /Views/Events/Book.cshtml *@
+@model Event
+@using veterans_site.Extensions
+
+<style>
+    .booking-section {
+        padding: 2rem 0;
+        background-color: #f8fafc;
+    }
+
+    .booking-card {
+        border: none;
+        border-radius: 1rem;
+        box-shadow: 0 0 30px rgba(0,0,0,0.05);
+    }
+
+    .event-info {
+        background: #f8fafc;
+        border-radius: 1rem;
+        padding: 1.5rem;
+        margin-bottom: 1.5rem;
+    }
+
+    .info-item {
+        margin-bottom: 1rem;
+    }
+
+        .info-item i {
+            width: 24px;
+            color: #0d6efd;
+        }
+
+    .confirmation-text {
+        font-size: 1.1rem;
+        color: #1e293b;
+        margin-bottom: 2rem;
+    }
+
+    .btn-confirm {
+        padding: 1rem 2rem;
+        border-radius: 0.5rem;
+        font-weight: 500;
+        transition: all 0.3s ease;
+    }
+
+        .btn-confirm:hover {
+            transform: translateY(-2px);
+        }
+
+    .status-badge {
+        padding: 0.5rem 1rem;
+        border-radius: 2rem;
+        font-weight: 500;
+    }
+</style>
+
+<div class="booking-section">
+    <div class="container">
+        <div class="booking-card card">
+            <div class="card-body p-4">
+                <nav aria-label="breadcrumb" class="mb-4">
+                    <ol class="breadcrumb">
+                        <li class="breadcrumb-item">
+                            <a asp-action="Index" class="text-decoration-none">Події</a>
+                        </li>
+                        <li class="breadcrumb-item">
+                            <a asp-action="Details" asp-route-id="@Model.Id" class="text-decoration-none">
+                                Деталі події
+                            </a>
+                        </li>
+                        <li class="breadcrumb-item active">Реєстрація на подію</li>
+                    </ol>
+                </nav>
+
+                <h1 class="h2 mb-4">Реєстрація на подію</h1>
+
+                <div class="row">
+                    <div class="col-lg-8">
+                        <div class="event-info mb-4">
+                            <h5 class="mb-3">Інформація про подію</h5>
+                            <div class="info-item">
+                                <i class="fas fa-heading me-2"></i>
+                                <strong>Назва:</strong> @Model.Title
+                            </div>
+                            <div class="info-item">
+                                <i class="far fa-calendar-alt me-2"></i>
+                                <strong>Дата та час:</strong> @Model.Date.ToString("dd.MM.yyyy HH:mm")
+                            </div>
+                            <div class="info-item">
+                                <i class="far fa-clock me-2"></i>
+                                <strong>Тривалість:</strong> @Model.Duration хвилин
+                            </div>
+                            <div class="info-item">
+                                <i class="far fa-clock me-2"></i>
+                                <strong>Час завершення:</strong> @Model.EndTime.ToString("HH:mm")
+                            </div>
+                            <div class="info-item">
+                                <i class="fas fa-map-marker-alt me-2"></i>
+                                <strong>Місце проведення:</strong> @Model.Location
+                            </div>
+                            <div class="info-item">
+                                <i class="fas fa-tag me-2"></i>
+                                <strong>Категорія:</strong> @Model.Category.GetDisplayName()
+                            </div>
+                            @if (Model.MaxParticipants.HasValue)
+                            {
+                                <div class="info-item">
+                                    <i class="fas fa-users me-2"></i>
+                                    <strong>Вільних місць:</strong>
+                                    @(Model.MaxParticipants - Model.EventParticipants.Count) з @Model.MaxParticipants
+                                </div>
+                            }
+                        </div>
+
+                        <div class="confirmation-section">
+                            <p class="confirmation-text">
+                                Ви дійсно бажаєте зареєструватися на цю подію?
+                            </p>
+
+                            <form asp-action="Book" method="post">
+                                @Html.AntiForgeryToken()
+                                <input type="hidden" name="id" value="@Model.Id" />
+
+                                <div class="d-flex gap-3">
+                                    <button type="submit" class="btn btn-primary btn-confirm">
+                                        <i class="fas fa-check me-2"></i>Підтвердити реєстрацію
+                                    </button>
+                                    <a asp-action="Details" asp-route-id="@Model.Id"
+                                       class="btn btn-outline-secondary btn-confirm">
+                                        <i class="fas fa-times me-2"></i>Скасувати
+                                    </a>
+                                </div>
+                            </form>
+                        </div>
+                    </div>
+
+                    <div class="col-lg-4">
+                        <div class="alert alert-info">
+                            <h5 class="alert-heading">
+                                <i class="fas fa-info-circle me-2"></i>Важлива інформація
+                            </h5>
+                            <p class="mb-0">
+                                Після реєстрації ви отримаєте електронний лист з підтвердженням
+                                та додатковою інформацією про подію.
+                                За необхідності ви зможете скасувати свою реєстрацію
+                                у своєму особистому кабінеті.
+                            </p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>

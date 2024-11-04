@@ -22,5 +22,9 @@ namespace veterans_site.Services
             string zoomUrl = null);
         Task SendConsultationCancelledNotificationAsync(string toEmail, string userName, string consultationTitle,
         DateTime scheduledTime, string specialistName);
+
+        Task SendEventRegistrationConfirmationAsync(string toEmail, string userName, Event evt);
+        Task SendEventCancellationNotificationAsync(string toEmail, string userName, Event evt);
+        Task SendEventReminderAsync(string toEmail, string userName, Event evt);
     }
 }

@@ -69,6 +69,14 @@ builder.Services.AddAuthorization(options =>
 
 builder.Services.AddHostedService<ConsultationBackgroundService>();
 
+builder.Services.AddHostedService<EventBackgroundService>();
+
+builder.Services.AddAuthorization(options =>
+{
+    options.AddPolicy("CanRegisterForEvents", policy =>
+        policy.RequireRole("Veteran"));
+});
+
 var app = builder.Build();
     
 using (var scope = app.Services.CreateScope())

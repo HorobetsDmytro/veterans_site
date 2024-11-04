@@ -78,7 +78,7 @@ namespace veterans_site.Areas.Admin.Controllers
 
         [HttpPost]
         [ValidateAntiForgeryToken]
-        public async Task<IActionResult> Create([Bind("Title,Description,Date,Location,MaxParticipants,Category")] Event @event)
+        public async Task<IActionResult> Create([Bind("Title,Description,Date,Duration,Location,MaxParticipants,Category")] Event @event)
         {
             if (ModelState.IsValid)
             {
@@ -106,7 +106,7 @@ namespace veterans_site.Areas.Admin.Controllers
 
         [HttpPost]
         [ValidateAntiForgeryToken]
-        public async Task<IActionResult> Edit(int id, [Bind("Id,Title,Description,Date,Location,MaxParticipants,Category,Status")] Event @event)
+        public async Task<IActionResult> Edit(int id, [Bind("Id,Title,Description,Date,Duration,Location,MaxParticipants,Category,Status")] Event @event)
         {
             if (id != @event.Id)
             {

@@ -1,0 +1,165 @@
+﻿@* /Views/Events/Details.cshtml *@
+@model Event
+@using veterans_site.Extensions
+
+<style>
+    .event-details {
+        padding: 2rem 0;
+        background-color: #f8fafc;
+    }
+
+    .details-card {
+        border: none;
+        border-radius: 1rem;
+        box-shadow: 0 0 30px rgba(0,0,0,0.05);
+    }
+
+    .event-title {
+        font-size: 2rem;
+        font-weight: 700;
+        color: #1e293b;
+        margin-bottom: 1.5rem;
+    }
+
+    .info-section {
+        background: #ffffff;
+        border-radius: 1rem;
+        padding: 1.5rem;
+        margin-bottom: 1.5rem;
+    }
+
+    .info-title {
+        color: #0d6efd;
+        font-size: 1.1rem;
+        font-weight: 600;
+        margin-bottom: 1rem;
+    }
+
+    .info-list {
+        list-style: none;
+        padding: 0;
+        margin: 0;
+    }
+
+    .info-list li {
+        padding: 0.75rem 0;
+        border-bottom: 1px solid rgba(0,0,0,0.05);
+    }
+
+    .info-list li:last-child {
+        border-bottom: none;
+    }
+
+    .info-list i {
+        width: 24px;
+        color: #0d6efd;
+    }
+
+    .description-section {
+        background: #ffffff;
+        border-radius: 1rem;
+        padding: 1.5rem;
+    }
+
+    .btn-book {
+        padding: 1rem 2rem;
+        border-radius: 0.5rem;
+        font-weight: 500;
+        transition: all 0.3s ease;
+    }
+
+    .btn-book:hover {
+        transform: translateY(-2px);
+    }
+</style>
+
+<div class="event-details">
+    <div class="container">
+        <div class="details-card card">
+            <div class="card-body p-4">
+                <nav aria-label="breadcrumb" class="mb-4">
+                    <ol class="breadcrumb">
+                        <li class="breadcrumb-item">
+                            <a asp-action="Index" class="text-decoration-none">Події</a>
+                        </li>
+                        <li class="breadcrumb-item active">Деталі події</li>
+                    </ol>
+                </nav>
+
+                <h1 class="event-title">@Model.Title</h1>
+
+                <div class="row g-4">
+                    <div class="col-lg-8">
+                        <div class="description-section mb-4">
+                            <h5 class="info-title">
+                                <i class="fas fa-align-left me-2"></i>Опис події
+                            </h5>
+                            <p class="mb-0">@Model.Description</p>
+                        </div>
+
+                        @if (Model.Status == EventStatus.Planned && Model.CanRegister)
+                        {
+                            <a asp-action="Book" asp-route-id="@Model.Id"
+                               class="btn btn-primary btn-book">
+                                <i class="fas fa-user-plus me-2"></i>Зареєструватися на подію
+                            </a>
+                        }
+                    </div>
+
+                    <div class="col-lg-4">
+                        <div class="info-section">
+                            <h5 class="info-title">
+                                <i class="fas fa-info-circle me-2"></i>Інформація про подію
+                            </h5>
+                            <ul class="info-list">
+                                <li>
+                                    <i class="far fa-calendar-alt me-2"></i>
+                                    <strong>Дата та час:</strong><br>
+                                    <span class="ms-4">@Model.Date.ToString("dd.MM.yyyy HH:mm")</span>
+                                </li>
+                                <li>
+                                    <i class="far fa-clock me-2"></i>
+                                    <strong>Тривалість:</strong><br>
+                                    <span class="ms-4">@Model.Duration хвилин</span>
+                                </li>
+                                <li>
+                                    <i class="far fa-clock me-2"></i>
+                                    <strong>Час завершення:</strong><br>
+                                    <span class="ms-4">@Model.EndTime.ToString("HH:mm")</span>
+                                </li>
+                                <li>
+                                    <i class="fas fa-map-marker-alt me-2"></i>
+                                    <strong>Місце проведення:</strong><br>
+                                    <span class="ms-4">@Model.Location</span>
+                                </li>
+                                <li>
+                                    <i class="fas fa-tag me-2"></i>
+                                    <strong>Категорія:</strong><br>
+                                    <span class="ms-4">@Model.Category.GetDisplayName()</span>
+                                </li>
+                                @if (Model.MaxParticipants.HasValue)
+                                {
+                                    <li>
+                                        <i class="fas fa-users me-2"></i>
+                                        <strong>Учасники:</strong><br>
+                                        <span class="ms-4">
+                                            @Model.EventParticipants.Count / @Model.MaxParticipants місць зайнято
+                                        </span>
+                                    </li>
+                                }
+                            </ul>
+                        </div>
+
+                        @if (!Model.CanRegister && Model.Status == EventStatus.Planned)
+                        {
+                            <div class="alert alert-warning">
+                                <i class="fas fa-exclamation-triangle me-2"></i>
+                                На жаль, всі місця вже зайняті
+                            </div>
+                        }
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>

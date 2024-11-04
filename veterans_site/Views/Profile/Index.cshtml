@@ -4,310 +4,470 @@
     ViewData["Title"] = "Мій профіль";
 }
 
-<div class="container mt-5">
-    @if (TempData["Success"] != null)
-    {
-        <div class="alert alert-success alert-dismissible fade show" role="alert">
-            @TempData["Success"]
-            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
-        </div>
+<style>
+    .profile-section {
+        padding: 2rem 0;
+        background-color: #f8fafc;
     }
 
-    @if (TempData["Error"] != null)
-    {
-        <div class="alert alert-danger alert-dismissible fade show" role="alert">
-            @TempData["Error"]
-            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
-        </div>
+    .profile-card {
+        border: none;
+        border-radius: 1rem;
+        box-shadow: 0 0 30px rgba(0,0,0,0.05);
+        transition: all 0.3s ease;
     }
 
-    <div class="row">
-        <div class="col-md-4">
-            <div class="card shadow-sm mb-4">
-                <div class="card-body">
-                    <h2 class="h4 mb-4">Персональна інформація</h2>
-                    <div class="alert @(Model.User.IsActive ? "alert-success" : "alert-danger") mb-4">
-                        <h5 class="alert-heading">Статус облікового запису</h5>
-                        @if (Model.User.IsActive)
-                        {
-                            <p class="mb-0">Ваш обліковий запис активний</p>
-                        }
-                        else
-                        {
-                            <p class="mb-0">Ваш обліковий запис неактивний. Зв'яжіться з адміністрацією для відновлення доступу.</p>
-                        }
-                    </div>
+    /* .profile-card:hover {
+        transform: translateY(-5px);
+    } */
 
-                    <div class="mb-3">
-                        <label class="text-muted d-block">Ім'я</label>
-                        <span class="h6">@Model.User.FirstName</span>
-                    </div>
+    .profile-header {
+        display: flex;
+        align-items: center;
+        margin-bottom: 2rem;
+    }
 
-                    <div class="mb-3">
-                        <label class="text-muted d-block">Прізвище</label>
-                        <span class="h6">@Model.User.LastName</span>
-                    </div>
+    .profile-avatar {
+        width: 80px;
+        height: 80px;
+        background: #0d6efd;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: white;
+        font-size: 2rem;
+        font-weight: 600;
+        margin-right: 1.5rem;
+    }
 
-                    <div class="mb-3">
-                        <label class="text-muted d-block">Email</label>
-                        <span class="h6">@Model.User.Email</span>
-                    </div>
+    .profile-info label {
+        font-size: 0.875rem;
+        color: #64748b;
+        margin-bottom: 0.25rem;
+    }
 
-                    <a asp-area="Identity" asp-page="/Account/Manage/Index" class="btn btn-outline-primary btn-sm">
-                        Редагувати профіль
-                    </a>
+    .profile-info span {
+        font-size: 1rem;
+        color: #1e293b;
+        font-weight: 500;
+    }
+
+    .tab-container {
+        background: white;
+        border-radius: 1rem;
+        padding: 1.5rem;
+        margin-bottom: 2rem;
+    }
+
+    .nav-tabs {
+        border: none;
+        gap: 1rem;
+        margin-bottom: 1.5rem;
+    }
+
+    .nav-tabs .nav-link {
+        border: none;
+        border-radius: 0.5rem;
+        padding: 0.75rem 1.5rem;
+        color: #64748b;
+        font-weight: 500;
+        transition: all 0.3s ease;
+    }
+
+    .nav-tabs .nav-link:hover {
+        background: #f1f5f9;
+    }
+
+    .nav-tabs .nav-link.active {
+        background: #0d6efd;
+        color: white;
+    }
+
+    .list-group-item {
+        border: none;
+        border-radius: 0.75rem;
+        margin-bottom: 1rem;
+        padding: 1.5rem;
+        background: #f8fafc;
+        transition: all 0.3s ease;
+    }
+
+    .list-group-item:hover {
+        background: #f1f5f9;
+    }
+
+    .item-title {
+        font-size: 1.1rem;
+        font-weight: 600;
+        color: #1e293b;
+        margin-bottom: 0.5rem;
+    }
+
+    .item-info {
+        color: #64748b;
+        font-size: 0.9rem;
+    }
+
+    .item-info i {
+        width: 20px;
+        color: #0d6efd;
+        margin-right: 0.5rem;
+    }
+
+    .badge {
+        padding: 0.5rem 1rem;
+        border-radius: 2rem;
+        font-weight: 500;
+    }
+
+    .btn-sm {
+        padding: 0.5rem 1rem;
+        border-radius: 0.5rem;
+        font-weight: 500;
+        transition: all 0.3s ease;
+    }
+
+    .btn-sm:hover {
+        transform: translateY(-2px);
+    }
+
+    .empty-message {
+        text-align: center;
+        padding: 2rem;
+        color: #64748b;
+    }
+
+    .status-badge {
+        padding: 0.75rem 1.5rem;
+        border-radius: 0.5rem;
+        font-weight: 500;
+        display: inline-flex;
+        align-items: center;
+        gap: 0.5rem;
+    }
+
+    .status-badge i {
+        font-size: 1.2rem;
+    }
+
+    .alert {
+        border-radius: 1rem;
+        border: none;
+    }
+</style>
+
+<div class="profile-section">
+    <div class="container">
+        @if (TempData["Success"] != null)
+        {
+            <div class="alert alert-success alert-dismissible fade show mb-4" role="alert">
+                <i class="fas fa-check-circle me-2"></i>
+                @TempData["Success"]
+                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+            </div>
+        }
+
+        @if (TempData["Error"] != null)
+        {
+            <div class="alert alert-danger alert-dismissible fade show mb-4" role="alert">
+                <i class="fas fa-exclamation-circle me-2"></i>
+                @TempData["Error"]
+                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+            </div>
+        }
+
+        <div class="row g-4">
+            <div class="col-md-4">
+                <div class="profile-card card">
+                    <div class="card-body p-4">
+                        <div class="profile-header">
+                            <div class="profile-avatar">
+                                @Model.User.FirstName[0]
+                            </div>
+                            <div>
+                                <h2 class="h4 mb-1">@Model.User.FirstName @Model.User.LastName</h2>
+                                <p class="text-muted mb-0">@Model.User.Email</p>
+                            </div>
+                        </div>
+
+                        <div class="status-badge w-100 mb-4 @(Model.User.IsActive ? "bg-success bg-opacity-10 text-success" : "bg-danger bg-opacity-10 text-danger")">
+                            <i class="@(Model.User.IsActive ? "fas fa-check-circle" : "fas fa-exclamation-circle")"></i>
+                            @if (Model.User.IsActive)
+                            {
+                                <span>Акаунт активний</span>
+                            }
+                            else
+                            {
+                                <span>Акаунт неактивний</span>
+                            }
+                        </div>
+
+                        <a asp-area="Identity" asp-page="/Account/Manage/Index" 
+                           class="btn btn-primary w-100">
+                            <i class="fas fa-user-edit me-2"></i>
+                            Редагувати профіль
+                        </a>
+                    </div>
                 </div>
             </div>
-        </div>
 
-        <div class="col-md-8">
-            <div class="card shadow-sm mb-4">
-                <div class="card-body">
-                    <h2 class="h4 mb-4">Мої консультації</h2>
+            <div class="col-md-8">
+                <div class="profile-card card mb-4">
+                    <div class="card-body p-4">
+                        <h3 class="h4 mb-4">Мої консультації</h3>
+                        
+                        <ul class="nav nav-tabs">
+                            <li class="nav-item">
+                                <a class="nav-link active" data-bs-toggle="tab" href="#upcoming">
+                                    <i class="fas fa-calendar-alt me-2"></i>Заплановані
+                                </a>
+                            </li>
+                            <li class="nav-item">
+                                <a class="nav-link" data-bs-toggle="tab" href="#past">
+                                    <i class="fas fa-history me-2"></i>Минулі
+                                </a>
+                            </li>
+                        </ul>
 
-                    <ul class="nav nav-tabs mb-3">
-                        <li class="nav-item">
-                            <a class="nav-link active" data-bs-toggle="tab" href="#upcoming">Заплановані</a>
-                        </li>
-                        <li class="nav-item">
-                            <a class="nav-link" data-bs-toggle="tab" href="#past">Минулі</a>
-                        </li>
-                    </ul>
-
-                    <div class="tab-content">
-                        <div class="tab-pane fade show active" id="upcoming">
-                            @if (Model.UpcomingConsultations.Any())
-                            {
-                                <div class="list-group">
-                                    @foreach (var consultation in Model.UpcomingConsultations)
-                                    {
-                                        <div class="list-group-item">
-                                            <div class="d-flex w-100 justify-content-between align-items-center">
-                                                <div>
-                                                    <div class="d-flex align-items-center gap-2 mb-2">
-                                                        <h5 class="mb-0">@consultation.Title</h5>
-                                                        <span class="badge @(consultation.Format == ConsultationFormat.Individual ? "bg-info" : "bg-primary")">
-                                                            @consultation.Format.GetDisplayName()
-                                                        </span>
-                                                        <span class="badge @(consultation.Mode == ConsultationMode.Online ? "bg-success" : "bg-warning")">
-                                                            @consultation.Mode.GetDisplayName()
-                                                        </span>
-                                                    </div>
-                                                    <p class="mb-1">
-                                                        <i class="far fa-calendar-alt"></i>
-                                                        @if (consultation.Format == ConsultationFormat.Individual && consultation.Slots != null)
-                                                        {
-                                                            var bookedSlot = consultation.Slots.FirstOrDefault(s => s.IsBooked && s.UserId == Model.User.Id);
-                                                            if (bookedSlot != null)
-                                                            {
-                                                                @bookedSlot.DateTime.ToString("dd.MM.yyyy HH:mm")
-                                                            }
-                                                            else
-                                                            {
+                        <div class="tab-content">
+                            <div class="tab-pane fade show active" id="upcoming">
+                                @if (Model.UpcomingConsultations.Any())
+                                {
+                                    <div class="list-group">
+                                        @foreach (var consultation in Model.UpcomingConsultations)
+                                        {
+                                            <div class="list-group-item">
+                                                <div class="d-flex justify-content-between align-items-start">
+                                                    <div class="flex-grow-1">
+                                                        <h5 class="item-title">@consultation.Title</h5>
+                                                        <div class="d-flex gap-2 mb-3">
+                                                            <span class="badge bg-primary">@consultation.Format.GetDisplayName()</span>
+                                                            <span class="badge bg-info">@consultation.Mode.GetDisplayName()</span>
+                                                        </div>
+                                                        <div class="item-info">
+                                                            <p class="mb-2">
+                                                                <i class="far fa-calendar-alt"></i>
                                                                 @consultation.DateTime.ToString("dd.MM.yyyy HH:mm")
+                                                            </p>
+                                                            <p class="mb-2">
+                                                                <i class="far fa-clock"></i>
+                                                                Тривалість: @consultation.Duration хв
+                                                            </p>
+                                                            <p class="mb-2">
+                                                                <i class="fas fa-user-md"></i>
+                                                                @consultation.SpecialistName
+                                                            </p>
+                                                            @if (consultation.Mode == ConsultationMode.Offline)
+                                                            {
+                                                                <p class="mb-2">
+                                                                    <i class="fas fa-map-marker-alt"></i>
+                                                                    @consultation.Location
+                                                                </p>
                                                             }
-                                                        }
-                                                        else
+                                                        </div>
+                                                    </div>
+                                                    <div class="d-flex flex-column gap-2">
+                                                        @if (consultation.Status != ConsultationStatus.Cancelled)
                                                         {
-                                                            @consultation.DateTime.ToString("dd.MM.yyyy HH:mm")
+                                                            <form asp-controller="Consultations" asp-action="Cancel" 
+                                                                  method="post" onsubmit="return confirm('Ви впевнені?');">
+                                                                @Html.AntiForgeryToken()
+                                                                <input type="hidden" name="consultationId" value="@consultation.Id" />
+                                                                <button type="submit" class="btn btn-danger btn-sm">
+                                                                    <i class="fas fa-times me-2"></i>Скасувати
+                                                                </button>
+                                                            </form>
                                                         }
-                                                        <br />
-                                                        <i class="far fa-clock"></i> Тривалість: @consultation.Duration хв<br />
-                                                        <i class="fas fa-user-md"></i> @consultation.SpecialistName<br />
-                                                        <i class="fas fa-tag"></i> @consultation.Type.GetDisplayName()<br />
-                                                        @if (consultation.Mode == ConsultationMode.Offline)
-                                                        {
-                                                            <i class="fas fa-map-marker-alt"></i> @consultation.Location
-
-                                                            <br />
-                                                        }
-                                                    </p>
+                                                        <a asp-action="ConsultationDetails" asp-route-id="@consultation.Id" 
+                                                           class="btn btn-outline-primary btn-sm">
+                                                            <i class="fas fa-info-circle me-2"></i>Деталі
+                                                        </a>
+                                                    </div>
                                                 </div>
-                                                <div class="d-flex flex-column gap-2">
-                                                    @if (consultation.Status != ConsultationStatus.Cancelled)
-                                                    {
-                                                        <form asp-controller="Consultations" asp-action="Cancel" method="post"
-                                                              onsubmit="return confirm('Ви впевнені, що хочете скасувати запис на консультацію?');">
+                                            </div>
+                                        }
+                                    </div>
+                                }
+                                else
+                                {
+                                    <div class="empty-message">
+                                        <i class="far fa-calendar-times fa-3x mb-3"></i>
+                                        <p>Немає запланованих консультацій</p>
+                                    </div>
+                                }
+                            </div>
+
+                            <div class="tab-pane fade" id="past">
+                                @if (Model.PastConsultations.Any())
+                                {
+                                    <div class="list-group">
+                                        @foreach (var consultation in Model.PastConsultations)
+                                        {
+                                            <div class="list-group-item">
+                                                <div class="d-flex justify-content-between align-items-start">
+                                                    <div class="flex-grow-1">
+                                                        <h5 class="item-title">@consultation.Title</h5>
+                                                        <div class="d-flex gap-2 mb-3">
+                                                            <span class="badge bg-primary">@consultation.Format.GetDisplayName()</span>
+                                                            <span class="badge bg-info">@consultation.Mode.GetDisplayName()</span>
+                                                        </div>
+                                                        <div class="item-info">
+                                                            <p class="mb-2">
+                                                                <i class="far fa-calendar-alt"></i>
+                                                                @consultation.DateTime.ToString("dd.MM.yyyy HH:mm")
+                                                            </p>
+                                                            <p class="mb-2">
+                                                                <i class="far fa-clock"></i>
+                                                                Тривалість: @consultation.Duration хв
+                                                            </p>
+                                                            <p class="mb-2">
+                                                                <i class="fas fa-user-md"></i>
+                                                                @consultation.SpecialistName
+                                                            </p>
+                                                            @if (consultation.Mode == ConsultationMode.Offline)
+                                                            {
+                                                                <p class="mb-2">
+                                                                    <i class="fas fa-map-marker-alt"></i>
+                                                                    @consultation.Location
+                                                                </p>
+                                                            }
+                                                        </div>
+                                                    </div>
+                                                    <div class="d-flex flex-column gap-2">
+                                                        <a asp-action="ConsultationDetails" asp-route-id="@consultation.Id"
+                                                           class="btn btn-outline-primary btn-sm">
+                                                            <i class="fas fa-info-circle me-2"></i>Деталі
+                                                        </a>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        }
+                                    </div>
+                                }
+                                else
+                                {
+                                    <div class="empty-message">
+                                        <i class="far fa-calendar-times fa-3x mb-3"></i>
+                                        <p>Немає минулих консультацій</p>
+                                    </div>
+                                }
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Секція подій -->
+                <div class="profile-card card">
+                    <div class="card-body p-4">
+                        <h3 class="h4 mb-4">Мої події</h3>
+                        <ul class="nav nav-tabs">
+                            <li class="nav-item">
+                                <a class="nav-link active" data-bs-toggle="tab" href="#upcomingEvents">
+                                    <i class="fas fa-calendar-alt me-2"></i>Заплановані
+                                </a>
+                            </li>
+                            <li class="nav-item">
+                                <a class="nav-link" data-bs-toggle="tab" href="#pastEvents">
+                                    <i class="fas fa-history me-2"></i>Минулі
+                                </a>
+                            </li>
+                        </ul>
+
+                        <div class="tab-content">
+                            <div class="tab-pane fade show active" id="upcomingEvents">
+                                @if (Model.UpcomingEvents.Any())
+                                {
+                                    <div class="list-group">
+                                        @foreach (var evt in Model.UpcomingEvents)
+                                        {
+                                            <div class="list-group-item">
+                                                <div class="d-flex justify-content-between align-items-start">
+                                                    <div class="flex-grow-1">
+                                                        <h5 class="item-title">@evt.Title</h5>
+                                                        <div class="d-flex gap-2 mb-3">
+                                                            <span class="badge bg-primary">@evt.Category.GetDisplayName()</span>
+                                                        </div>
+                                                        <div class="item-info">
+                                                            <p class="mb-2">
+                                                                <i class="far fa-calendar-alt"></i>
+                                                                @evt.Date.ToString("dd.MM.yyyy HH:mm")
+                                                            </p>
+                                                            <p class="mb-2">
+                                                                <i class="fas fa-map-marker-alt"></i>
+                                                                @evt.Location
+                                                            </p>
+                                                        </div>
+                                                    </div>
+                                                    <div class="d-flex flex-column gap-2">
+                                                        <form asp-controller="Events" asp-action="Cancel" 
+                                                              method="post" onsubmit="return confirm('Ви впевнені?');">
                                                             @Html.AntiForgeryToken()
-                                                            <input type="hidden" name="consultationId" value="@consultation.Id" />
+                                                            <input type="hidden" name="eventId" value="@evt.Id" />
                                                             <button type="submit" class="btn btn-danger btn-sm">
-                                                                <i class="fas fa-times"></i> Скасувати
+                                                                <i class="fas fa-times me-2"></i>Скасувати
                                                             </button>
                                                         </form>
-                                                    }
-                                                    <a asp-action="ConsultationDetails" asp-route-id="@consultation.Id"
+                                                        <a asp-action="EventDetails" asp-route-id="@evt.Id" 
+                                                           class="btn btn-outline-primary btn-sm">
+                                                            <i class="fas fa-info-circle me-2"></i>Деталі
+                                                        </a>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        }
+                                    </div>
+                                }
+                                else
+                                {
+                                    <div class="empty-message">
+                                        <i class="far fa-calendar-times fa-3x mb-3"></i>
+                                        <p>Немає запланованих подій</p>
+                                    </div>
+                                }
+                            </div>
+
+                            <div class="tab-pane fade" id="pastEvents">
+                                @if (Model.PastEvents.Any())
+                                {
+                                    <div class="list-group">
+                                        @foreach (var evt in Model.PastEvents)
+                                        {
+                                            <div class="list-group-item">
+                                                <div class="d-flex justify-content-between align-items-start">
+                                                    <div class="flex-grow-1">
+                                                        <h5 class="item-title">@evt.Title</h5>
+                                                        <div class="d-flex gap-2 mb-3">
+                                                            <span class="badge bg-primary">@evt.Category.GetDisplayName()</span>
+                                                        </div>
+                                                        <div class="item-info">
+                                                            <p class="mb-2">
+                                                                <i class="far fa-calendar-alt"></i>
+                                                                @evt.Date.ToString("dd.MM.yyyy HH:mm")
+                                                            </p>
+                                                            <p class="mb-2">
+                                                                <i class="fas fa-map-marker-alt"></i>
+                                                                @evt.Location
+                                                            </p>
+                                                        </div>
+                                                    </div>
+                                                    <a asp-action="EventDetails" asp-route-id="@evt.Id"
                                                        class="btn btn-outline-primary btn-sm">
-                                                        <i class="fas fa-info-circle"></i> Деталі
+                                                        <i class="fas fa-info-circle me-2"></i>Деталі
                                                     </a>
                                                 </div>
                                             </div>
-                                        </div>
-                                    }
-                                </div>
-                            }
-                            else
-                            {
-                                <p class="text-muted">Немає запланованих консультацій</p>
-                            }
-                        </div>
-                        <div class="tab-pane fade" id="past">
-                            @if (Model.PastConsultations.Any())
-                            {
-                                <div class="list-group">
-                                    @foreach (var consultation in Model.PastConsultations)
-                                    {
-                                        <div class="list-group-item">
-                                            <div class="d-flex w-100 justify-content-between align-items-center">
-                                                <div>
-                                                    <div class="d-flex align-items-center gap-2 mb-2">
-                                                        <h5 class="mb-0">@consultation.Title</h5>
-                                                        <span class="badge @(consultation.Format == ConsultationFormat.Individual ? "bg-info" : "bg-primary")">
-                                                            @consultation.Format.GetDisplayName()
-                                                        </span>
-                                                        <span class="badge @(consultation.Mode == ConsultationMode.Online ? "bg-success" : "bg-warning")">
-                                                            @consultation.Mode.GetDisplayName()
-                                                        </span>
-                                                    </div>
-                                                    <p class="mb-1">
-                                                        <i class="far fa-calendar-alt"></i>
-                                                        @if (consultation.Format == ConsultationFormat.Individual && consultation.Slots != null)
-                                                        {
-                                                            var bookedSlot = consultation.Slots.FirstOrDefault(s => s.IsBooked && s.UserId == Model.User.Id);
-                                                            if (bookedSlot != null)
-                                                            {
-                                                                @bookedSlot.DateTime.ToString("dd.MM.yyyy HH:mm")
-                                                            }
-                                                            else
-                                                            {
-                                                                @consultation.DateTime.ToString("dd.MM.yyyy HH:mm")
-                                                            }
-                                                        }
-                                                        else
-                                                        {
-                                                            @consultation.DateTime.ToString("dd.MM.yyyy HH:mm")
-                                                        }
-                                                        <br />
-                                                        <i class="far fa-clock"></i> Тривалість: @consultation.Duration хв<br />
-                                                        <i class="fas fa-user-md"></i> @consultation.SpecialistName<br />
-                                                        <i class="fas fa-tag"></i> @consultation.Type.GetDisplayName()<br />
-                                                        @if (consultation.Mode == ConsultationMode.Offline)
-                                                        {
-                                                            <i class="fas fa-map-marker-alt"></i> @consultation.Location
-
-                                                            <br />
-                                                        }
-                                                    </p>
-                                                    <div class="mt-2">
-                                                        <span class="badge @(consultation.Status switch
-                                    {
-                                        ConsultationStatus.Planned => "bg-primary",
-                                        ConsultationStatus.InProgress => "bg-success",
-                                        ConsultationStatus.Completed => "bg-secondary",
-                                        ConsultationStatus.Cancelled => "bg-danger",
-                                        _ => "bg-secondary"
-                                    })">
-                                                            @consultation.Status.GetDisplayName()
-                                                        </span>
-                                                    </div>
-                                                </div>
-                                                <a asp-action="ConsultationDetails" asp-route-id="@consultation.Id"
-                                                   class="btn btn-outline-primary btn-sm">
-                                                    <i class="fas fa-info-circle"></i> Деталі
-                                                </a>
-                                            </div>
-                                        </div>
-                                    }
-                                </div>
-                            }
-                            else
-                            {
-                                <p class="text-muted">Немає минулих консультацій</p>
-                            }
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <div class="card shadow-sm">
-                <div class="card-body">
-                    <h2 class="h4 mb-4">Мої події</h2>
-
-                    <ul class="nav nav-tabs mb-3">
-                        <li class="nav-item">
-                            <a class="nav-link active" data-bs-toggle="tab" href="#upcomingEvents">Заплановані</a>
-                        </li>
-                        <li class="nav-item">
-                            <a class="nav-link" data-bs-toggle="tab" href="#pastEvents">Минулі</a>
-                        </li>
-                    </ul>
-
-                    <div class="tab-content">
-                        <div class="tab-pane fade show active" id="upcomingEvents">
-                            @if (Model.UpcomingEvents.Any())
-                            {
-                                <div class="list-group">
-                                    @foreach (var evt in Model.UpcomingEvents)
-                                    {
-                                        <div class="list-group-item">
-                                            <div class="d-flex w-100 justify-content-between align-items-center">
-                                                <div>
-                                                    <h5 class="mb-1">@evt.Title</h5>
-                                                    <p class="mb-1">
-                                                        <i class="far fa-calendar-alt"></i> @evt.Date.ToString("dd.MM.yyyy HH:mm")<br />
-                                                        <i class="fas fa-map-marker-alt"></i> @evt.Location<br />
-                                                        <i class="fas fa-tag"></i> @evt.Category.GetDisplayName()
-                                                    </p>
-                                                </div>
-                                                <div class="d-flex flex-column gap-2">
-                                                    <form asp-controller="Events" asp-action="Cancel" method="post" onsubmit="return confirm('Ви впевнені, що хочете скасувати реєстрацію на подію?');">
-                                                        @Html.AntiForgeryToken()
-                                                        <input type="hidden" name="eventId" value="@evt.Id" />
-                                                        <button type="submit" class="btn btn-danger btn-sm">
-                                                            <i class="fas fa-times"></i> Скасувати
-                                                        </button>
-                                                    </form>
-                                                    <a asp-action="EventDetails" asp-route-id="@evt.Id" class="btn btn-outline-primary btn-sm">
-                                                        <i class="fas fa-info-circle"></i> Деталі
-                                                    </a>
-                                                </div>
-                                            </div>
-                                        </div>
-                                    }
-                                </div>
-                            }
-                            else
-                            {
-                                <p class="text-muted">Немає запланованих подій</p>
-                            }
-                        </div>
-                        <div class="tab-pane fade" id="pastEvents">
-                            @if (Model.PastEvents.Any())
-                            {
-                                <div class="list-group">
-                                    @foreach (var evt in Model.PastEvents)
-                                    {
-                                        <div class="list-group-item">
-                                            <div class="d-flex w-100 justify-content-between align-items-center">
-                                                <div>
-                                                    <h5 class="mb-1">@evt.Title</h5>
-                                                    <p class="mb-1">
-                                                        <i class="far fa-calendar-alt"></i> @evt.Date.ToString("dd.MM.yyyy HH:mm")<br />
-                                                        <i class="fas fa-map-marker-alt"></i> @evt.Location<br />
-                                                        <i class="fas fa-tag"></i> @evt.Category.GetDisplayName()
-                                                    </p>
-                                                </div>
-                                                <a asp-action="EventDetails" asp-route-id="@evt.Id" class="btn btn-outline-primary btn-sm">
-                                                    <i class="fas fa-info-circle"></i> Деталі
-                                                </a>
-                                            </div>
-                                        </div>
-                                    }
-                                </div>
-                            }
-                            else
-                            {
-                                <p class="text-muted">Немає минулих подій</p>
-                            }
+                                        }
+                                    </div>
+                                }
+                                else
+                                {
+                                    <div class="empty-message">
+                                        <i class="far fa-calendar-times fa-3x mb-3"></i>
+                                        <p>Немає минулих подій</p>
+                                    </div>
+                                }
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -315,3 +475,30 @@
         </div>
     </div>
 </div>
+
+@section Scripts {
+    <script>
+        // Додати анімацію для бейджів статусу
+        document.addEventListener('DOMContentLoaded', function () {
+            // Анімація для alert повідомлень
+            const alerts = document.querySelectorAll('.alert');
+            alerts.forEach(alert => {
+                setTimeout(() => {
+                    alert.classList.add('fade');
+                    setTimeout(() => {
+                        alert.remove();
+                    }, 500);
+                }, 3000);
+            });
+
+            // Підсвічування активної вкладки
+            const hash = window.location.hash;
+            if (hash) {
+                const tab = document.querySelector(`a[href="${hash}"]`);
+                if (tab) {
+                    tab.click();
+                }
+            }
+        });
+    </script>
+}

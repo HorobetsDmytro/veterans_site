@@ -4,65 +4,317 @@
     ViewData["Title"] = "Головна сторінка";
 }
 
-<div class="container-fluid px-0">
-    <div class="position-relative">
-        <div class="p-5 text-center bg-image" style="
-            background-image: url('/images/hero-bg.jpg');
-            height: 500px;
+@section Styles {
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/4.1.1/animate.min.css" />
+    <style>
+        .hero-section {
+            position: relative;
+            min-height: 100vh;
+            background: linear-gradient(rgba(0, 0, 0, 0.7), rgba(0, 0, 0, 0.7)), url('/images/hero-bg.jpg');
             background-size: cover;
             background-position: center;
-            background-color: #2c3e50;">
-            <div class="mask" style="background-color: rgba(0, 0, 0, 0.6);">
-                <div class="d-flex justify-content-center align-items-center h-100">
-                    <div class="text-white">
-                        <h1 class="mb-3 display-3">Підтримка Ветеранів України</h1>
-                        <p class="mb-4 fs-4">Платформа для надання всебічної допомоги та підтримки ветеранам</p>
-                        <a class="btn btn-outline-light btn-lg me-2" href="#services">Дізнатись більше</a>
-                        <a class="btn btn-primary btn-lg" asp-area="" asp-controller="Consultations" asp-action="Index">Записатись на консультацію</a>
-                    </div>
-                </div>
-            </div>
+            background-attachment: fixed;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            text-align: center;
+            padding: 2rem 0;
+        }
+
+        .hero-content {
+            max-width: 800px;
+            padding: 2rem;
+            /*animation: fadeIn 1s ease-out;*/
+        }
+
+        .hero-title {
+            font-size: 4rem;
+            font-weight: 700;
+            margin-bottom: 1.5rem;
+            line-height: 1.2;
+        }
+
+        .hero-subtitle {
+            font-size: 1.5rem;
+            margin-bottom: 2rem;
+            opacity: 0.9;
+        }
+
+        .hero-buttons {
+            display: flex;
+            gap: 1rem;
+            justify-content: center;
+            margin-top: 2rem;
+        }
+
+        .hero-btn {
+            padding: 1rem 2.5rem;
+            font-size: 1.1rem;
+            font-weight: 500;
+            border-radius: 50px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            transition: all 0.3s ease;
+            text-decoration: none !important;
+        }
+
+        .hero-btn:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 10px 20px rgba(0, 0, 0, 0.2);
+            text-decoration: none !important;
+        }
+
+        .hero-btn-primary {
+            background: #0d6efd;
+            border: none;
+            color: white !important;
+        }
+
+        .hero-btn-primary:hover {
+            color: white !important;
+        }
+
+        .hero-btn-outline {
+            background: transparent;
+            border: 2px solid white;
+            color: white !important;
+        }
+
+        .hero-btn-outline:hover {
+            background: white;
+            color: #0d6efd !important;
+            text-decoration: none !important;
+        }
+
+        .parallax-bg {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-size: cover;
+            background-position: center;
+            background-repeat: no-repeat;
+            transform: translateZ(-1px) scale(1.2);
+        }
+
+        .z-1 { z-index: 1; }
+        .z-2 { z-index: 2; }
+
+        .service-card {
+            transition: all 0.3s ease;
+            overflow: hidden;
+        }
+
+        .service-card:hover {
+            transform: translateY(-10px);
+        }
+
+        .service-icon {
+            width: 70px;
+            height: 70px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        /* Utility Classes */
+        .py-6 { 
+            padding-top: 5rem; 
+            padding-bottom: 5rem; 
+        }
+        .mb-6 { 
+            margin-bottom: 5rem; 
+        }
+
+        .shadow-hover {
+            transition: all 0.3s ease;
+        }
+
+        .shadow-hover:hover {
+            box-shadow: 0 1rem 3rem rgba(0,0,0,.175)!important;
+        }
+
+        .transition-300 {
+            transition: all 0.3s ease;
+        }
+
+        /* Latest News Cards */
+        .news-card {
+            overflow: hidden;
+        }
+
+        .news-card img {
+            transition: transform 0.3s ease;
+        }
+
+        .news-card:hover img {
+            transform: scale(1.1);
+        }
+
+        /* Consultation Types */
+        /* .consultation-type {
+            transition: all 0.3s ease;
+        }
+
+        .consultation-type:hover .rounded-circle {
+            background-color: var(--bs-primary)!important;
+            color: white!important;
+        } */
+
+        .consultation-type {
+            transition: all 0.3s ease;
+        }
+
+            .consultation-type:hover {
+                transform: translateY(-10px);
+            }
+
+        .icon-wrapper {
+            transition: all 0.3s ease;
+        }
+
+        .consultation-type:hover .icon-wrapper {
+            background-color: var(--bs-primary) !important;
+        }
+
+        .icon-main {
+            transition: all 0.3s ease;
+        }
+
+        .consultation-type:hover .icon-main {
+            color: white !important;
+        }
+
+        .shadow-hover {
+            transition: all 0.3s ease;
+        }
+
+            .shadow-hover:hover {
+                box-shadow: 0 1rem 3rem rgba(0,0,0,.175) !important;
+            }
+
+        .statistics-section {
+            background: linear-gradient(45deg, #0d6efd, #0a58ca);
+            padding: 5rem 0;
+            color: white;
+        }
+
+        .stat-item {
+            text-align: center;
+            padding: 2rem;
+            border-radius: 1rem;
+            transition: all 0.3s ease;
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(5px);
+        }
+
+            .stat-item:hover {
+                transform: translateY(-10px);
+                background: rgba(255, 255, 255, 0.15);
+            }
+
+        .stat-number {
+            font-size: 3.5rem;
+            font-weight: 800;
+            margin-bottom: 1rem;
+            background: linear-gradient(45deg, #ffffff, #e6e6e6);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            display: inline-block;
+        }
+
+        .stat-icon {
+            font-size: 2.5rem;
+            margin-bottom: 1.5rem;
+            color: rgba(255, 255, 255, 0.9);
+        }
+
+        .stat-label {
+            font-size: 1.1rem;
+            opacity: 0.9;
+            font-weight: 500;
+            line-height: 1.4;
+        }
+    </style>
+}
+
+<!-- Hero Section -->
+<section class="hero-section">
+    <div class="hero-content container">
+        <h1 class="hero-title">
+            Підтримка Ветеранів України
+        </h1>
+        <p class="hero-subtitle">
+            Платформа для надання всебічної допомоги та підтримки ветеранам
+        </p>
+        <div class="hero-buttons">
+            <a href="#services" class="hero-btn hero-btn-outline">
+                <i class="fas fa-chevron-down me-2"></i>
+                ДІЗНАТИСЬ БІЛЬШЕ
+            </a>
+            <a asp-controller="Consultations" asp-action="Index" class="hero-btn hero-btn-primary">
+                <i class="fas fa-calendar-check me-2"></i>
+                ЗАПИСАТИСЬ НА КОНСУЛЬТАЦІЮ
+            </a>
         </div>
     </div>
-</div>
+</section>
 
-<section id="services" class="py-5 bg-light">
+<!-- Services Section -->
+<section id="services" class="py-6 bg-light">
     <div class="container">
-        <h2 class="text-center mb-5">Наші Послуги</h2>
+        <div class="text-center mb-6">
+            <h6 class="text-primary text-uppercase fw-bold mb-3">Наші послуги</h6>
+            <h2 class="display-5 fw-bold mb-4">Що ми пропонуємо</h2>
+            <div class="mx-auto" style="max-width: 600px;">
+                <p class="text-muted lead">Ми надаємо комплексну підтримку ветеранам через різноманітні послуги та заходи</p>
+            </div>
+        </div>
+
         <div class="row g-4">
-            <div class="col-md-4">
-                <div class="card h-100 border-0 shadow-sm">
-                    <div class="card-body text-center">
-                        <div class="mb-4">
-                            <i class="fas fa-calendar-alt fa-3x text-primary"></i>
+            <div class="col-lg-4">
+                <div class="card service-card h-100 border-0 shadow-hover transition-300">
+                    <div class="card-body p-5 text-center">
+                        <div class="service-icon bg-primary bg-opacity-10 text-primary rounded-circle p-3 mb-4 mx-auto">
+                            <i class="fas fa-calendar-alt fa-2x"></i>
                         </div>
-                        <h5 class="card-title">Події та Заходи</h5>
-                        <p class="card-text">Регулярні зустрічі, тренінги та соціальні заходи для ветеранів</p>
-                        <a asp-controller="Events" asp-action="Index" class="btn btn-primary">Переглянути події</a>
+                        <h4 class="mb-3">Події та Заходи</h4>
+                        <p class="text-muted mb-4">Регулярні зустрічі, тренінги та соціальні заходи для ветеранів. Можливість спілкування та обміну досвідом.</p>
+                        <a asp-controller="Events" asp-action="Index" class="btn btn-link text-primary p-0">
+                            Переглянути події <i class="fas fa-arrow-right ms-2"></i>
+                        </a>
                     </div>
                 </div>
             </div>
-            <div class="col-md-4">
-                <div class="card h-100 border-0 shadow-sm">
-                    <div class="card-body text-center">
-                        <div class="mb-4">
-                            <i class="fas fa-user-md fa-3x text-primary"></i>
+
+            <div class="col-lg-4">
+                <div class="card service-card h-100 border-0 shadow-hover transition-300">
+                    <div class="card-body p-5 text-center">
+                        <div class="service-icon bg-primary bg-opacity-10 text-primary rounded-circle p-3 mb-4 mx-auto">
+                            <i class="fas fa-user-md fa-2x"></i>
                         </div>
-                        <h5 class="card-title">Консультації</h5>
-                        <p class="card-text">Медичні, психологічні та юридичні консультації від професіоналів</p>
-                        <a asp-controller="Consultations" asp-action="Index" class="btn btn-primary">Записатись</a>
+                        <h4 class="mb-3">Консультації</h4>
+                        <p class="text-muted mb-4">Професійні консультації від кваліфікованих спеціалістів у сферах медицини, психології та права.</p>
+                        <a asp-controller="Consultations" asp-action="Index" class="btn btn-link text-primary p-0">
+                            Записатись <i class="fas fa-arrow-right ms-2"></i>
+                        </a>
                     </div>
                 </div>
             </div>
-            <div class="col-md-4">
-                <div class="card h-100 border-0 shadow-sm">
-                    <div class="card-body text-center">
-                        <div class="mb-4">
-                            <i class="fas fa-newspaper fa-3x text-primary"></i>
+
+            <div class="col-lg-4">
+                <div class="card service-card h-100 border-0 shadow-hover transition-300">
+                    <div class="card-body p-5 text-center">
+                        <div class="service-icon bg-primary bg-opacity-10 text-primary rounded-circle p-3 mb-4 mx-auto">
+                            <i class="fas fa-newspaper fa-2x"></i>
                         </div>
-                        <h5 class="card-title">Новини</h5>
-                        <p class="card-text">Актуальні новини та важлива інформація для ветеранів</p>
-                        <a asp-controller="News" asp-action="Index" class="btn btn-primary">Читати новини</a>
+                        <h4 class="mb-3">Новини</h4>
+                        <p class="text-muted mb-4">Актуальні новини та важлива інформація для ветеранів. Будьте в курсі останніх подій та змін.</p>
+                        <a asp-controller="News" asp-action="Index" class="btn btn-link text-primary p-0">
+                            Читати новини <i class="fas fa-arrow-right ms-2"></i>
+                        </a>
                     </div>
                 </div>
             </div>
@@ -70,111 +322,213 @@
     </div>
 </section>
 
-<section class="py-5">
+<!-- Latest News Section -->
+<section class="py-6">
     <div class="container">
-        <div class="d-flex justify-content-between align-items-center mb-4">
-            <h2>Останні Новини</h2>
-            <a asp-controller="News" asp-action="Index" class="btn btn-outline-primary">Всі новини</a>
+        <div class="text-center mb-6">
+            <h6 class="text-primary text-uppercase fw-bold mb-3">Останні новини</h6>
+            <h2 class="display-5 fw-bold mb-4">Будьте в курсі подій</h2>
         </div>
+
         <div class="row g-4">
             @foreach (var news in ViewBag.LatestNews ?? new List<News>())
             {
-                <div class="col-md-4">
-                    <div class="card h-100 shadow-sm">
-                        @if (!string.IsNullOrEmpty(news.ImagePath))
-                        {
-                            <img src="@news.ImagePath" class="card-img-top" alt="@news.Title" style="height: 200px; object-fit: cover;">
-                        }
-                        <div class="card-body">
-                            <h5 class="card-title">@news.Title</h5>
-                            <p class="card-text text-muted">@news.PublishDate.ToString("dd.MM.yyyy")</p>
-                            <a asp-controller="News" asp-action="Details" asp-route-id="@news.Id" class="btn btn-link p-0">Читати далі</a>
+                <div class="col-lg-4">
+                    <div class="card news-card h-100 border-0 shadow-hover">
+                        <div class="overflow-hidden">
+                            @if (!string.IsNullOrEmpty(news.ImagePath))
+                            {
+                                <img src="@news.ImagePath" class="card-img-top" alt="@news.Title" 
+                                     style="height: 250px; object-fit: cover;">
+                            }
+                        </div>
+                        <div class="card-body p-4">
+                            <div class="d-flex justify-content-between align-items-center mb-3">
+                                <span class="badge bg-primary rounded-pill px-3">Новина</span>
+                                <small class="text-muted">@news.PublishDate.ToString("dd.MM.yyyy")</small>
+                            </div>
+                            <h5 class="card-title mb-3">@news.Title</h5>
+                            <a asp-controller="News" asp-action="Details" asp-route-id="@news.Id" 
+                               class="btn btn-link text-primary p-0">
+                                Читати далі <i class="fas fa-long-arrow-alt-right ms-2"></i>
+                            </a>
                         </div>
                     </div>
                 </div>
             }
         </div>
+
+        <div class="text-center mt-5">
+            <a asp-controller="News" asp-action="Index" class="btn btn-outline-primary btn-lg rounded-pill px-5">
+                Всі новини <i class="fas fa-arrow-right ms-2"></i>
+            </a>
+        </div>
     </div>
 </section>
 
-<section class="py-5 bg-light">
+<!-- Events Section -->
+<section class="py-6 bg-light">
     <div class="container">
-        <div class="d-flex justify-content-between align-items-center mb-4">
-            <h2>Найближчі Події</h2>
-            <a asp-controller="Events" asp-action="Index" class="btn btn-outline-primary">Всі події</a>
+        <div class="text-center mb-6">
+            <h6 class="text-primary text-uppercase fw-bold mb-3">Події</h6>
+            <h2 class="display-5 fw-bold">Найближчі Події</h2>
         </div>
+
         <div class="row g-4">
             @foreach (var evt in ViewBag.UpcomingEvents ?? new List<Event>())
             {
                 <div class="col-md-6">
-                    <div class="card h-100 shadow-sm">
-                        <div class="card-body">
-                            <h5 class="card-title">@evt.Title</h5>
-                            <ul class="list-unstyled text-muted">
-                                <li><i class="far fa-calendar-alt"></i> @evt.Date.ToString("dd.MM.yyyy HH:mm")</li>
-                                <li><i class="fas fa-map-marker-alt"></i> @evt.Location</li>
-                                <li><i class="fas fa-tag"></i> @veterans_site.Extensions.EnumExtensions.GetDisplayName(evt.Category)</li>
+                    <div class="card h-100 border-0 shadow-hover transition-300">
+                        <div class="card-body p-4">
+                            <div class="d-flex justify-content-between align-items-center mb-3">
+                                <span class="badge bg-primary rounded-pill px-3">
+                                    @((evt.Category switch
+                                    {
+                                        EventCategory.Meeting => "Зустріч",
+                                        EventCategory.Training => "Тренінг",
+                                        EventCategory.Workshop => "Майстер-клас",
+                                        EventCategory.Consultation => "Консультація",
+                                        EventCategory.SocialEvent => "Соціальний захід",
+                                        _ => evt.Category.ToString()
+                                    }))
+                                </span>
+                                <span class="text-muted"><i class="far fa-calendar-alt me-2"></i>@evt.Date.ToString("dd.MM.yyyy")</span>
+                            </div>
+                            <h4 class="card-title mb-3">@evt.Title</h4>
+                            <ul class="list-unstyled mb-4">
+                                <li class="mb-2">
+                                    <i class="fas fa-clock text-primary me-2"></i>
+                                    @evt.Date.ToString("HH:mm")
+                                </li>
+                                <li>
+                                    <i class="fas fa-map-marker-alt text-primary me-2"></i>
+                                    @evt.Location
+                                </li>
                             </ul>
-                            <a asp-controller="Events" asp-action="Details" asp-route-id="@evt.Id" class="btn btn-primary">Деталі</a>
+                            <a asp-controller="Events" asp-action="Details" asp-route-id="@evt.Id" 
+                               class="btn btn-primary rounded-pill">
+                                Деталі події <i class="fas fa-arrow-right ms-2"></i>
+                            </a>
                         </div>
                     </div>
                 </div>
             }
         </div>
+
+        <div class="text-center mt-5">
+            <a asp-controller="Events" asp-action="Index" class="btn btn-outline-primary btn-lg rounded-pill px-5">
+                Всі події <i class="fas fa-arrow-right ms-2"></i>
+            </a>
+        </div>
     </div>
 </section>
 
-<section class="py-5">
+<!-- Consultation Types Section -->
+<section class="py-6">
     <div class="container">
-        <h2 class="text-center mb-5">Види Консультацій</h2>
+        <div class="text-center mb-6">
+            <h6 class="text-primary text-uppercase fw-bold mb-3">КОНСУЛЬТАЦІЇ</h6>
+            <h2 class="display-5 fw-bold">Види Консультацій</h2>
+        </div>
+
         <div class="row g-4">
             <div class="col-md-4">
-                <div class="card h-100 border-0 shadow-sm">
-                    <div class="card-body text-center">
-                        <div class="rounded-circle bg-primary bg-opacity-10 p-4 mx-auto mb-4" style="width: fit-content;">
-                            <i class="fas fa-heartbeat fa-3x text-primary"></i>
+                <div class="card consultation-type h-100 border-0 shadow-hover transition-300">
+                    <div class="card-body p-5 text-center">
+                        <div class="icon-wrapper rounded-circle bg-primary bg-opacity-10 p-4 mx-auto mb-4" style="width: fit-content;">
+                            <i class="fas fa-heartbeat fa-3x text-primary icon-main"></i>
                         </div>
-                        <h5>Медичні Консультації</h5>
-                        <p class="text-muted">Професійні консультації з питань здоров'я та реабілітації</p>
+                        <h4>Медичні Консультації</h4>
+                        <p class="text-muted">Професійні консультації з питань здоров'я та реабілітації. Індивідуальний підхід та підтримка на кожному етапі.</p>
                     </div>
                 </div>
             </div>
             <div class="col-md-4">
-                <div class="card h-100 border-0 shadow-sm">
-                    <div class="card-body text-center">
-                        <div class="rounded-circle bg-primary bg-opacity-10 p-4 mx-auto mb-4" style="width: fit-content;">
-                            <i class="fas fa-brain fa-3x text-primary"></i>
+                <div class="card consultation-type h-100 border-0 shadow-hover transition-300">
+                    <div class="card-body p-5 text-center">
+                        <div class="icon-wrapper rounded-circle bg-primary bg-opacity-10 p-4 mx-auto mb-4" style="width: fit-content;">
+                            <i class="fas fa-brain fa-3x text-primary icon-main"></i>
                         </div>
-                        <h5>Психологічні Консультації</h5>
-                        <p class="text-muted">Підтримка та допомога у подоланні психологічних труднощів</p>
+                        <h4>Психологічні Консультації</h4>
+                        <p class="text-muted">Професійна підтримка та допомога у подоланні психологічних труднощів. Конфіденційність та безпека.</p>
                     </div>
                 </div>
             </div>
             <div class="col-md-4">
-                <div class="card h-100 border-0 shadow-sm">
-                    <div class="card-body text-center">
-                        <div class="rounded-circle bg-primary bg-opacity-10 p-4 mx-auto mb-4" style="width: fit-content;">
-                            <i class="fas fa-balance-scale fa-3x text-primary"></i>
+                <div class="card consultation-type h-100 border-0 shadow-hover transition-300">
+                    <div class="card-body p-5 text-center">
+                        <div class="icon-wrapper rounded-circle bg-primary bg-opacity-10 p-4 mx-auto mb-4" style="width: fit-content;">
+                            <i class="fas fa-balance-scale fa-3x text-primary icon-main"></i>
                         </div>
-                        <h5>Юридичні Консультації</h5>
-                        <p class="text-muted">Правова допомога та консультації з юридичних питань</p>
+                        <h4>Юридичні Консультації</h4>
+                        <p class="text-muted">Професійна правова допомога та консультації з юридичних питань. Захист ваших прав та інтересів.</p>
                     </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="text-center mt-5">
+            <a asp-controller="Consultations" asp-action="Index" class="btn btn-outline-primary btn-lg rounded-pill px-5">
+                Всі консультації <i class="fas fa-arrow-right ms-2"></i>
+            </a>
+        </div>
+    </div>
+</section>
+
+<!-- Statistics Section -->
+<section class="statistics-section py-6">
+    <div class="container">
+        <div class="row g-4">
+            <div class="col-md-3">
+                <div class="stat-item">
+                    <div class="stat-icon">
+                        <i class="fas fa-users"></i>
+                    </div>
+                    <div class="stat-number">5000+</div>
+                    <div class="stat-label">Ветеранів отримали<br>допомогу</div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="stat-item">
+                    <div class="stat-icon">
+                        <i class="fas fa-handshake"></i>
+                    </div>
+                    <div class="stat-number">1200+</div>
+                    <div class="stat-label">Проведених<br>консультацій</div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="stat-item">
+                    <div class="stat-icon">
+                        <i class="fas fa-calendar-check"></i>
+                    </div>
+                    <div class="stat-number">300+</div>
+                    <div class="stat-label">Організованих<br>подій</div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="stat-item">
+                    <div class="stat-icon">
+                        <i class="fas fa-user-md"></i>
+                    </div>
+                    <div class="stat-number">50+</div>
+                    <div class="stat-label">Професійних<br>спеціалістів</div>
                 </div>
             </div>
         </div>
     </div>
 </section>
 
-<section class="py-5 bg-primary text-white">
-    <div class="container">
-        <div class="row align-items-center">
-            <div class="col-lg-8 text-center text-lg-start">
-                <h2 class="mb-3">Потрібна допомога?</h2>
-                <p class="mb-lg-0">Запишіться на консультацію прямо зараз і отримайте професійну допомогу</p>
-            </div>
-            <div class="col-lg-4 text-center text-lg-end">
-                <a asp-controller="Consultations" asp-action="Index" class="btn btn-light btn-lg">Записатись на консультацію</a>
-            </div>
-        </div>
-    </div>
-</section>
+@section Scripts {
+    <script>
+        // Smooth scroll for anchor links
+        document.querySelectorAll('a[href^="#"]').forEach(anchor => {
+            anchor.addEventListener('click', function (e) {
+                e.preventDefault();
+                document.querySelector(this.getAttribute('href')).scrollIntoView({
+                    behavior: 'smooth'
+                });
+            });
+        });
+    </script>
+}

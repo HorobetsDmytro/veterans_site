@@ -1,15 +1,117 @@
-﻿@* Views/News/Details.cshtml *@
-@model veterans_site.ViewModels.NewsDetailsViewModel
+﻿@model veterans_site.ViewModels.NewsDetailsViewModel
 @{
     ViewData["Title"] = Model.News.Title;
 }
+
+<style>
+    .news-title {
+        font-size: 2.5rem;
+        font-weight: 700;
+        color: #2d3748;
+        line-height: 1.3;
+    }
+
+    .news-meta {
+        font-size: 0.95rem;
+        color: #718096;
+        padding: 0.5rem 1rem;
+        background: rgba(237, 242, 247, 0.7);
+        border-radius: 1rem;
+        display: inline-block;
+    }
+
+    .news-image {
+        border-radius: 1rem;
+        box-shadow: 0 10px 20px rgba(0, 0, 0, 0.1);
+        transition: transform 0.3s ease;
+    }
+
+    .news-image:hover {
+        transform: scale(1.01);
+    }
+
+    .news-content {
+        font-size: 1.1rem;
+        line-height: 1.8;
+        color: #4a5568;
+    }
+
+    .news-content p {
+        margin-bottom: 1.5rem;
+    }
+
+    .share-btn {
+        padding: 0.8rem 1.5rem;
+        border-radius: 2rem;
+        transition: all 0.3s ease;
+        font-weight: 500;
+    }
+
+    .share-btn:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+    }
+
+    .recent-news-card {
+        padding: 1.5rem;
+        border-radius: 1rem;
+    }
+
+    .recent-news-title {
+        font-size: 1.25rem;
+        font-weight: 600;
+        margin-bottom: 1.5rem;
+        color: #2d3748;
+    }
+
+    .recent-news-item {
+        padding: 1rem;
+        border-radius: 0.75rem;
+        transition: all 0.3s ease;
+        border-bottom: 1px solid #e2e8f0;
+    }
+
+    .recent-news-item:last-child {
+        border-bottom: none;
+    }
+
+    .recent-news-item:hover {
+        background: #f8fafc;
+    }
+
+    .recent-news-link {
+        color: #2d3748;
+        text-decoration: none;
+        font-weight: 500;
+        transition: color 0.3s ease;
+    }
+
+    .recent-news-link:hover {
+        color: #0d6efd;
+    }
+
+    .breadcrumb {
+        background: transparent;
+        padding: 0;
+    }
+
+    .breadcrumb-item a {
+        color: #0d6efd;
+        text-decoration: none;
+        transition: color 0.3s ease;
+    }
+
+    .breadcrumb-item a:hover {
+        color: #0a58ca;
+    }
+</style>
 
 <div class="container mt-5">
     <div class="row">
         <!-- Основний контент -->
         <div class="col-lg-8">
-            <div class="card shadow-sm">
-                <div class="card-body">
+            <div class="card border-0 shadow-sm rounded-3">
+                <div class="card-body p-4">
                     <nav aria-label="breadcrumb" class="mb-4">
                         <ol class="breadcrumb">
                             <li class="breadcrumb-item"><a asp-controller="Home" asp-action="Index">Головна</a></li>
@@ -18,81 +120,78 @@
                         </ol>
                     </nav>
 
-                    <h1 class="card-title h2 mb-4">@Model.News.Title</h1>
+                    <h1 class="news-title mb-4">@Model.News.Title</h1>
 
-                    <div class="text-muted mb-4">
-                        <i class="far fa-calendar-alt"></i>
+                    <div class="news-meta mb-4">
+                        <i class="far fa-calendar-alt me-2"></i>
                         @Model.News.PublishDate.ToString("dd MMMM yyyy, HH:mm")
                     </div>
 
                     @if (!string.IsNullOrEmpty(Model.News.ImagePath))
                     {
-                        <div class="mb-4">
-                            <img src="@Model.News.ImagePath" class="img-fluid rounded" alt="@Model.News.Title">
+                        <div class="mb-5">
+                            <img src="@Model.News.ImagePath" class="news-image img-fluid w-100" alt="@Model.News.Title">
                         </div>
                     }
 
-                    <div class="news-content">
+                    <div class="news-content mb-5">
                         @Html.Raw(Model.News.Content)
                     </div>
 
-                    <!-- Кнопки соціальних мереж -->
-                    <div class="mt-4 pt-4 border-top">
-                        <h5>Поділитися:</h5>
-                        <div class="d-flex gap-2">
-                            <a href="#" class="btn btn-outline-primary">
-                                <i class="fab fa-facebook-f"></i> <!-- Facebook Icon -->
-                            </a>
-                            <a href="#" class="btn btn-outline-info">
-                                <i class="fab fa-twitter"></i> <!-- Twitter Icon -->
-                            </a>
-                            <a href="#" class="btn btn-outline-success">
-                                <i class="fab fa-telegram"></i> <!-- Telegram Icon -->
-                            </a>
+                    <div class="mt-5 pt-4 border-top">
+                        <h5 class="mb-4 fw-bold">Поділитися статтею:</h5>
+                        <div class="d-flex flex-wrap gap-3">
+                            <button class="share-btn btn btn-outline-primary" onclick="shareOnFacebook()">
+                                <i class="fab fa-facebook-f me-2"></i>Facebook
+                            </button>
+                            <button class="share-btn btn btn-outline-info" onclick="shareOnTwitter()">
+                                <i class="fab fa-twitter me-2"></i>Twitter
+                            </button>
+                            <button class="share-btn btn btn-outline-success" onclick="shareOnTelegram()">
+                                <i class="fab fa-telegram me-2"></i>Telegram
+                            </button>
                         </div>
                     </div>
-
                 </div>
             </div>
         </div>
 
         <!-- Бічна панель -->
         <div class="col-lg-4">
-            <!-- Останні новини -->
-            <div class="card shadow-sm">
-                <div class="card-body">
-                    <h5 class="card-title mb-4">Останні новини</h5>
-                    @foreach (var news in Model.RecentNews)
-                    {
-                        <div class="mb-3 pb-3 border-bottom">
-                            <h6 class="mb-2">
-                                <a asp-action="Details" asp-route-id="@news.Id" class="text-decoration-none text-dark">
-                                    @news.Title
-                                </a>
-                            </h6>
-                            <small class="text-muted">
-                                <i class="far fa-calendar-alt"></i>
-                                @news.PublishDate.ToString("dd.MM.yyyy")
-                            </small>
-                        </div>
-                    }
-                </div>
+            <div class="recent-news-card card border-0 shadow-sm sticky-top" style="top: 2rem;">
+                <h5 class="recent-news-title">Останні новини</h5>
+                @foreach (var news in Model.RecentNews)
+                {
+                    <div class="recent-news-item">
+                        <a asp-action="Details" asp-route-id="@news.Id" class="recent-news-link">
+                            <h6 class="mb-2">@news.Title</h6>
+                        </a>
+                        <small class="text-muted d-flex align-items-center">
+                            <i class="far fa-calendar-alt me-2"></i>
+                            @news.PublishDate.ToString("dd.MM.yyyy")
+                        </small>
+                    </div>
+                }
             </div>
-
-            <!-- Додаткові блоки за потреби -->
         </div>
     </div>
 </div>
 
-@section Styles {
-    <style>
-        .news-content {
-            font-size: 1.1rem;
-            line-height: 1.8;
+@section Scripts {
+    <script>
+        function shareOnFacebook() {
+            window.open(`https://www.facebook.com/sharer/sharer.php?u=${window.location.href}`,
+                '_blank');
         }
 
-        .news-content p {
-            margin-bottom: 1.5rem;
+        function shareOnTwitter() {
+            window.open(`https://twitter.com/intent/tweet?url=${window.location.href}&text=@Model.News.Title`,
+                '_blank');
         }
-    </style>
+
+        function shareOnTelegram() {
+            window.open(`https://t.me/share/url?url=${window.location.href}&text=@Model.News.Title`,
+                '_blank');
+        }
+    </script>
 }
