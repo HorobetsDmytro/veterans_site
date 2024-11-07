@@ -16,6 +16,7 @@ namespace veterans_site.Controllers
         private readonly IEmailService _emailService;
         private readonly ILogger<EventsController> _logger;
         private readonly VeteranSupportDBContext _context;
+        private readonly GoogleCalendarService _calendarService;
         private const int PageSize = 6;
 
         public EventsController(
@@ -23,13 +24,15 @@ namespace veterans_site.Controllers
             UserManager<ApplicationUser> userManager,
             IEmailService emailService,
             ILogger<EventsController> logger,
-            VeteranSupportDBContext context)
+            VeteranSupportDBContext context,
+            GoogleCalendarService calendarService)
         {
             _eventRepository = eventRepository;
             _userManager = userManager;
             _emailService = emailService;
             _logger = logger;
             _context = context;
+            _calendarService = calendarService;
         }
 
         public async Task<IActionResult> Index(
@@ -155,20 +158,20 @@ namespace veterans_site.Controllers
                 if (evt.Status != EventStatus.Planned)
                 {
                     TempData["Error"] = "Реєстрація на цю подію вже закрита.";
-                    return RedirectToAction(nameof(Details), new { id });
+                    return RedirectToAction(nameof(Index));
                 }
 
                 var userId = _userManager.GetUserId(User);
                 if (await _eventRepository.IsUserRegisteredForEventAsync(id.Value, userId))
                 {
                     TempData["Error"] = "Ви вже зареєстровані на цю подію.";
-                    return RedirectToAction(nameof(Details), new { id });
+                    return RedirectToAction(nameof(Index));
                 }
 
                 if (!evt.CanRegister)
                 {
                     TempData["Error"] = "На жаль, всі місця вже зайняті.";
-                    return RedirectToAction(nameof(Details), new { id });
+                    return RedirectToAction(nameof(Index));
                 }
 
                 return View(evt);
@@ -176,7 +179,8 @@ namespace veterans_site.Controllers
             catch (Exception ex)
             {
                 _logger.LogError($"Error in Book GET method: {ex.Message}");
-                return View("Error");
+                TempData["Error"] = "Виникла помилка при спробі реєстрації на подію.";
+                return RedirectToAction(nameof(Index));
             }
         }
 
@@ -190,6 +194,7 @@ namespace veterans_site.Controllers
                 var userId = _userManager.GetUserId(User);
                 var user = await _userManager.GetUserAsync(User);
 
+                // Перевірки
                 if (await _eventRepository.IsUserRegisteredForEventAsync(id, userId))
                 {
                     TempData["Error"] = "Ви вже зареєстровані на цю подію.";
@@ -214,19 +219,116 @@ namespace veterans_site.Controllers
                     return RedirectToAction(nameof(Details), new { id });
                 }
 
-                await _eventRepository.RegisterUserForEventAsync(userId, id);
+                // Отримуємо URL для авторизації Google
+                var authUrl = await _calendarService.GetAuthorizationUrl(userId);
 
-                // Тут можна додати відправку email з підтвердженням реєстрації
-                // await _emailService.SendEventRegistrationConfirmationAsync(user.Email, user.FirstName, evt);
+                // Зберігаємо дані для використання після авторизації Google
+                TempData["PendingEventId"] = id;
+                TempData["ReturnUrl"] = Url.Action(nameof(Details), new { id });
 
-                TempData["Success"] = "Ви успішно зареєструвалися на подію.";
-                return RedirectToAction(nameof(Details), new { id });
+                // Перенаправляємо на сторінку авторизації Google
+                return Redirect(authUrl);
             }
             catch (Exception ex)
             {
                 _logger.LogError($"Error in Book POST method: {ex.Message}");
                 TempData["Error"] = "Виникла помилка при реєстрації на подію.";
                 return RedirectToAction(nameof(Details), new { id });
+            }
+        }
+
+        [Authorize]
+        [HttpGet] // Явно вказуємо, що це GET метод
+        public async Task<IActionResult> GoogleCallback(string code, string error = null)
+        {
+            if (!string.IsNullOrEmpty(error))
+            {
+                TempData["Error"] = "Не вдалося отримати доступ до Google Calendar. Спробуйте ще раз.";
+                return RedirectToAction("Index");
+            }
+
+            var userId = _userManager.GetUserId(User);
+            var user = await _userManager.GetUserAsync(User);
+            var eventId = TempData["PendingEventId"] as int?;
+
+            if (!eventId.HasValue)
+            {
+                TempData["Error"] = "Помилка при реєстрації на подію.";
+                return RedirectToAction("Index", "Home");
+            }
+
+            try
+            {
+                if (await _eventRepository.IsUserRegisteredForEventAsync(eventId.Value, userId))
+                {
+                    TempData["Error"] = "Ви вже зареєстровані на цю подію.";
+                    return RedirectToAction(nameof(Details), new { id = eventId });
+                }
+
+                var evt = await _eventRepository.GetByIdWithParticipantsAsync(eventId.Value);
+                if (evt == null)
+                {
+                    TempData["Error"] = "Подію не знайдено.";
+                    return RedirectToAction("Index");
+                }
+
+                if (evt.Status != EventStatus.Planned)
+                {
+                    TempData["Error"] = "Реєстрація на цю подію вже закрита.";
+                    return RedirectToAction(nameof(Details), new { id = eventId });
+                }
+
+                if (!evt.CanRegister)
+                {
+                    TempData["Error"] = "На жаль, всі місця вже зайняті.";
+                    return RedirectToAction(nameof(Details), new { id = eventId });
+                }
+
+                var redirectUri = "https://localhost:7037/Events/GoogleCallback";
+                var credential = await _calendarService.GetCredentialAsync(userId, code, redirectUri);
+
+                await _eventRepository.RegisterUserForEventAsync(userId, eventId.Value);
+
+                try
+                {
+                    await _calendarService.AddEventToCalendarAsync(evt, userId, credential);
+
+                    try
+                    {
+                        await _emailService.SendEventRegistrationConfirmationAsync(
+                            user.Email,
+                            $"{user.FirstName} {user.LastName}",
+                            evt);
+
+                        TempData["Success"] = "Ви успішно зареєструвалися на подію. Подію додано до вашого Google Calendar та " +
+                                            "відправлено підтвердження на email.";
+                    }
+                    catch (Exception emailEx)
+                    {
+                        _logger.LogError($"Failed to send confirmation email: {emailEx.Message}");
+                        TempData["Success"] = "Ви успішно зареєструвалися на подію та додали її до Google Calendar, " +
+                                            "але виникла помилка при відправці email-підтвердження.";
+                    }
+                }
+                catch (Exception calendarEx)
+                {
+                    _logger.LogError($"Failed to add event to Google Calendar: {calendarEx.Message}");
+                    TempData["Success"] = "Ви успішно зареєструвалися на подію, але виникла помилка при додаванні " +
+                                        "події до Google Calendar.";
+                }
+
+                return RedirectToAction(nameof(Details), new { id = eventId });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError($"Error in GoogleCallback: {ex.Message}");
+                if (ex.InnerException != null)
+                {
+                    _logger.LogError($"Inner exception: {ex.InnerException.Message}");
+                }
+
+                TempData["Error"] = "Виникла помилка при реєстрації на подію. Спробуйте ще раз пізніше.";
+                return RedirectToAction(nameof(Details), new { id = eventId });
             }
         }
 
@@ -267,6 +369,41 @@ namespace veterans_site.Controllers
                 _logger.LogError($"Error in Cancel method: {ex.Message}");
                 TempData["Error"] = "Виникла помилка при скасуванні реєстрації.";
                 return RedirectToAction(nameof(Details), new { id });
+            }
+        }
+
+        [HttpPost]
+        [Authorize]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> AddComment(int eventId, string content)
+        {
+            try
+            {
+                if (string.IsNullOrWhiteSpace(content))
+                {
+                    TempData["Error"] = "Коментар не може бути пустим";
+                    return RedirectToAction(nameof(Details), new { id = eventId });
+                }
+
+                var user = await _userManager.GetUserAsync(User);
+                var comment = new EventComment
+                {
+                    EventId = eventId,
+                    UserId = user.Id,
+                    Content = content,
+                    CreatedAt = DateTime.Now
+                };
+
+                _context.EventComments.Add(comment);
+                await _context.SaveChangesAsync();
+
+                return RedirectToAction(nameof(Details), new { id = eventId });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError($"Error adding comment: {ex.Message}");
+                TempData["Error"] = "Виникла помилка при додаванні коментаря";
+                return RedirectToAction(nameof(Details), new { id = eventId });
             }
         }
     }

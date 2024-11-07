@@ -169,13 +169,13 @@ namespace veterans_site.Areas.Admin.Controllers
                 return NotFound();
             }
 
-            var @event = await _eventRepository.GetByIdAsync(id.Value);
-            if (@event == null)
+            var evt = await _eventRepository.GetByIdWithParticipantsAsync(id.Value);
+            if (evt == null)
             {
                 return NotFound();
             }
 
-            return View(@event);
+            return View(evt);
         }
 
     }

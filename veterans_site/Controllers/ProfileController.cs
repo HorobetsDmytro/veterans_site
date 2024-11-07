@@ -13,15 +13,18 @@ namespace veterans_site.Controllers
         private readonly UserManager<ApplicationUser> _userManager;
         private readonly IConsultationRepository _consultationRepository;
         private readonly IEventRepository _eventRepository;
+        private readonly ILogger<ProfileController> _logger;
 
         public ProfileController(
             UserManager<ApplicationUser> userManager,
             IConsultationRepository consultationRepository,
-            IEventRepository eventRepository)
+            IEventRepository eventRepository,
+            ILogger<ProfileController> logger)
         {
             _userManager = userManager;
             _consultationRepository = consultationRepository;
             _eventRepository = eventRepository;
+            _logger = logger;
         }
 
         public async Task<IActionResult> Index()
@@ -130,6 +133,34 @@ namespace veterans_site.Controllers
             return RedirectToAction(nameof(Index));
         }
 
+        [Authorize]
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> CancelEvent(int id)
+        {
+            try
+            {
+                var userId = _userManager.GetUserId(User);
+
+                if (!await _eventRepository.IsUserRegisteredForEventAsync(id, userId))
+                {
+                    TempData["Error"] = "Ви не зареєстровані на цю подію.";
+                    return RedirectToAction("Index", "Profile");
+                }
+
+                await _eventRepository.CancelEventParticipationAsync(id, userId);
+
+                TempData["Success"] = "Реєстрацію на подію скасовано.";
+                return RedirectToAction("Index", "Profile");
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError($"Error in Cancel method: {ex.Message}");
+                TempData["Error"] = "Виникла помилка при скасуванні реєстрації.";
+                return RedirectToAction("Index", "Profile");
+            }
+        }
+
         public async Task<IActionResult> ConsultationDetails(int id)
         {
             var userId = _userManager.GetUserId(User);
@@ -149,23 +180,22 @@ namespace veterans_site.Controllers
             return View(consultation);
         }
 
-        //public async Task<IActionResult> EventDetails(int id)
-        //{
-        //    var userId = _userManager.GetUserId(User);
-        //    var evt = await _eventRepository.GetByIdWithParticipantsAsync(id);
+        public async Task<IActionResult> EventDetails(int id)
+        {
+            var userId = _userManager.GetUserId(User);
+            var evt = await _eventRepository.GetByIdWithParticipantsAsync(id);
 
-        //    if (evt == null)
-        //    {
-        //        return NotFound();
-        //    }
+            if (evt == null)
+            {
+                return NotFound();
+            }
 
-        //    // Перевіряємо чи користувач зареєстрований на цю подію
-        //    if (!evt.EventParticipants.Any(p => p.UserId == userId))
-        //    {
-        //        return Forbid();
-        //    }
+            if (!evt.EventParticipants.Any(p => p.UserId == userId))
+            {
+                return Forbid();
+            }
 
-        //    return View(evt);
-        //}
+            return View(evt);
+        }
     }
 }

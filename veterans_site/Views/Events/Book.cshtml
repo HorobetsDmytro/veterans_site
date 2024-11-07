@@ -1,5 +1,4 @@
-﻿@* /Views/Events/Book.cshtml *@
-@model Event
+﻿@model Event
 @using veterans_site.Extensions
 
 <style>
@@ -30,12 +29,6 @@
             color: #0d6efd;
         }
 
-    .confirmation-text {
-        font-size: 1.1rem;
-        color: #1e293b;
-        margin-bottom: 2rem;
-    }
-
     .btn-confirm {
         padding: 1rem 2rem;
         border-radius: 0.5rem;
@@ -46,12 +39,6 @@
         .btn-confirm:hover {
             transform: translateY(-2px);
         }
-
-    .status-badge {
-        padding: 0.5rem 1rem;
-        border-radius: 2rem;
-        font-weight: 500;
-    }
 </style>
 
 <div class="booking-section">
@@ -62,11 +49,6 @@
                     <ol class="breadcrumb">
                         <li class="breadcrumb-item">
                             <a asp-action="Index" class="text-decoration-none">Події</a>
-                        </li>
-                        <li class="breadcrumb-item">
-                            <a asp-action="Details" asp-route-id="@Model.Id" class="text-decoration-none">
-                                Деталі події
-                            </a>
                         </li>
                         <li class="breadcrumb-item active">Реєстрація на подію</li>
                     </ol>
@@ -113,10 +95,6 @@
                         </div>
 
                         <div class="confirmation-section">
-                            <p class="confirmation-text">
-                                Ви дійсно бажаєте зареєструватися на цю подію?
-                            </p>
-
                             <form asp-action="Book" method="post">
                                 @Html.AntiForgeryToken()
                                 <input type="hidden" name="id" value="@Model.Id" />
@@ -125,8 +103,7 @@
                                     <button type="submit" class="btn btn-primary btn-confirm">
                                         <i class="fas fa-check me-2"></i>Підтвердити реєстрацію
                                     </button>
-                                    <a asp-action="Details" asp-route-id="@Model.Id"
-                                       class="btn btn-outline-secondary btn-confirm">
+                                    <a asp-action="Index" class="btn btn-outline-secondary btn-confirm">
                                         <i class="fas fa-times me-2"></i>Скасувати
                                     </a>
                                 </div>
@@ -139,12 +116,11 @@
                             <h5 class="alert-heading">
                                 <i class="fas fa-info-circle me-2"></i>Важлива інформація
                             </h5>
-                            <p class="mb-0">
-                                Після реєстрації ви отримаєте електронний лист з підтвердженням
-                                та додатковою інформацією про подію.
-                                За необхідності ви зможете скасувати свою реєстрацію
-                                у своєму особистому кабінеті.
-                            </p>
+                            <ul class="mb-0 ps-3">
+                                <li class="mb-2">Після реєстрації ви отримаєте email з підтвердженням</li>
+                                <li class="mb-2">За необхідності ви зможете скасувати свою реєстрацію в особистому кабінеті</li>
+                                <li>За день до події ви отримаєте нагадування на email</li>
+                            </ul>
                         </div>
                     </div>
                 </div>

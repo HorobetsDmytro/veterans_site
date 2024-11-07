@@ -17,10 +17,6 @@
         transition: all 0.3s ease;
     }
 
-    /* .profile-card:hover {
-        transform: translateY(-5px);
-    } */
-
     .profile-header {
         display: flex;
         align-items: center;
@@ -400,10 +396,10 @@
                                                         </div>
                                                     </div>
                                                     <div class="d-flex flex-column gap-2">
-                                                        <form asp-controller="Events" asp-action="Cancel" 
+                                                        <form asp-controller="Profile" asp-action="CancelEvent" 
                                                               method="post" onsubmit="return confirm('Ви впевнені?');">
                                                             @Html.AntiForgeryToken()
-                                                            <input type="hidden" name="eventId" value="@evt.Id" />
+                                                            <input type="hidden" name="id" value="@evt.Id" />
                                                             <button type="submit" class="btn btn-danger btn-sm">
                                                                 <i class="fas fa-times me-2"></i>Скасувати
                                                             </button>

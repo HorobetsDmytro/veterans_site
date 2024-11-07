@@ -136,12 +136,14 @@ namespace veterans_site.Repositories
                     e.Status != EventStatus.Cancelled);
         }
 
-        public async Task<Event> GetByIdWithParticipantsAsync(int eventId)
+        public async Task<Event> GetByIdWithParticipantsAsync(int id)
         {
             return await _context.Events
                 .Include(e => e.EventParticipants)
-                .ThenInclude(ep => ep.User)
-                .FirstOrDefaultAsync(e => e.Id == eventId);
+                    .ThenInclude(ep => ep.User)
+                .Include(e => e.Comments)
+                    .ThenInclude(c => c.User)
+                .FirstOrDefaultAsync(e => e.Id == id);
         }
 
         public async Task<ICollection<EventParticipant>> GetEventParticipantsAsync(int eventId)

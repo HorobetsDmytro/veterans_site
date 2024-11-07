@@ -1,6 +1,8 @@
-﻿@* /Views/Events/Details.cshtml *@
-@model Event
+﻿@using Microsoft.AspNetCore.Identity
 @using veterans_site.Extensions
+@model Event
+@inject veterans_site.Interfaces.IEventRepository eventRepository
+@inject UserManager<ApplicationUser> UserManager
 
 <style>
     .event-details {
@@ -71,6 +73,59 @@
     .btn-book:hover {
         transform: translateY(-2px);
     }
+
+    .btn-register:disabled {
+        opacity: 0.8;
+        cursor: not-allowed;
+        pointer-events: none;
+    }
+
+    .comments-section {
+        margin-top: 2rem;
+        padding: 1.5rem;
+        background: #f8fafc;
+        border-radius: 1rem;
+    }
+
+    .comment {
+        padding: 1rem;
+        margin-bottom: 1rem;
+        background: white;
+        border-radius: 0.5rem;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+    }
+
+    .comment-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 0.5rem;
+    }
+
+    .comment-author {
+        font-weight: 600;
+        color: #1e293b;
+    }
+
+    .comment-time {
+        font-size: 0.875rem;
+        color: #64748b;
+    }
+
+    .comment-content {
+        color: #334155;
+    }
+
+    .comment-form {
+        background: white;
+        padding: 1.5rem;
+        border-radius: 0.5rem;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+    }
+
+    .comment-input {
+        resize: none;
+    }
 </style>
 
 <div class="event-details">
@@ -97,12 +152,21 @@
                             <p class="mb-0">@Model.Description</p>
                         </div>
 
-                        @if (Model.Status == EventStatus.Planned && Model.CanRegister)
+                        @if (User.Identity.IsAuthenticated)
                         {
-                            <a asp-action="Book" asp-route-id="@Model.Id"
-                               class="btn btn-primary btn-book">
-                                <i class="fas fa-user-plus me-2"></i>Зареєструватися на подію
-                            </a>
+                            @if (await eventRepository.IsUserRegisteredForEventAsync(Model.Id, UserManager.GetUserId(User)))
+                            {
+                                <button class="btn btn-success btn-register" disabled>
+                                    <i class="fas fa-check me-2"></i>Ви зареєстровані
+                                </button>
+                            }
+                            else if (Model.Status == EventStatus.Planned && Model.CanRegister)
+                            {
+                                <a asp-action="Book" asp-route-id="@Model.Id"
+                                   class="btn btn-primary btn-register">
+                                    <i class="fas fa-user-plus me-2"></i>Зареєструватися
+                                </a>
+                            }
                         }
                     </div>
 
@@ -162,4 +226,72 @@
             </div>
         </div>
     </div>
+</div>
+
+<div class="comments-section">
+    <h4 class="mb-4">
+        <i class="fas fa-comments me-2"></i>
+        Коментарі
+    </h4>
+
+    @if (User.Identity.IsAuthenticated)
+    {
+        <div class="comment-form mb-4">
+            <form asp-action="AddComment" method="post">
+                @Html.AntiForgeryToken()
+                <input type="hidden" name="eventId" value="@Model.Id" />
+                <div class="mb-3">
+                    <textarea name="content"
+                              class="form-control comment-input"
+                              rows="3"
+                              placeholder="Напишіть ваш коментар..."
+                              required></textarea>
+                </div>
+                <button type="submit" class="btn btn-primary">
+                    <i class="fas fa-paper-plane me-2"></i>
+                    Додати коментар
+                </button>
+            </form>
+        </div>
+    }
+    else
+    {
+        <div class="alert alert-info mb-4">
+            <i class="fas fa-info-circle me-2"></i>
+            Щоб залишати коментарі, будь ласка,
+            <a asp-area="Identity" asp-page="/Account/Login"
+               class="alert-link">увійдіть в систему</a>.
+        </div>
+    }
+
+    @if (Model.Comments != null && Model.Comments.Any())
+    {
+        <div class="comments-list">
+            @foreach (var comment in Model.Comments.OrderByDescending(c => c.CreatedAt))
+            {
+                <div class="comment">
+                    <div class="comment-header">
+                        <span class="comment-author">
+                            <i class="fas fa-user me-2"></i>
+                            @comment.User.FirstName @comment.User.LastName
+                        </span>
+                        <span class="comment-time">
+                            <i class="far fa-clock me-1"></i>
+                            @comment.CreatedAt.ToString("dd.MM.yyyy HH:mm")
+                        </span>
+                    </div>
+                    <div class="comment-content">
+                        @comment.Content
+                    </div>
+                </div>
+            }
+        </div>
+    }
+    else
+    {
+        <div class="text-center text-muted py-4">
+            <i class="far fa-comments fa-3x mb-3"></i>
+            <p class="mb-0">Поки що немає коментарів. Будьте першим!</p>
+        </div>
+    }
 </div>

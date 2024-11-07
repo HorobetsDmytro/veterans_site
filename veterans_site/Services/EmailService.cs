@@ -545,12 +545,12 @@ namespace veterans_site.Services
         <body style='font-family: Arial, sans-serif; margin: 0; padding: 20px;'>
             <div style='background-color: #f8f9fa; padding: 20px; border-radius: 5px;'>
                 <h2 style='color: #2c3e50;'>Вітаємо, {{userName}}!</h2>
-                <p>Нагадуємо, що завтра відбудеться подія """"{{evt.Title}}"""".</p>
+                <p>Нагадуємо, що завтра відбудеться подія {evt.Title}.</p>
                 
                 <div style='background-color: white; padding: 15px; border-radius: 5px; margin: 15px 0;'>
-                    <p><strong>Дата та час:</strong> {{evt.Date:dd.MM.yyyy HH:mm}}</p>
-                    <p><strong>Місце проведення:</strong> {{evt.Location}}</p>
-                    <p><strong>Категорія:</strong> {{evt.Category.GetDisplayName()}}</p>
+                    <p><strong>Дата та час:</strong> {evt.Date:dd.MM.yyyy HH:mm}</p>
+                    <p><strong>Місце проведення:</strong> {evt.Location}</p>
+                    <p><strong>Категорія:</strong> {evt.Category.GetDisplayName()}</p>
                 </div>
 
                 <p>Чекаємо на вас!</p>

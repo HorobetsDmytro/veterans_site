@@ -21,6 +21,7 @@ public class VeteranSupportDBContext : IdentityDbContext<ApplicationUser>
     public DbSet<RoleChangeRequest> RoleChangeRequests { get; set; }
     public DbSet<ConsultationSlot> ConsultationSlots { get; set; }
     public DbSet<ConsultationBookingRequest> ConsultationBookingRequests { get; set; }
+    public DbSet<EventComment> EventComments { get; set; }
 
 
     protected override void OnModelCreating(ModelBuilder builder)

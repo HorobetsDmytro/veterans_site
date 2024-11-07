@@ -1,6 +1,8 @@
-﻿@* /Views/Events/Index.cshtml *@
-@model veterans_site.ViewModels.EventIndexViewModel
+﻿@using Microsoft.AspNetCore.Identity
 @using veterans_site.Extensions
+@model veterans_site.ViewModels.EventIndexViewModel
+@inject veterans_site.Interfaces.IEventRepository eventRepository
+@inject UserManager<ApplicationUser> UserManager
 
 <style>
     .event-section {
@@ -67,6 +69,12 @@
         color: rgba(255, 255, 255, 0.8);
         font-size: 1.1rem;
         margin-bottom: 2rem;
+    }
+
+    .btn-register:disabled {
+        opacity: 0.8;
+        cursor: not-allowed;
+        pointer-events: none;
     }
 </style>
 
@@ -147,20 +155,11 @@
                     @foreach (var evt in Model.Events)
                     {
                         <div class="col-md-6">
-                            <div class="event-card card">
-                                <div class="card-body p-4">
+                            <div class="event-card card d-flex flex-column">
+                                <div class="card-body p-4 d-flex flex-column">
                                     <div class="d-flex justify-content-between mb-3">
                                         <span class="category-badge bg-primary bg-opacity-10 text-primary">
                                             @evt.Category.GetDisplayName()
-                                        </span>
-                                        <span class="status-badge @(evt.Status switch {
-                                            EventStatus.Planned => "bg-primary bg-opacity-10 text-primary",
-                                            EventStatus.InProgress => "bg-success bg-opacity-10 text-success",
-                                            EventStatus.Completed => "bg-secondary bg-opacity-10 text-secondary",
-                                            EventStatus.Cancelled => "bg-danger bg-opacity-10 text-danger",
-                                            _ => ""
-                                        })">
-                                            @evt.Status.GetDisplayName()
                                         </span>
                                     </div>
 
@@ -184,17 +183,27 @@
                                         }
                                     </div>
 
-                                    <div class="d-flex gap-2">
-                                        <a asp-action="Details" asp-route-id="@evt.Id" 
+                                    @* /Views/Events/Index.cshtml - оновлюємо секцію з кнопками *@
+                                    <div class="mt-auto d-flex gap-2">
+                                        <a asp-action="Details" asp-route-id="@evt.Id"
                                            class="btn btn-outline-primary btn-register">
                                             <i class="fas fa-info-circle me-2"></i>Деталі
                                         </a>
-                                        @if (evt.Status == EventStatus.Planned && evt.CanRegister)
+                                        @if (User.Identity.IsAuthenticated)
                                         {
-                                            <a asp-action="Book" asp-route-id="@evt.Id"
-                                               class="btn btn-primary btn-register">
-                                                <i class="fas fa-user-plus me-2"></i>Зареєструватися
-                                            </a>
+                                            @if (await eventRepository.IsUserRegisteredForEventAsync(evt.Id, UserManager.GetUserId(User)))
+                                            {
+                                                <button class="btn btn-success btn-register" disabled>
+                                                    <i class="fas fa-check me-2"></i>Ви зареєстровані
+                                                </button>
+                                            }
+                                            else if (evt.Status == EventStatus.Planned && evt.CanRegister)
+                                            {
+                                                <a asp-action="Book" asp-route-id="@evt.Id"
+                                                   class="btn btn-primary btn-register">
+                                                    <i class="fas fa-user-plus me-2"></i>Зареєструватися
+                                                </a>
+                                            }
                                         }
                                     </div>
                                 </div>

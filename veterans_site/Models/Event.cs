@@ -1,4 +1,5 @@
-﻿using System.ComponentModel.DataAnnotations;
+﻿
+using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
 
 namespace veterans_site.Models
@@ -52,6 +53,8 @@ namespace veterans_site.Models
 
         [NotMapped]
         public DateTime EndTime => Date.AddMinutes(Duration);
+
+        public ICollection<EventComment> Comments { get; set; } = new List<EventComment>();
     }
 
 
@@ -75,8 +78,6 @@ namespace veterans_site.Models
         Training,       // Тренінг
         [Display(Name = "Майстер-клас")]
         Workshop,       // Майстер-клас
-        [Display(Name = "Консультація")]
-        Consultation,   // Консультація
         [Display(Name = "Соціальний захід")]
         SocialEvent     // Соціальний захід
     }

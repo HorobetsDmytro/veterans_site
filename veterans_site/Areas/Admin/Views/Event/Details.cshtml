@@ -1,7 +1,5 @@
 ﻿@using veterans_site.Extensions
-
-@model veterans_site.Models.Event
-
+@model Event
 @{
     ViewData["Title"] = "Деталі події";
 }
@@ -9,59 +7,154 @@
 <div class="container mt-5">
     <div class="card shadow-sm">
         <div class="card-body">
-            <h1 class="h3 mb-4">@Model.Title</h1>
+            <nav aria-label="breadcrumb" class="mb-4">
+                <ol class="breadcrumb">
+                    <li class="breadcrumb-item"><a asp-action="Index">Події</a></li>
+                    <li class="breadcrumb-item active">Деталі події</li>
+                </ol>
+            </nav>
 
-            <div class="row g-4">
-                <div class="col-md-6">
-                    <h2 class="h5 mb-3">Деталі події</h2>
-                    <ul class="list-unstyled">
-                        <li>
-                            <strong>Дата:</strong>
-                            @Model.Date.ToString("dd.MM.yyyy HH:mm")
-                        </li>
-                        <li>
-                            <strong>Тривалість:</strong>
-                            @Model.Duration хвилин
-                        </li>
-                        <li>
-                            <strong>Час завершення:</strong>
-                            @Model.EndTime.ToString("HH:mm")
-                        </li>
-                        <li>
-                            <strong>Місце проведення:</strong>
-                            @Model.Location
-                        </li>
-                        @if (Model.MaxParticipants.HasValue)
+            <div class="row">
+                <div class="col-md-8">
+                    <h1 class="h2 mb-4">@Model.Title</h1>
+
+                    <div class="mb-4">
+                        <h5 class="text-muted mb-3">Опис події</h5>
+                        <p>@Model.Description</p>
+                    </div>
+
+                    <div class="row mb-4">
+                        <div class="col-md-6">
+                            <h5 class="text-muted mb-3">Основна інформація</h5>
+                            <ul class="list-unstyled">
+                                <li class="mb-2">
+                                    <i class="far fa-calendar-alt me-2"></i>
+                                    <strong>Дата та час:</strong> @Model.Date.ToString("dd.MM.yyyy HH:mm")
+                                </li>
+                                <li class="mb-2">
+                                    <i class="far fa-clock me-2"></i>
+                                    <strong>Тривалість:</strong> @Model.Duration хв
+                                </li>
+                                <li class="mb-2">
+                                    <i class="far fa-clock me-2"></i>
+                                    <strong>Час завершення:</strong> @Model.EndTime.ToString("HH:mm")
+                                </li>
+                                <li class="mb-2">
+                                    <i class="fas fa-map-marker-alt me-2"></i>
+                                    <strong>Місце проведення:</strong> @Model.Location
+                                </li>
+                                <li class="mb-2">
+                                    <i class="fas fa-tag me-2"></i>
+                                    <strong>Категорія:</strong> @Model.Category.GetDisplayName()
+                                </li>
+                            </ul>
+                        </div>
+
+                        <div class="col-md-6">
+                            <h5 class="text-muted mb-3">Додаткова інформація</h5>
+                            <ul class="list-unstyled">
+                                @if (Model.MaxParticipants.HasValue)
+                                {
+                                    <li class="mb-2">
+                                        <i class="fas fa-users me-2"></i>
+                                        <strong>Максимум учасників:</strong> @Model.MaxParticipants
+                                    </li>
+                                    <li class="mb-2">
+                                        <i class="fas fa-user-check me-2"></i>
+                                        <strong>Зареєстровано учасників:</strong> @Model.EventParticipants.Count
+                                    </li>
+                                    <li class="mb-2">
+                                        <i class="fas fa-user-plus me-2"></i>
+                                        <strong>Вільних місць:</strong> @(Model.MaxParticipants - Model.EventParticipants.Count)
+                                    </li>
+                                }
+                                <li class="mb-2">
+                                    <i class="fas fa-info-circle me-2"></i>
+                                    <strong>Статус події:</strong>
+                                    <span class="badge @(Model.Status switch
+                                    {
+                                        EventStatus.Planned => "bg-primary",
+                                        EventStatus.InProgress => "bg-success",
+                                        EventStatus.Completed => "bg-secondary",
+                                        EventStatus.Cancelled => "bg-danger",
+                                        _ => "bg-secondary"
+                                    })">
+                                        @Model.Status.GetDisplayName()
+                                    </span>
+                                </li>
+                            </ul>
+                        </div>
+                    </div>
+
+                    <div class="mt-4">
+                        <div class="d-flex justify-content-between align-items-center mb-3">
+                            <h4>Зареєстровані учасники</h4>
+                            <span class="badge bg-primary">
+                                Всього учасників: @(Model.EventParticipants?.Count ?? 0)
+                            </span>
+                        </div>
+
+                        @if (Model.EventParticipants != null && Model.EventParticipants.Any())
                         {
-                            <li>
-                                <strong>Максимум учасників:</strong>
-                                @Model.MaxParticipants
-                            </li>
+                            <div class="table-responsive">
+                                <table class="table table-striped">
+                                    <thead>
+                                        <tr>
+                                            <th>№</th>
+                                            <th>Ім'я та прізвище</th>
+                                            <th>Email</th>
+                                            <th>Дата реєстрації</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        @{
+                                            int index = 1;
+                                        }
+                                        @foreach (var participant in Model.EventParticipants
+                                       .OrderBy(p => p.RegistrationDate)
+                                       .Where(p => p.User != null))
+                                        {
+                                            <tr>
+                                                <td>@(index++)</td>
+                                                <td>@($"{participant.User.FirstName} {participant.User.LastName}")</td>
+                                                <td>@participant.User.Email</td>
+                                                <td>@participant.RegistrationDate.ToString("dd.MM.yyyy HH:mm")</td>
+                                            </tr>
+                                        }
+                                    </tbody>
+                                </table>
+                            </div>
+
+                            <div class="alert alert-info mt-3">
+                                <i class="fas fa-info-circle me-2"></i>
+                                @if (Model.MaxParticipants.HasValue)
+                                {
+                                    <span>Вільних місць: @(Model.MaxParticipants - Model.EventParticipants.Count) з @Model.MaxParticipants</span>
+                                }
+                                else
+                                {
+                                    <span>Кількість місць не обмежена</span>
+                                }
+                            </div>
                         }
-                        <li>
-                            <strong>Категорія:</strong>
-                            @Model.Category.GetDisplayName()
-                        </li>
-                        <li>
-                            <strong>Статус:</strong>
-                            @Model.Status.GetDisplayName()
-                        </li>
-                    </ul>
-                </div>
+                        else
+                        {
+                            <div class="alert alert-info">
+                                <i class="fas fa-users me-2"></i>
+                                Поки що немає зареєстрованих учасників.
+                            </div>
+                        }
+                    </div>
 
-                <div class="col-md-6">
-                    <h2 class="h5 mb-3">Опис</h2>
-                    <p class="text-muted">@Model.Description</p>
+                    <div class="mt-4">
+                        <a asp-action="Index" class="btn btn-secondary me-2">
+                            <i class="fas fa-arrow-left me-1"></i> Назад до списку
+                        </a>
+                        <a asp-action="Edit" asp-route-id="@Model.Id" class="btn btn-primary">
+                            <i class="fas fa-edit me-1"></i> Редагувати
+                        </a>
+                    </div>
                 </div>
-            </div>
-
-            <div class="mt-4 d-flex gap-3">
-                <a asp-action="Index" class="btn btn-secondary">
-                    Назад до списку
-                </a>
-                <a asp-action="Edit" asp-route-id="@Model.Id" class="btn btn-primary">
-                    Редагувати
-                </a>
             </div>
         </div>
     </div>

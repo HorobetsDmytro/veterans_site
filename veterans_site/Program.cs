@@ -54,6 +54,9 @@ builder.Services.AddScoped<INewsRepository, NewsRepository>();
 builder.Services.AddScoped<IConsultationRepository, ConsultationRepository>();
 builder.Services.AddScoped<ILogger<ConsultationController>, Logger<ConsultationController>>();
 
+builder.Services.AddScoped<GoogleCalendarService>();
+builder.Services.AddDataProtection();
+
 builder.Services.Configure<EmailSettings>(
     builder.Configuration.GetSection("EmailSettings"));
 builder.Services.AddScoped<IEmailService, EmailService>();
@@ -87,6 +90,11 @@ using (var scope = app.Services.CreateScope())
         var userManager = services.GetRequiredService<UserManager<ApplicationUser>>();
         var rolesManager = services.GetRequiredService<RoleManager<IdentityRole>>();
         await RoleInitializer.InitializeAsync(userManager, rolesManager);
+
+        if (!Directory.Exists(Path.Combine(Directory.GetCurrentDirectory(), "GoogleCalendarTokens")))
+        {
+            Directory.CreateDirectory(Path.Combine(Directory.GetCurrentDirectory(), "GoogleCalendarTokens"));
+        }
     }
     catch (Exception ex)
     {

@@ -3,6 +3,7 @@ using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using veterans_site.Data;
 
@@ -11,9 +12,11 @@ using veterans_site.Data;
 namespace veterans_site.Migrations
 {
     [DbContext(typeof(VeteranSupportDBContext))]
-    partial class VeteranSupportDBContextModelSnapshot : ModelSnapshot
+    [Migration("20241104173246_UpdateEventCategories")]
+    partial class UpdateEventCategories
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -464,37 +467,6 @@ namespace veterans_site.Migrations
                     b.ToTable("Events");
                 });
 
-            modelBuilder.Entity("veterans_site.Models.EventComment", b =>
-                {
-                    b.Property<int>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("int");
-
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
-
-                    b.Property<string>("Content")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<DateTime>("CreatedAt")
-                        .HasColumnType("datetime2");
-
-                    b.Property<int>("EventId")
-                        .HasColumnType("int");
-
-                    b.Property<string>("UserId")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(450)");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("EventId");
-
-                    b.HasIndex("UserId");
-
-                    b.ToTable("EventComments");
-                });
-
             modelBuilder.Entity("veterans_site.Models.EventParticipant", b =>
                 {
                     b.Property<int>("Id")
@@ -736,25 +708,6 @@ namespace veterans_site.Migrations
                     b.Navigation("User");
                 });
 
-            modelBuilder.Entity("veterans_site.Models.EventComment", b =>
-                {
-                    b.HasOne("veterans_site.Models.Event", "Event")
-                        .WithMany("Comments")
-                        .HasForeignKey("EventId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.HasOne("veterans_site.Models.ApplicationUser", "User")
-                        .WithMany()
-                        .HasForeignKey("UserId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.Navigation("Event");
-
-                    b.Navigation("User");
-                });
-
             modelBuilder.Entity("veterans_site.Models.EventParticipant", b =>
                 {
                     b.HasOne("veterans_site.Models.ApplicationUser", null)
@@ -794,8 +747,6 @@ namespace veterans_site.Migrations
 
             modelBuilder.Entity("veterans_site.Models.Event", b =>
                 {
-                    b.Navigation("Comments");
-
                     b.Navigation("EventParticipants");
                 });
 #pragma warning restore 612, 618

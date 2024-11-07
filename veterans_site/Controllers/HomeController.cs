@@ -22,7 +22,9 @@ namespace veterans_site.Controllers
             var upcomingEvents = await _eventRepository.GetUpcomingEventsAsync();
 
             ViewBag.LatestNews = latestNews;
-            ViewBag.UpcomingEvents = upcomingEvents;
+            ViewBag.UpcomingEvents = upcomingEvents
+            .OrderBy(e => e.Date)
+            .ToList();
 
             return View();
         }

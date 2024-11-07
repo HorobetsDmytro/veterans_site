@@ -24,8 +24,13 @@ namespace veterans_site.Services
             {
                 try
                 {
+                    var now = DateTime.Now;
+                    // Чекаємо до наступної перевірки о 00:00
+                    var tomorrow = now.Date.AddDays(1);
+                    var delay = tomorrow - now;
+                    await Task.Delay(delay, stoppingToken);
+
                     await ProcessEvents();
-                    await Task.Delay(_checkInterval, stoppingToken);
                 }
                 catch (Exception ex)
                 {
@@ -40,67 +45,63 @@ namespace veterans_site.Services
             using var scope = _scopeFactory.CreateScope();
             var context = scope.ServiceProvider.GetRequiredService<VeteranSupportDBContext>();
             var emailService = scope.ServiceProvider.GetRequiredService<IEmailService>();
-            var currentTime = DateTime.Now;
+            var currentDate = DateTime.Now.Date;
 
-            var eventsToUpdate = await context.Events
-                .Where(e => e.Status == EventStatus.Planned || e.Status == EventStatus.InProgress)
+            // Отримуємо всі події, які відбудуться сьогодні
+            var todayEvents = await context.Events
                 .Include(e => e.EventParticipants)
                     .ThenInclude(ep => ep.User)
+                .Where(e => e.Date.Date == currentDate
+                        && e.Status == EventStatus.Planned)
+                .ToListAsync();
+
+            foreach (var evt in todayEvents)
+            {
+                foreach (var participant in evt.EventParticipants)
+                {
+                    try
+                    {
+                        await emailService.SendEventReminderAsync(
+                            participant.User.Email,
+                            $"{participant.User.FirstName} {participant.User.LastName}",
+                            evt
+                        );
+                        _logger.LogInformation($"Sent reminder for event {evt.Id} to {participant.User.Email}");
+                    }
+                    catch (Exception ex)
+                    {
+                        _logger.LogError($"Failed to send reminder to {participant.User.Email}: {ex.Message}");
+                    }
+                }
+            }
+
+            // Оновлюємо статуси подій
+            await UpdateEventStatuses(context);
+        }
+
+        private async Task UpdateEventStatuses(VeteranSupportDBContext context)
+        {
+            var currentTime = DateTime.Now;
+            var eventsToUpdate = await context.Events
+                .Where(e => e.Status == EventStatus.Planned || e.Status == EventStatus.InProgress)
                 .ToListAsync();
 
             foreach (var evt in eventsToUpdate)
             {
-                try
+                if (evt.Status == EventStatus.Planned && evt.Date <= currentTime)
                 {
-                    // Подія починається
-                    if (evt.Status == EventStatus.Planned && evt.Date <= currentTime)
-                    {
-                        evt.Status = EventStatus.InProgress;
-                        _logger.LogInformation($"Event {evt.Id} status changed to InProgress");
-                    }
-                    // Подія закінчується (використовуємо тривалість)
-                    else if (evt.Status == EventStatus.InProgress &&
-                             evt.Date.AddMinutes(evt.Duration) <= currentTime)
-                    {
-                        evt.Status = EventStatus.Completed;
-                        _logger.LogInformation($"Event {evt.Id} status changed to Completed");
-                    }
-
-                    // Відправка нагадувань учасникам за день до події
-                    if (evt.Status == EventStatus.Planned &&
-                        evt.Date.Date == currentTime.Date.AddDays(1))
-                    {
-                        foreach (var participant in evt.EventParticipants)
-                        {
-                            try
-                            {
-                                await emailService.SendEventReminderAsync(
-                                    participant.User.Email,
-                                    $"{participant.User.FirstName} {participant.User.LastName}",
-                                    evt
-                                );
-                            }
-                            catch (Exception ex)
-                            {
-                                _logger.LogError($"Failed to send reminder to {participant.User.Email}: {ex.Message}");
-                            }
-                        }
-                    }
+                    evt.Status = EventStatus.InProgress;
+                    _logger.LogInformation($"Event {evt.Id} status changed to InProgress");
                 }
-                catch (Exception ex)
+                else if (evt.Status == EventStatus.InProgress &&
+                         evt.Date.AddMinutes(evt.Duration) <= currentTime)
                 {
-                    _logger.LogError($"Error processing event {evt.Id}: {ex.Message}");
+                    evt.Status = EventStatus.Completed;
+                    _logger.LogInformation($"Event {evt.Id} status changed to Completed");
                 }
             }
 
-            try
-            {
-                await context.SaveChangesAsync();
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError($"Error saving event updates: {ex.Message}");
-            }
+            await context.SaveChangesAsync();
         }
     }
 }
