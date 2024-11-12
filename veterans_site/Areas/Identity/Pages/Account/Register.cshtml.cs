@@ -16,6 +16,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
 using Microsoft.Extensions.Logging;
 using veterans_site.Models;
+using veterans_site.Services;
 
 namespace veterans_site.Areas.Identity.Pages.Account
 {
@@ -26,18 +27,21 @@ namespace veterans_site.Areas.Identity.Pages.Account
         private readonly IUserStore<ApplicationUser> _userStore;
         private readonly IUserEmailStore<ApplicationUser> _emailStore;
         private readonly ILogger<RegisterModel> _logger;
+        private readonly IEmailService _emailService;
 
         public RegisterModel(
             UserManager<ApplicationUser> userManager,
             IUserStore<ApplicationUser> userStore,
             SignInManager<ApplicationUser> signInManager,
-            ILogger<RegisterModel> logger)
+            ILogger<RegisterModel> logger,
+            IEmailService emailService)
         {
             _userManager = userManager;
             _userStore = userStore;
             _emailStore = GetEmailStore();
             _signInManager = signInManager;
             _logger = logger;
+            _emailService = emailService;
         }
 
         [BindProperty]
@@ -104,11 +108,23 @@ namespace veterans_site.Areas.Identity.Pages.Account
                 if (result.Succeeded)
                 {
                     await _userManager.AddToRoleAsync(user, "Veteran");
-                    _logger.LogInformation("User created a new account with password.");
 
-                    // Автоматичний вхід
+                    try
+                    {
+                        await _emailService.SendRegistrationConfirmationAsync(
+                            user.Email,
+                            $"{user.FirstName} {user.LastName}"
+                        );
+
+                        //TempData["Success"] = "Реєстрація успішна. Перевірте вашу електронну пошту.";
+                    }
+                    catch (Exception ex)
+                    {
+                        _logger.LogError($"Failed to send registration email: {ex.Message}");
+                    }
+
                     await _signInManager.SignInAsync(user, isPersistent: false);
-                    return LocalRedirect(returnUrl); // Перенаправлення на домашню сторінку
+                    return LocalRedirect(returnUrl);
                 }
                 foreach (var error in result.Errors)
                 {
@@ -116,7 +132,6 @@ namespace veterans_site.Areas.Identity.Pages.Account
                 }
             }
 
-            // Якщо щось пішло не так, повторно відобразити форму
             return Page();
         }
 

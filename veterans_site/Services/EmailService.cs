@@ -568,5 +568,52 @@ namespace veterans_site.Services
             await smtp.SendAsync(email);
             await smtp.DisconnectAsync(true);
         }
+
+        public async Task SendRegistrationConfirmationAsync(string toEmail, string userName)
+        {
+            try
+            {
+                var email = new MimeMessage();
+                email.From.Add(MailboxAddress.Parse(_emailSettings.FromEmail));
+                email.To.Add(MailboxAddress.Parse(toEmail));
+                email.Subject = "Успішна реєстрація на платформі підтримки ветеранів";
+
+                var builder = new BodyBuilder();
+                builder.HtmlBody = $@"
+                <html>
+                <body style='font-family: Arial, sans-serif; margin: 0; padding: 20px;'>
+                    <div style='background-color: #f8f9fa; padding: 20px; border-radius: 5px;'>
+                        <h2 style='color: #2c3e50;'>Вітаємо, {userName}!</h2>
+                        <p>Ви успішно зареєструвалися на платформі підтримки ветеранів.</p>
+                        <p>Тепер ви маєте доступ до:</p>
+                        <ul>
+                            <li>Запису на консультації</li>
+                            <li>Реєстрації на події</li>
+                            <li>Перегляду новин та оновлень</li>
+                        </ul>
+                        <p style='background-color: #e3f2fd; padding: 15px; border-radius: 5px; margin-top: 20px;'>
+                            <strong>Примітка:</strong> Якщо ви не реєструвалися на нашій платформі, 
+                            будь ласка, проігноруйте цей лист.
+                        </p>
+                        <br>
+                        <p style='color: #7f8c8d;'>З повагою,<br>Команда підтримки ветеранів</p>
+                    </div>
+                </body>
+                </html>";
+
+                email.Body = builder.ToMessageBody();
+
+                using var smtp = new SmtpClient();
+                await smtp.ConnectAsync(_emailSettings.SmtpServer, _emailSettings.SmtpPort, SecureSocketOptions.StartTls);
+                await smtp.AuthenticateAsync(_emailSettings.FromEmail, _emailSettings.Password);
+                await smtp.SendAsync(email);
+                await smtp.DisconnectAsync(true);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError($"Error sending registration confirmation email: {ex.Message}");
+                throw;
+            }
+        }
     }
 }

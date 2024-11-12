@@ -24,13 +24,37 @@ namespace veterans_site.Services
             {
                 try
                 {
-                    var now = DateTime.Now;
-                    // Чекаємо до наступної перевірки о 00:00
-                    var tomorrow = now.Date.AddDays(1);
-                    var delay = tomorrow - now;
-                    await Task.Delay(delay, stoppingToken);
+                    using var scope = _scopeFactory.CreateScope();
+                    var context = scope.ServiceProvider.GetRequiredService<VeteranSupportDBContext>();
+                    var currentTime = DateTime.Now;
 
-                    await ProcessEvents();
+                    // Отримуємо події, які потребують оновлення статусу
+                    var events = await context.Events
+                        .Where(e => e.Status != EventStatus.Cancelled &&
+                                   e.Status != EventStatus.Completed)
+                        .ToListAsync();
+
+                    foreach (var evt in events)
+                    {
+                        var eventEndTime = evt.Date.AddMinutes(evt.Duration);
+
+                        if (eventEndTime <= currentTime)
+                        {
+                            evt.Status = EventStatus.Completed;
+                            _logger.LogInformation($"Event {evt.Id} automatically marked as Completed");
+                        }
+                        else if (evt.Date <= currentTime && currentTime < eventEndTime)
+                        {
+                            if (evt.Status != EventStatus.InProgress)
+                            {
+                                evt.Status = EventStatus.InProgress;
+                                _logger.LogInformation($"Event {evt.Id} automatically marked as InProgress");
+                            }
+                        }
+                    }
+
+                    await context.SaveChangesAsync();
+                    await Task.Delay(_checkInterval, stoppingToken);
                 }
                 catch (Exception ex)
                 {

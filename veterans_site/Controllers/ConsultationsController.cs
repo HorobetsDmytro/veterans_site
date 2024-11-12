@@ -17,6 +17,7 @@ namespace veterans_site.Controllers
         private readonly IConsultationRepository _consultationRepository;
         private readonly IEmailService _emailService;
         private readonly ILogger<ConsultationsController> _logger;
+        private readonly IPDFService _pdfService;
         private readonly UserManager<ApplicationUser> _userManager;
         private readonly VeteranSupportDBContext _context;
         private const int PageSize = 6;
@@ -26,13 +27,15 @@ namespace veterans_site.Controllers
             UserManager<ApplicationUser> userManager,
             IEmailService emailService,
             ILogger<ConsultationsController> logger,
-            VeteranSupportDBContext context)
+            VeteranSupportDBContext context,
+            IPDFService pdfService)
         {
             _consultationRepository = consultationRepository;
             _userManager = userManager;
             _emailService = emailService;
             _logger = logger;
             _context = context;
+            _pdfService = pdfService;
         }
 
         public async Task<IActionResult> Index(
@@ -360,6 +363,42 @@ namespace veterans_site.Controllers
                     _logger.LogError($"Inner exception: {ex.InnerException.Message}");
                 }
                 TempData["Error"] = "Виникла помилка при скасуванні запису.";
+                return RedirectToAction("Index", "Profile");
+            }
+        }
+
+        [Authorize]
+        [HttpGet]
+        public async Task<IActionResult> GeneratePDF(int id)
+        {
+            try
+            {
+                var userId = _userManager.GetUserId(User);
+                var user = await _userManager.GetUserAsync(User);
+
+                // Перевіряємо чи користувач зареєстрований на цю консультацію
+                if (!await _consultationRepository.IsUserBookedForConsultationAsync(id, userId))
+                {
+                    return Forbid();
+                }
+
+                var consultation = await _consultationRepository.GetByIdWithSlotsAsync(id);
+                if (consultation == null)
+                {
+                    return NotFound();
+                }
+
+                var pdfBytes = _pdfService.GenerateConsultationConfirmation(consultation, user);
+
+                // Формуємо ім'я файлу
+                var fileName = $"consultation_{id}_{DateTime.Now:yyyyMMdd}.pdf";
+
+                return File(pdfBytes, "application/pdf", fileName);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError($"Error generating PDF: {ex.Message}");
+                TempData["Error"] = "Виникла помилка при генерації PDF";
                 return RedirectToAction("Index", "Profile");
             }
         }

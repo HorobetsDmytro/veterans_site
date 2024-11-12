@@ -20,5 +20,6 @@ namespace veterans_site.Interfaces
         Task<bool> HasActiveEventsAsync(string userId);
         Task<Event> GetByIdWithParticipantsAsync(int eventId);
         Task<ICollection<EventParticipant>> GetEventParticipantsAsync(int eventId);
+        Task UpdateEventStatusesAsync();
     }
 }

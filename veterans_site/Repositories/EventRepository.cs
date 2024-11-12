@@ -153,5 +153,33 @@ namespace veterans_site.Repositories
                 .Where(ep => ep.EventId == eventId)
                 .ToListAsync();
         }
+
+        public async Task UpdateEventStatusesAsync()
+        {
+            var currentTime = DateTime.Now;
+            var events = await _context.Events
+                .Where(e => e.Status != EventStatus.Cancelled &&
+                           e.Status != EventStatus.Completed)
+                .ToListAsync();
+
+            foreach (var evt in events)
+            {
+                var eventEndTime = evt.Date.AddMinutes(evt.Duration);
+
+                if (eventEndTime <= currentTime)
+                {
+                    evt.Status = EventStatus.Completed;
+                }
+                else if (evt.Date <= currentTime && currentTime < eventEndTime)
+                {
+                    if (evt.Status != EventStatus.InProgress)
+                    {
+                        evt.Status = EventStatus.InProgress;
+                    }
+                }
+            }
+
+            await _context.SaveChangesAsync();
+        }
     }
 }

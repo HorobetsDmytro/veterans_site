@@ -219,8 +219,32 @@
                                         @item.Status.GetDisplayName()
                                     </span>
                                     <div class="d-flex gap-2 mt-3">
-                                        <a asp-action="Details" asp-route-id="@item.Id" class="btn btn-outline-primary btn-sm">Деталі</a>
-                                        <a asp-action="Edit" asp-route-id="@item.Id" class="btn btn-outline-success btn-sm">Редагувати</a>
+                                        <a asp-action="Details" asp-route-id="@item.Id"
+                                           class="btn btn-outline-primary btn-sm">
+                                            <i class="fas fa-info-circle me-2"></i>Деталі
+                                        </a>
+                                        @{
+                                            bool hasBookings = item.Format == ConsultationFormat.Individual
+                                            ? item.Slots.Any(s => s.IsBooked)
+                                            : item.Bookings.Any();
+                                        }
+
+                                        @if (!hasBookings && item.Status == ConsultationStatus.Planned)
+                                        {
+                                            <a asp-action="Edit" asp-route-id="@item.Id"
+                                               class="btn btn-outline-success btn-sm">
+                                                <i class="fas fa-edit me-2"></i>Редагувати
+                                            </a>
+                                        }
+                                        else
+                                        {
+                                            <button class="btn btn-outline-secondary btn-sm" disabled
+                                                    data-bs-toggle="tooltip"
+                                                    title="Неможливо редагувати консультацію, на яку вже є записи">
+                                                <i class="fas fa-edit me-2"></i>Редагувати
+                                            </button>
+                                        }
+
                                         <a asp-action="Delete" asp-route-id="@item.Id" class="btn btn-outline-danger btn-sm">Видалити</a>
                                     </div>
                                 </div>

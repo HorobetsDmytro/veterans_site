@@ -406,5 +406,32 @@ namespace veterans_site.Repositories
                             c.Bookings.Any(b => b.UserId == userId))
                 .ToListAsync();
         }
+
+        public async Task UpdateConsultationStatusesAsync()
+        {
+            var currentTime = DateTime.Now;
+            var consultations = await _context.Consultations
+                .Where(c => c.Status != ConsultationStatus.Cancelled &&
+                           c.Status != ConsultationStatus.Completed)
+                .ToListAsync();
+
+            foreach (var consultation in consultations)
+            {
+                var consultationEndTime = consultation.Format == ConsultationFormat.Individual
+                    ? consultation.EndDateTime
+                    : consultation.DateTime.AddMinutes(consultation.Duration);
+
+                if (consultationEndTime <= currentTime)
+                {
+                    consultation.Status = ConsultationStatus.Completed;
+                }
+                else if (consultation.DateTime <= currentTime && currentTime < consultationEndTime)
+                {
+                    consultation.Status = ConsultationStatus.InProgress;
+                }
+            }
+
+            await _context.SaveChangesAsync();
+        }
     }
 }

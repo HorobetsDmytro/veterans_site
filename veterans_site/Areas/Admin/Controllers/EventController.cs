@@ -106,7 +106,7 @@ namespace veterans_site.Areas.Admin.Controllers
 
         [HttpPost]
         [ValidateAntiForgeryToken]
-        public async Task<IActionResult> Edit(int id, [Bind("Id,Title,Description,Date,Duration,Location,MaxParticipants,Category,Status")] Event @event)
+        public async Task<IActionResult> Edit(int id, Event @event)
         {
             if (id != @event.Id)
             {
@@ -115,9 +115,48 @@ namespace veterans_site.Areas.Admin.Controllers
 
             if (ModelState.IsValid)
             {
-                await _eventRepository.UpdateAsync(@event);
-                return RedirectToAction(nameof(Index));
+                try
+                {
+                    // Отримуємо поточний стан події з бази даних
+                    var existingEvent = await _eventRepository.GetByIdAsync(id);
+                    if (existingEvent == null)
+                    {
+                        return NotFound();
+                    }
+
+                    // Перевіряємо, чи змінилась дата
+                    if (@event.Date > DateTime.Now)
+                    {
+                        // Якщо нова дата в майбутньому, встановлюємо статус "Заплановано"
+                        @event.Status = EventStatus.Planned;
+                    }
+                    else
+                    {
+                        // Якщо дата в минулому або теперішньому, зберігаємо поточний статус
+                        @event.Status = existingEvent.Status;
+                    }
+
+                    // Зберігаємо всі інші поля
+                    existingEvent.Title = @event.Title;
+                    existingEvent.Description = @event.Description;
+                    existingEvent.Date = @event.Date;
+                    existingEvent.Location = @event.Location;
+                    existingEvent.MaxParticipants = @event.MaxParticipants;
+                    existingEvent.Category = @event.Category;
+                    existingEvent.Duration = @event.Duration;
+                    existingEvent.Status = @event.Status;
+
+                    await _eventRepository.UpdateAsync(existingEvent);
+
+                    TempData["Success"] = "Подію успішно оновлено";
+                    return RedirectToAction(nameof(Index));
+                }
+                catch (Exception ex)
+                {
+                    ModelState.AddModelError("", "Виникла помилка при збереженні змін. Спробуйте ще раз.");
+                }
             }
+
             return View(@event);
         }
 

@@ -46,6 +46,8 @@ namespace veterans_site.Areas.Specialist.Controllers
         {
             try
             {
+                await _consultationRepository.UpdateConsultationStatusesAsync();
+
                 var currentUser = await _userManager.GetUserAsync(User);
                 var specialistName = $"{currentUser.FirstName} {currentUser.LastName}";
 
@@ -229,119 +231,123 @@ namespace veterans_site.Areas.Specialist.Controllers
         public async Task<IActionResult> Edit(int? id)
         {
             if (id == null)
+            {
                 return NotFound();
+            }
 
-            var consultation = await _consultationRepository.GetByIdWithSlotsAsync(id.Value);
+            var consultation = await _context.Consultations
+                .Include(c => c.Slots)
+                .Include(c => c.Bookings)
+                .FirstOrDefaultAsync(c => c.Id == id);
+
             if (consultation == null)
+            {
                 return NotFound();
+            }
 
-            var currentUser = await _userManager.GetUserAsync(User);
-            if (consultation.SpecialistName != $"{currentUser.FirstName} {currentUser.LastName}")
-                return Forbid();
+            // Перевіряємо чи є записи на консультацію
+            bool hasBookings = consultation.Format == ConsultationFormat.Individual
+                ? consultation.Slots.Any(s => s.IsBooked)
+                : consultation.Bookings.Any();
+
+            if (hasBookings)
+            {
+                TempData["Error"] = "Неможливо редагувати консультацію, оскільки на неї вже є записи";
+                return RedirectToAction(nameof(Index));
+            }
 
             return View(consultation);
         }
 
+        // POST: Specialist/Consultation/Edit/5
         [HttpPost]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> Edit(int id, Consultation consultation)
         {
             if (id != consultation.Id)
-                return NotFound();
-
-            var currentUser = await _userManager.GetUserAsync(User);
-            if (consultation.SpecialistName != $"{currentUser.FirstName} {currentUser.LastName}")
-                return Forbid();
-
-            if (consultation.Mode == ConsultationMode.Offline && string.IsNullOrWhiteSpace(consultation.Location))
             {
-                ModelState.AddModelError("Location", "Для офлайн консультації необхідно вказати місце проведення");
+                return NotFound();
+            }
+
+            var existingConsultation = await _context.Consultations
+                .Include(c => c.Slots)
+                .Include(c => c.Bookings)
+                .FirstOrDefaultAsync(c => c.Id == id);
+
+            if (existingConsultation == null)
+            {
+                return NotFound();
+            }
+
+            // Повторна перевірка на наявність записів
+            bool hasBookings = existingConsultation.Format == ConsultationFormat.Individual
+                ? existingConsultation.Slots.Any(s => s.IsBooked)
+                : existingConsultation.Bookings.Any();
+
+            if (hasBookings)
+            {
+                TempData["Error"] = "Неможливо редагувати консультацію, оскільки на неї вже є записи";
+                return RedirectToAction(nameof(Index));
             }
 
             if (ModelState.IsValid)
             {
                 try
                 {
-                    var existingConsultation = await _consultationRepository.GetByIdWithSlotsAsync(id);
-
-                    // Перевіряємо чи змінився статус на "Скасовано"
-                    var statusChangedToCancelled = existingConsultation.Status != ConsultationStatus.Cancelled &&
-                                                 consultation.Status == ConsultationStatus.Cancelled;
-
-                    // Зберігаємо користувачів для повідомлення перед оновленням
-                    var usersToNotify = new List<ApplicationUser>();
-                    if (statusChangedToCancelled)
-                    {
-                        if (existingConsultation.Format == ConsultationFormat.Individual)
-                        {
-                            // Збираємо користувачів із заброньованих слотів
-                            usersToNotify.AddRange(
-                                existingConsultation.Slots
-                                    .Where(s => s.IsBooked && s.User != null)
-                                    .Select(s => s.User)
-                            );
-                        }
-                        else
-                        {
-                            // Збираємо користувачів із бронювань для групової консультації
-                            usersToNotify.AddRange(
-                                existingConsultation.Bookings
-                                    .Where(b => b.User != null)
-                                    .Select(b => b.User)
-                            );
-                        }
-                    }
-
-                    // Оновлюємо дані консультації
+                    // Оновлюємо основні поля
                     existingConsultation.Title = consultation.Title;
                     existingConsultation.Description = consultation.Description;
-                    existingConsultation.Price = consultation.Price;
                     existingConsultation.Type = consultation.Type;
                     existingConsultation.Mode = consultation.Mode;
+                    existingConsultation.Duration = consultation.Duration;
+                    existingConsultation.Price = consultation.Price;
                     existingConsultation.Location = consultation.Location;
-                    existingConsultation.Status = consultation.Status;
 
-                    if (existingConsultation.Format == ConsultationFormat.Group)
+                    if (consultation.Format == ConsultationFormat.Individual)
                     {
-                        existingConsultation.MaxParticipants = consultation.MaxParticipants;
                         existingConsultation.DateTime = consultation.DateTime;
-                        existingConsultation.Duration = consultation.Duration;
-                    }
+                        existingConsultation.EndDateTime = consultation.EndDateTime;
 
-                    await _consultationRepository.UpdateAsync(existingConsultation);
+                        // Видаляємо старі слоти
+                        _context.ConsultationSlots.RemoveRange(existingConsultation.Slots);
 
-                    // Відправляємо повідомлення про скасування
-                    if (statusChangedToCancelled)
-                    {
-                        foreach (var user in usersToNotify)
+                        // Генеруємо нові слоти
+                        var currentTime = consultation.DateTime;
+                        while (currentTime < consultation.EndDateTime)
                         {
-                            try
+                            var newSlot = new ConsultationSlot
                             {
-                                await _emailService.SendConsultationCancelledNotificationAsync(
-                                    user.Email,
-                                    $"{user.FirstName} {user.LastName}",
-                                    existingConsultation.Title,
-                                    existingConsultation.Format == ConsultationFormat.Individual
-                                        ? existingConsultation.Slots.First(s => s.UserId == user.Id).DateTime
-                                        : existingConsultation.DateTime,
-                                    existingConsultation.SpecialistName
-                                );
-                            }
-                            catch (Exception ex)
-                            {
-                                _logger.LogError($"Failed to send cancellation notification to {user.Email}: {ex.Message}");
-                            }
+                                ConsultationId = id,
+                                DateTime = currentTime,
+                                IsBooked = false
+                            };
+                            existingConsultation.Slots.Add(newSlot);
+                            currentTime = currentTime.AddMinutes(consultation.Duration);
                         }
                     }
+                    else
+                    {
+                        existingConsultation.DateTime = consultation.DateTime;
+                        existingConsultation.MaxParticipants = consultation.MaxParticipants;
+                    }
 
+                    var now = DateTime.Now;
+                    if (consultation.DateTime > now)
+                    {
+                        existingConsultation.Status = ConsultationStatus.Planned;
+                    }
+
+                    await _context.SaveChangesAsync();
+                    TempData["Success"] = "Консультацію успішно оновлено";
                     return RedirectToAction(nameof(Index));
                 }
                 catch (Exception ex)
                 {
                     _logger.LogError($"Error updating consultation: {ex.Message}");
-                    ModelState.AddModelError("", "Помилка при оновленні консультації");
+                    ModelState.AddModelError("", "Виникла помилка при збереженні змін.");
                 }
             }
+
             return View(consultation);
         }
 

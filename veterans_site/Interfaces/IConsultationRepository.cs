@@ -50,6 +50,6 @@ namespace veterans_site.Interfaces
         Task<Consultation> GetByIdWithSlotsAsync(int id);
         Task<bool> BookConsultationSlotAsync(int consultationId, int slotId, string userId);
         Task<IEnumerable<Consultation>> GetUserConsultationsWithSlotsAsync(string userId);
-
+        Task UpdateConsultationStatusesAsync();
     }
 }

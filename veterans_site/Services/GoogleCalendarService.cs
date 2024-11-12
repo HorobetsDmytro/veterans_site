@@ -98,16 +98,27 @@ namespace veterans_site.Services
                         DateTime = eventDetails.Date.AddMinutes(eventDetails.Duration),
                         TimeZone = "Europe/Kiev",
                     },
-                    Reminders = new Event.RemindersData
+                    Reminders = new Google.Apis.Calendar.v3.Data.Event.RemindersData
                     {
                         UseDefault = false,
                         Overrides = new List<EventReminder>
                     {
-                        new EventReminder { Method = "popup", Minutes = 60 },
-                        new EventReminder { Method = "popup", Minutes = 10 }
+                        // Нагадування о 00:00 в день події
+                        new EventReminder
+                        {
+                            Method = "popup",
+                            // Конвертуємо час до хвилин від початку дня до події
+                            Minutes = (int)(eventDetails.Date - eventDetails.Date.Date).TotalMinutes
+                        },
+                        // Нагадування за годину до початку
+                        new EventReminder
+                        {
+                            Method = "popup",
+                            Minutes = 60
+                        }
                     }
                     }
-                };
+                    };
 
                 await service.Events.Insert(calendarEvent, "primary").ExecuteAsync();
             }
@@ -116,7 +127,7 @@ namespace veterans_site.Services
                 throw new Exception($"Error adding event to calendar: {ex.Message}", ex);
             }
         }
-
+    
         private string GetProtectedUserId(string userId)
         {
             var protector = _dataProtectionProvider.CreateProtector("GoogleCalendarUserId");

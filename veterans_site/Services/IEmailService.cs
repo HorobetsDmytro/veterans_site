@@ -26,5 +26,6 @@ namespace veterans_site.Services
         Task SendEventRegistrationConfirmationAsync(string toEmail, string userName, Event evt);
         Task SendEventCancellationNotificationAsync(string toEmail, string userName, Event evt);
         Task SendEventReminderAsync(string toEmail, string userName, Event evt);
+        Task SendRegistrationConfirmationAsync(string toEmail, string userName);
     }
 }

@@ -39,15 +39,15 @@ namespace veterans_site.Controllers
             EventCategory? category = null,
             string sortOrder = null,
             int page = 1)
-        {
+        {   
             try
             {
-                IEnumerable<Event> events = await _eventRepository.GetAllAsync();
+                await _eventRepository.UpdateEventStatusesAsync();
 
-                // Фільтруємо тільки заплановані та активні події
-                events = events.Where(e => e.Status == EventStatus.Planned || e.Status == EventStatus.InProgress);
+                var events = await _eventRepository.GetAllAsync();
 
-                // Застосовуємо фільтр категорії
+                events = events.Where(e => e.Status == EventStatus.Planned);
+
                 if (category.HasValue)
                 {
                     events = events.Where(e => e.Category == category);

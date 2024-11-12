@@ -198,12 +198,6 @@
                                 <span>Акаунт неактивний</span>
                             }
                         </div>
-
-                        <a asp-area="Identity" asp-page="/Account/Manage/Index" 
-                           class="btn btn-primary w-100">
-                            <i class="fas fa-user-edit me-2"></i>
-                            Редагувати профіль
-                        </a>
                     </div>
                 </div>
             </div>
@@ -278,6 +272,10 @@
                                                         <a asp-action="ConsultationDetails" asp-route-id="@consultation.Id" 
                                                            class="btn btn-outline-primary btn-sm">
                                                             <i class="fas fa-info-circle me-2"></i>Деталі
+                                                        </a>
+                                                        <a asp-controller="Consultations" asp-action="GeneratePDF" asp-route-id="@consultation.Id"
+                                                           class="btn btn-outline-secondary btn-sm">
+                                                            <i class="fas fa-file-pdf me-2"></i>Сформувати PDF
                                                         </a>
                                                     </div>
                                                 </div>

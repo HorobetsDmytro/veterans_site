@@ -53,8 +53,9 @@ builder.Services.AddScoped<IEventRepository, EventRepository>();
 builder.Services.AddScoped<INewsRepository, NewsRepository>();
 builder.Services.AddScoped<IConsultationRepository, ConsultationRepository>();
 builder.Services.AddScoped<ILogger<ConsultationController>, Logger<ConsultationController>>();
-
 builder.Services.AddScoped<GoogleCalendarService>();
+builder.Services.AddScoped<IPDFService, PDFService>();
+
 builder.Services.AddDataProtection();
 
 builder.Services.Configure<EmailSettings>(
