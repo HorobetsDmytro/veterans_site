@@ -236,16 +236,5 @@ namespace veterans_site.Areas.Admin.Controllers
             var latestNews = await _newsRepository.GetLatestNewsAsync(count);
             return View(latestNews);
         }
-
-        public async Task<IActionResult> Search(string title)
-        {
-            if (string.IsNullOrEmpty(title))
-            {
-                return RedirectToAction(nameof(Index));
-            }
-
-            var searchResults = await _newsRepository.SearchNewsByTitleAsync(title);
-            return View("Index", searchResults);
-        }
     }
 }

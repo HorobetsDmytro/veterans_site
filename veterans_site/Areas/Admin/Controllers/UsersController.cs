@@ -155,18 +155,15 @@ namespace veterans_site.Areas.Admin.Controllers
                 return NotFound();
             }
 
-            // Перевіряємо чи не намагаємось видалити адміна
             if (await _userManager.IsInRoleAsync(user, "Admin"))
             {
                 TempData["Error"] = "Неможливо видалити адміністратора.";
                 return RedirectToAction(nameof(Index));
             }
 
-            // Видаляємо всі бронювання користувача
             await _consultationRepository.RemoveUserBookingsAsync(id);
             await _eventRepository.RemoveUserParticipationsAsync(id);
 
-            // Видаляємо користувача
             var result = await _userManager.DeleteAsync(user);
             if (result.Succeeded)
             {
@@ -209,13 +206,13 @@ namespace veterans_site.Areas.Admin.Controllers
             }
 
             var userRoles = await _userManager.GetRolesAsync(user);
-            var allRoles = new List<string> { "Veteran", "Specialist" }; // Фіксований список доступних ролей
+            var allRoles = new List<string> { "Veteran", "Specialist" };
 
             var model = new UserRolesViewModel
             {
                 UserId = userId,
                 UserName = $"{user.FirstName} {user.LastName}",
-                SelectedRole = userRoles.FirstOrDefault(), // Поточна роль
+                SelectedRole = userRoles.FirstOrDefault(),
                 AvailableRoles = allRoles
             };
 

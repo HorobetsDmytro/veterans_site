@@ -117,26 +117,21 @@ namespace veterans_site.Areas.Admin.Controllers
             {
                 try
                 {
-                    // Отримуємо поточний стан події з бази даних
                     var existingEvent = await _eventRepository.GetByIdAsync(id);
                     if (existingEvent == null)
                     {
                         return NotFound();
                     }
 
-                    // Перевіряємо, чи змінилась дата
                     if (@event.Date > DateTime.Now)
                     {
-                        // Якщо нова дата в майбутньому, встановлюємо статус "Заплановано"
                         @event.Status = EventStatus.Planned;
                     }
                     else
                     {
-                        // Якщо дата в минулому або теперішньому, зберігаємо поточний статус
                         @event.Status = existingEvent.Status;
                     }
 
-                    // Зберігаємо всі інші поля
                     existingEvent.Title = @event.Title;
                     existingEvent.Description = @event.Description;
                     existingEvent.Date = @event.Date;
@@ -188,17 +183,6 @@ namespace veterans_site.Areas.Admin.Controllers
         {
             var upcomingEvents = await _eventRepository.GetUpcomingEventsAsync();
             return View(upcomingEvents);
-        }
-
-        public async Task<IActionResult> SearchByLocation(string location)
-        {
-            if (string.IsNullOrEmpty(location))
-            {
-                return RedirectToAction(nameof(Index));
-            }
-
-            var events = await _eventRepository.GetEventsByLocationAsync(location);
-            return View("Index", events);
         }
 
         public async Task<IActionResult> Details(int? id)

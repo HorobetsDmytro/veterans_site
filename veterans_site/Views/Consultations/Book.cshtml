@@ -72,88 +72,89 @@
 
                         <div class="info-alert mb-4">
                             <h5 class="mb-3">Деталі консультації</h5>
-                        <ul class="list-unstyled">
-                            <li class="mb-2"><strong>Назва:</strong> @Model.Title</li>
-                            <li class="mb-2"><strong>Спеціаліст:</strong> @Model.SpecialistName</li>
-                            @if (Model.Format != ConsultationFormat.Individual)
-                            {
-                                <li class="mb-2"><strong>Дата та час:</strong> @Model.DateTime.ToString("dd.MM.yyyy HH:mm")</li>
-                            }
-                            <li class="mb-2"><strong>Тривалість:</strong> @Model.Duration хв</li>
-                            <li class="mb-2"><strong>Тип:</strong> @Model.Type.GetDisplayName()</li>
-                            <li class="mb-2"><strong>Формат:</strong> @Model.Format.GetDisplayName()</li>
-                            <li class="mb-2"><strong>Формат проведення:</strong> @Model.Mode.GetDisplayName()</li>
-                            @if (Model.Mode == ConsultationMode.Offline)
-                            {
-                                <li class="mb-2"><strong>Місце проведення:</strong> @Model.Location</li>
-                            }
-                            @if (Model.Format == ConsultationFormat.Group)
-                            {
-                                <li class="mb-2"><strong>Вільних місць:</strong> @(Model.MaxParticipants - Model.BookedParticipants) з @Model.MaxParticipants</li>
-                            }
-                            <li class="mb-2"><strong>Ціна:</strong> @Model.Price.ToString("C")</li>
-                        </ul>
-                    </div>
-
-                    <div class="alert alert-secondary">
-                        <p class="mb-0">@Model.Description</p>
-                    </div>
-
-                    @if (Model.Format == ConsultationFormat.Individual && Model.Slots.Any())
-                    {
-                        <div class="slots-section mb-4">
-                            <h5 class="text-primary mb-3">Доступні слоти</h5>
-                            <div class="table-responsive">
-                                <table class="table table-hover slots-table">
-                                <thead>
-                                    <tr>
-                                        <th>Дата та час</th>
-                                        <th class="text-center">Вибір</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    @foreach (var slot in Model.Slots.Where(s => !s.IsBooked).OrderBy(s => s.DateTime))
-                                    {
-                                        <tr>
-                                            <td>@slot.DateTime.ToString("dd.MM.yyyy HH:mm")</td>
-                                            <td class="text-center">
-                                                <input type="radio" name="slotId" value="@slot.Id" class="form-check-input" required>
-                                            </td>
-                                        </tr>
-                                    }
-                                </tbody>
-                            </table>
+                            <ul class="list-unstyled">
+                                <li class="mb-2"><strong>Назва:</strong> @Model.Title</li>
+                                <li class="mb-2"><strong>Спеціаліст:</strong> @Model.SpecialistName</li>
+                                @if (Model.Format != ConsultationFormat.Individual)
+                                {
+                                    <li class="mb-2"><strong>Дата та час:</strong> @Model.DateTime.ToString("dd.MM.yyyy HH:mm")</li>
+                                }
+                                <li class="mb-2"><strong>Тривалість:</strong> @Model.Duration хв</li>
+                                <li class="mb-2"><strong>Тип:</strong> @Model.Type.GetDisplayName()</li>
+                                <li class="mb-2"><strong>Формат:</strong> @Model.Format.GetDisplayName()</li>
+                                <li class="mb-2"><strong>Формат проведення:</strong> @Model.Mode.GetDisplayName()</li>
+                                @if (Model.Mode == ConsultationMode.Offline)
+                                {
+                                    <li class="mb-2"><strong>Місце проведення:</strong> @Model.Location</li>
+                                }
+                                @if (Model.Format == ConsultationFormat.Group)
+                                {
+                                    <li class="mb-2"><strong>Вільних місць:</strong> @(Model.MaxParticipants - Model.BookedParticipants) з @Model.MaxParticipants</li>
+                                }
+                                <li class="mb-2"><strong>Ціна:</strong> @Model.Price.ToString("C")</li>
+                            </ul>
                         </div>
-                    </div>
-                    }
 
-                    <form asp-action="BookConfirm" method="post" id="bookingForm">
-                        @Html.AntiForgeryToken()
-                        <input type="hidden" name="id" value="@Model.Id" />
+                        <div class="alert alert-secondary">
+                            <p class="mb-0">@Model.Description</p>
+                        </div>
 
-                        @if (Model.Format == ConsultationFormat.Individual)
+                        @if (Model.Format == ConsultationFormat.Individual && Model.Slots.Any())
                         {
-                            <input type="hidden" name="slotId" id="selectedSlotId" />
+                            <div class="slots-section mb-4">
+                                <h5 class="text-primary mb-3">Доступні слоти</h5>
+                                <div class="table-responsive">
+                                    <table class="table table-hover slots-table">
+                                        <thead>
+                                        <tr>
+                                            <th>Дата та час</th>
+                                            <th class="text-center">Вибір</th>
+                                        </tr>
+                                        </thead>
+                                        <tbody>
+                                        @foreach (var slot in Model.Slots.Where(s => !s.IsBooked).OrderBy(s => s.DateTime))
+                                        {
+                                            <tr>
+                                                <td>@slot.DateTime.ToString("dd.MM.yyyy HH:mm")</td>
+                                                <td class="text-center">
+                                                    <input type="radio" name="slotId" value="@slot.Id" class="form-check-input" required>
+                                                </td>
+                                            </tr>
+                                        }
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
                         }
 
-                        <div class="confirm-checkbox">
-                            <div class="form-check">
-                                <input class="form-check-input" type="checkbox" id="confirmCheck" required>
-                                <label class="form-check-label" for="confirmCheck">
-                                    Я підтверджую запис на консультацію та згоден з умовами
-                                </label>
-                            </div>
-                        </div>
+                        <form asp-action="BookConfirm" method="post" id="bookingForm">
+                            @Html.AntiForgeryToken()
+                            <input type="hidden" name="id" value="@Model.Id" />
 
-                        <div class="action-buttons">
-                            <button type="submit" class="btn btn-primary">
-                                <i class="fas fa-check me-2"></i>Підтвердити запис
-                            </button>
-                            <a asp-action="Index" class="btn btn-secondary">
-                                <i class="fas fa-times me-2"></i>Скасувати
-                            </a>
-                        </div>
-                    </form>
+                            @if (Model.Format == ConsultationFormat.Individual)
+                            {
+                                <input type="hidden" name="slotId" id="selectedSlotId" />
+                            }
+
+                            <div class="confirm-checkbox">
+                                <div class="form-check">
+                                    <input class="form-check-input" type="checkbox" id="confirmCheck" required>
+                                    <label class="form-check-label" for="confirmCheck">
+                                        Я підтверджую запис на консультацію та згоден з умовами
+                                    </label>
+                                </div>
+                            </div>
+
+                            <div class="action-buttons">
+                                <button type="submit" class="btn btn-primary">
+                                    <i class="fas fa-check me-2"></i>Підтвердити запис
+                                </button>
+                                <a asp-action="Index" class="btn btn-secondary">
+                                    <i class="fas fa-times me-2"></i>Скасувати
+                                </a>
+                            </div>
+                        </form>
+                    </div>
                 </div>
             </div>
         </div>
@@ -165,26 +166,22 @@
     {
         <script>
             document.getElementById('bookingForm').addEventListener('submit', function (e) {
-                e.preventDefault(); // Спочатку запобігаємо стандартній відправці
-
-                // Перевіряємо чи вибрано слот
+                e.preventDefault();
+                
                 const selectedSlot = document.querySelector('input[name="slotId"]:checked');
                 if (!selectedSlot) {
                     alert('Будь ласка, виберіть слот для запису');
                     return;
                 }
 
-                // Перевіряємо чи встановлено чекбокс
                 const confirmCheck = document.getElementById('confirmCheck');
                 if (!confirmCheck.checked) {
                     alert('Будь ласка, підтвердіть свою згоду');
                     return;
                 }
 
-                // Встановлюємо значення вибраного слоту
                 document.getElementById('selectedSlotId').value = selectedSlot.value;
 
-                // Якщо всі перевірки пройдені, відправляємо форму
                 this.submit();
             });
         </script>
