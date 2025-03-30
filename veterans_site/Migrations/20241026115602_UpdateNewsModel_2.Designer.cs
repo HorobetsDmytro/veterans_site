@@ -11,7 +11,7 @@ using veterans_site.Data;
 
 namespace veterans_site.Migrations
 {
-    [DbContext(typeof(VeteranSupportDBContext))]
+    [DbContext(typeof(VeteranSupportDbContext))]
     [Migration("20241026115602_UpdateNewsModel_2")]
     partial class UpdateNewsModel_2
     {

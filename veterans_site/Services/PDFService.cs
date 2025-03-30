@@ -37,15 +37,12 @@ namespace veterans_site.Services
                 var pdf = new PdfDocument(writer);
                 var document = new Document(pdf, PageSize.A4);
 
-                // Шляхи до шрифтів
                 string regularFontPath = System.IO.Path.Combine(_environment.WebRootPath, "fonts", "Roboto-Regular.ttf");
                 string boldFontPath = System.IO.Path.Combine(_environment.WebRootPath, "fonts", "Roboto-Bold.ttf");
 
-                // Завантаження шрифтів
                 var font = PdfFontFactory.CreateFont("wwwroot/fonts/Arial.ttf", PdfEncodings.IDENTITY_H);
                 var boldFont = PdfFontFactory.CreateFont("wwwroot/fonts/Arialbd.ttf", PdfEncodings.IDENTITY_H);
 
-                // Заголовок документа
                 document.Add(new Paragraph("Запис на консультацію")
                     .SetFont(boldFont)
                     .SetFontSize(20)
@@ -53,7 +50,6 @@ namespace veterans_site.Services
                     .SetMarginBottom(20)
                     .SetFontColor(ColorConstants.BLUE));
 
-                // Основна інформація в рамці
                 var mainInfoTable = new Table(1)
                     .SetWidth(UnitValue.CreatePercentValue(100))
                     .SetMarginBottom(20)
@@ -71,7 +67,7 @@ namespace veterans_site.Services
                 var infoTable = new Table(2)
                     .SetWidth(UnitValue.CreatePercentValue(100));
 
-                // Додаємо інформацію про консультацію
+
                 AddInfoRow(infoTable, "Назва:", consultation.Title, font, boldFont);
                 AddInfoRow(infoTable, "Дата та час:", consultation.DateTime.ToString("dd.MM.yyyy HH:mm"), font, boldFont);
                 AddInfoRow(infoTable, "Тривалість:", $"{consultation.Duration} хвилин", font, boldFont);
@@ -92,7 +88,6 @@ namespace veterans_site.Services
                 mainInfoTable.AddCell(contentCell);
                 document.Add(mainInfoTable);
 
-                // Інформація про користувача
                 var userInfoTable = new Table(1)
                     .SetWidth(UnitValue.CreatePercentValue(100))
                     .SetMarginBottom(20)
@@ -116,7 +111,6 @@ namespace veterans_site.Services
                 userInfoTable.AddCell(new Cell().SetPadding(10).Add(userDetailsTable));
                 document.Add(userInfoTable);
 
-                // Додаткова інформація
                 var notesTable = new Table(1)
                     .SetWidth(UnitValue.CreatePercentValue(100))
                     .SetMarginTop(20);
@@ -137,7 +131,6 @@ namespace veterans_site.Services
                 notesTable.AddCell(notesCell);
                 document.Add(notesTable);
 
-                // Нижній колонтитул
                 var footer = new Paragraph()
                     .SetFont(font)
                     .SetFontSize(8)

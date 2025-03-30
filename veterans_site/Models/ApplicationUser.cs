@@ -16,6 +16,7 @@ namespace veterans_site.Models
         public bool IsActive { get; set; } = true;
 
         public DateTime RegistrationDate { get; set; } = DateTime.Now;
+        public string? AvatarPath { get; set; }
 
         public virtual ICollection<ConsultationBooking> ConsultationBookings { get; set; }
         public virtual ICollection<EventParticipant> EventParticipants { get; set; }

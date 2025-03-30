@@ -11,7 +11,7 @@ using veterans_site.Data;
 
 namespace veterans_site.Migrations
 {
-    [DbContext(typeof(VeteranSupportDBContext))]
+    [DbContext(typeof(VeteranSupportDbContext))]
     [Migration("20241105002929_AddEventComments")]
     partial class AddEventComments
     {

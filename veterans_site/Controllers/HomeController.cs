@@ -13,9 +13,9 @@ namespace veterans_site.Controllers
         private readonly UserManager<ApplicationUser> _userManager;
         private readonly INewsRepository _newsRepository;
         private readonly IEventRepository _eventRepository;
-        private readonly VeteranSupportDBContext _context;
+        private readonly VeteranSupportDbContext _context;
 
-        public HomeController(INewsRepository newsRepository, IEventRepository eventRepository, VeteranSupportDBContext context, UserManager<ApplicationUser> userManager)
+        public HomeController(INewsRepository newsRepository, IEventRepository eventRepository, VeteranSupportDbContext context, UserManager<ApplicationUser> userManager)
         {
             _newsRepository = newsRepository;
             _eventRepository = eventRepository;
@@ -25,23 +25,19 @@ namespace veterans_site.Controllers
 
         private async Task<HomeStatisticsViewModel> GetStatisticsAsync()
         {
-            // Кількість ветеранів, які записувались на консультації
             var veteransCount = await _context.ConsultationBookings
                 .Select(b => b.UserId)
                 .Distinct()
                 .CountAsync();
 
-            // Кількість завершених консультацій
             var completedConsultations = await _context.Consultations
                 .Where(c => c.Status == ConsultationStatus.Completed)
                 .CountAsync();
 
-            // Кількість завершених подій
             var completedEvents = await _context.Events
                 .Where(e => e.Status == EventStatus.Completed)
                 .CountAsync();
 
-            // Кількість спеціалістів
             var specialistsCount = (await _userManager.GetUsersInRoleAsync("Specialist")).Count;
 
             return new HomeStatisticsViewModel

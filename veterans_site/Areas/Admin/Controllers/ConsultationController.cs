@@ -13,13 +13,13 @@ namespace veterans_site.Areas.Admin.Controllers
     public class ConsultationController : Controller
     {
         private readonly IConsultationRepository _consultationRepository;
-        private readonly VeteranSupportDBContext _context;
+        private readonly VeteranSupportDbContext _context;
         private const int PageSize = 6;
 
-        public ConsultationController(IConsultationRepository consultationRepository, VeteranSupportDBContext veteranSupportDBContext)
+        public ConsultationController(IConsultationRepository consultationRepository, VeteranSupportDbContext context)
         {
             _consultationRepository = consultationRepository;
-            _context = veteranSupportDBContext;
+            _context = context;
         }
 
         public async Task<IActionResult> Index(

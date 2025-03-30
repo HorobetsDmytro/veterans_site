@@ -191,7 +191,6 @@ namespace veterans_site.Services
                     ? $"<li style='margin-bottom: 8px;'><strong>Місце проведення:</strong> {consultation.Location}</li>"
                     : "";
 
-                // Генеруємо HTML для слотів, якщо консультація індивідуальна
                 var slotsHtml = "";
                 if (consultation.Format == ConsultationFormat.Individual && consultation.Slots != null && consultation.Slots.Any())
                 {

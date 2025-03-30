@@ -38,13 +38,12 @@ namespace veterans_site.Services
         private async Task ProcessConsultations()
         {
             using var scope = _scopeFactory.CreateScope();
-            var context = scope.ServiceProvider.GetRequiredService<VeteranSupportDBContext>();
+            var context = scope.ServiceProvider.GetRequiredService<VeteranSupportDbContext>();
             var emailService = scope.ServiceProvider.GetRequiredService<IEmailService>();
             var currentTime = DateTime.Now;
 
             try
             {
-                // Оновлення статусів консультацій
                 var consultationsToUpdate = await context.Consultations
                     .Where(c => c.Status != ConsultationStatus.Cancelled &&
                                c.Status != ConsultationStatus.Completed)
@@ -56,13 +55,11 @@ namespace veterans_site.Services
                         ? consultation.EndDateTime
                         : consultation.DateTime.AddMinutes(consultation.Duration);
 
-                    // Якщо консультація вже завершилась
                     if (consultationEndTime <= currentTime)
                     {
                         consultation.Status = ConsultationStatus.Completed;
                         _logger.LogInformation($"Consultation {consultation.Id} marked as Completed");
                     }
-                    // Якщо консультація зараз проходить
                     else if (consultation.DateTime <= currentTime && currentTime < consultationEndTime)
                     {
                         if (consultation.Status != ConsultationStatus.InProgress)
@@ -73,7 +70,6 @@ namespace veterans_site.Services
                     }
                 }
 
-                // Відправка нагадувань про консультації
                 var notificationTime = currentTime.AddMinutes(5);
                 var upcomingConsultations = await context.Consultations
                     .Include(c => c.Slots)

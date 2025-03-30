@@ -8,7 +8,7 @@ namespace veterans_site.Repositories
     public class ConsultationRepository : GenericRepository<Consultation>, IConsultationRepository
     {
         private readonly ILogger<ConsultationRepository> _logger;
-        public ConsultationRepository(VeteranSupportDBContext context, ILogger<ConsultationRepository> logger) : base(context)
+        public ConsultationRepository(VeteranSupportDbContext context, ILogger<ConsultationRepository> logger) : base(context)
         {
             _logger = logger;
         }

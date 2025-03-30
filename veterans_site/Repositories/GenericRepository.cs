@@ -7,10 +7,10 @@ namespace veterans_site.Repositories
 {
     public class GenericRepository<T> : IGenericRepository<T> where T : class
     {
-        protected readonly VeteranSupportDBContext _context;
+        protected readonly VeteranSupportDbContext _context;
         protected readonly DbSet<T> _dbSet;
 
-        public GenericRepository(VeteranSupportDBContext context)
+        public GenericRepository(VeteranSupportDbContext context)
         {
             _context = context;
             _dbSet = context.Set<T>();

@@ -35,6 +35,49 @@
         font-size: 2rem;
         font-weight: 600;
         margin-right: 1.5rem;
+        position: relative;
+        overflow: hidden;
+        background-size: cover;
+        background-position: center;
+    }
+
+    .profile-avatar img {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+    }
+
+    .avatar-upload {
+        position: relative;
+        display: inline-block;
+    }
+
+    .avatar-upload-input {
+        position: absolute;
+        left: 0;
+        top: 0;
+        width: 100%;
+        height: 100%;
+        opacity: 0;
+        cursor: pointer;
+    }
+
+    .avatar-upload-label {
+        position: absolute;
+        bottom: 0;
+        left: 0;
+        right: 0;
+        background: rgba(0,0,0,0.5);
+        color: white;
+        text-align: center;
+        padding: 4px;
+        font-size: 12px;
+        transform: translateY(100%);
+        transition: transform 0.3s ease;
+    }
+
+    .profile-avatar:hover .avatar-upload-label {
+        transform: translateY(0);
     }
 
     .profile-info label {
@@ -178,8 +221,17 @@
                 <div class="profile-card card">
                     <div class="card-body p-4">
                         <div class="profile-header">
-                            <div class="profile-avatar">
-                                @Model.User.FirstName[0]
+                            <div class="profile-avatar avatar-upload"
+                                 style="@(string.IsNullOrEmpty(Model.User.AvatarPath) ? "" : $"background-image: url('{Url.Content(Model.User.AvatarPath)}')")">
+                                @if (string.IsNullOrEmpty(Model.User.AvatarPath))
+                                {
+                                    @Model.User.FirstName[0]
+                                }
+                                <form id="avatarForm" asp-controller="Profile" asp-action="UploadAvatar" method="post" enctype="multipart/form-data">
+                                    @Html.AntiForgeryToken()
+                                    <input type="file" id="avatarInput" name="avatarFile" class="avatar-upload-input" accept="image/*" />
+                                    <label for="avatarInput" class="avatar-upload-label">Змінити фото</label>
+                                </form>
                             </div>
                             <div>
                                 <h2 class="h4 mb-1">@Model.User.FirstName @Model.User.LastName</h2>
@@ -472,9 +524,56 @@
 
 @section Scripts {
     <script>
-        // Додати анімацію для бейджів статусу
         document.addEventListener('DOMContentLoaded', function () {
-            // Анімація для alert повідомлень
+            const avatarInput = document.getElementById('avatarInput');
+            const avatarForm = document.getElementById('avatarForm');
+
+            if (avatarInput && avatarForm) {
+                avatarInput.addEventListener('change', function() {
+                    if (this.files && this.files[0]) {
+                        const reader = new FileReader();
+                        reader.onload = function(e) {
+                            const avatar = document.querySelector('.profile-avatar');
+                            if (avatar) {
+                                avatar.style.backgroundImage = `url(${e.target.result})`;
+                                avatar.innerHTML = '';
+
+                                const csrfToken = document.querySelector('input[name="__RequestVerificationToken"]')?.value;
+
+                                if (!csrfToken) {
+                                    console.error('CSRF token not found');
+                                    return;
+                                }
+
+                                const formData = new FormData();
+                                formData.append('avatarFile', avatarInput.files[0]);
+
+                                fetch(avatarForm.action, {
+                                    method: 'POST',
+                                    body: formData,
+                                    headers: {
+                                        'RequestVerificationToken': csrfToken
+                                    }
+                                })
+                                    .then(response => {
+                                        if (response.redirected) {
+                                            window.location.href = response.url;
+                                        }
+                                        return response.text();
+                                    })
+                                    .catch(error => {
+                                        console.error('Error:', error);
+                                        alert('Сталася помилка при завантаженні аватара');
+                                    });
+                            }
+                        };
+                        reader.readAsDataURL(this.files[0]);
+                    }
+                });
+            } else {
+                console.error('Не вдалося знайти необхідні елементи для завантаження аватара');
+            }
+            
             const alerts = document.querySelectorAll('.alert');
             alerts.forEach(alert => {
                 setTimeout(() => {
@@ -485,7 +584,6 @@
                 }, 3000);
             });
 
-            // Підсвічування активної вкладки
             const hash = window.location.hash;
             if (hash) {
                 const tab = document.querySelector(`a[href="${hash}"]`);

@@ -11,7 +11,7 @@ using veterans_site.Data;
 
 namespace veterans_site.Migrations
 {
-    [DbContext(typeof(VeteranSupportDBContext))]
+    [DbContext(typeof(VeteranSupportDbContext))]
     [Migration("20241102151057_AddNotificationSentFlag")]
     partial class AddNotificationSentFlag
     {

@@ -49,13 +49,24 @@
         .user-avatar {
             width: 35px;
             height: 35px;
-            background: #0d6efd;
             border-radius: 50%;
+            object-fit: cover;
+            background-color: #0d6efd;
+            color: white;
             display: flex;
             align-items: center;
             justify-content: center;
-            color: white;
             font-weight: 500;
+            background-size: cover;
+            background-position: center;
+        }
+
+        .avatar-placeholder {
+            width: 100%;
+            height: 100%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
         }
 
         .main-container {
@@ -128,7 +139,12 @@
                         {
                             var user = await UserManager.GetUserAsync(User);
                             <div class="user-info me-3">
-                                <div class="user-avatar">@user.FirstName[0]</div>
+                                <div class="user-avatar" style="@(!string.IsNullOrEmpty(user.AvatarPath) ? $"background-image: url('{Url.Content(user.AvatarPath)}')" : "")">
+                                    @if (string.IsNullOrEmpty(user.AvatarPath))
+                                    {
+                                        <span class="avatar-placeholder">@user.FirstName[0]</span>
+                                    }
+                                </div>
                                 <span>@user.FirstName @user.LastName</span>
                             </div>
                             <form asp-area="Identity" asp-page="/Account/Logout"

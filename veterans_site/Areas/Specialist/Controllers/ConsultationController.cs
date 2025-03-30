@@ -17,7 +17,7 @@ namespace veterans_site.Areas.Specialist.Controllers
         private readonly IConsultationRepository _consultationRepository;
         private readonly UserManager<ApplicationUser> _userManager;
         private readonly ILogger<ConsultationController> _logger;
-        private readonly VeteranSupportDBContext _context;
+        private readonly VeteranSupportDbContext _context;
         private readonly IEmailService _emailService;
         private const int PageSize = 6;
 
@@ -25,7 +25,7 @@ namespace veterans_site.Areas.Specialist.Controllers
             IConsultationRepository consultationRepository,
             UserManager<ApplicationUser> userManager,
             ILogger<ConsultationController> logger,
-            VeteranSupportDBContext context,
+            VeteranSupportDbContext context,
             IEmailService emailService) 
         {
             _consultationRepository = consultationRepository;
@@ -180,10 +180,8 @@ namespace veterans_site.Areas.Specialist.Controllers
                     await _consultationRepository.AddAsync(consultation);
                 }
 
-                // Отримуємо всіх користувачів з роллю Veteran
                 var veterans = await _userManager.GetUsersInRoleAsync("Veteran");
 
-                // Надсилаємо повідомлення кожному ветерану
                 foreach (var veteran in veterans)
                 {
                     try
@@ -196,7 +194,6 @@ namespace veterans_site.Areas.Specialist.Controllers
                     }
                     catch (Exception ex)
                     {
-                        // Логуємо помилку, але продовжуємо надсилати іншим ветеранам
                         _logger.LogError($"Failed to send notification to {veteran.Email}: {ex.Message}");
                     }
                 }
@@ -245,7 +242,6 @@ namespace veterans_site.Areas.Specialist.Controllers
                 return NotFound();
             }
 
-            // Перевіряємо чи є записи на консультацію
             bool hasBookings = consultation.Format == ConsultationFormat.Individual
                 ? consultation.Slots.Any(s => s.IsBooked)
                 : consultation.Bookings.Any();
@@ -259,7 +255,6 @@ namespace veterans_site.Areas.Specialist.Controllers
             return View(consultation);
         }
 
-        // POST: Specialist/Consultation/Edit/5
         [HttpPost]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> Edit(int id, Consultation consultation)
@@ -279,7 +274,6 @@ namespace veterans_site.Areas.Specialist.Controllers
                 return NotFound();
             }
 
-            // Повторна перевірка на наявність записів
             bool hasBookings = existingConsultation.Format == ConsultationFormat.Individual
                 ? existingConsultation.Slots.Any(s => s.IsBooked)
                 : existingConsultation.Bookings.Any();
@@ -294,7 +288,6 @@ namespace veterans_site.Areas.Specialist.Controllers
             {
                 try
                 {
-                    // Оновлюємо основні поля
                     existingConsultation.Title = consultation.Title;
                     existingConsultation.Description = consultation.Description;
                     existingConsultation.Type = consultation.Type;
@@ -308,10 +301,8 @@ namespace veterans_site.Areas.Specialist.Controllers
                         existingConsultation.DateTime = consultation.DateTime;
                         existingConsultation.EndDateTime = consultation.EndDateTime;
 
-                        // Видаляємо старі слоти
                         _context.ConsultationSlots.RemoveRange(existingConsultation.Slots);
 
-                        // Генеруємо нові слоти
                         var currentTime = consultation.DateTime;
                         while (currentTime < consultation.EndDateTime)
                         {
@@ -454,10 +445,8 @@ namespace veterans_site.Areas.Specialist.Controllers
                 using var transaction = await _context.Database.BeginTransactionAsync();
                 try
                 {
-                    // Перевіряємо статус консультації
                     if (consultation.Status != ConsultationStatus.Completed)
                     {
-                        // Перевірка на заброньовані слоти для індивідуальних консультацій
                         if (consultation.Format == ConsultationFormat.Individual)
                         {
                             if (consultation.Slots.Any(s => s.IsBooked))
@@ -466,7 +455,6 @@ namespace veterans_site.Areas.Specialist.Controllers
                                 return RedirectToAction(nameof(Index));
                             }
                         }
-                        // Перевірка для групових консультацій
                         else if (consultation.BookedParticipants > 0)
                         {
                             TempData["Error"] = "Неможливо видалити консультацію, оскільки є зареєстровані учасники";
@@ -474,7 +462,6 @@ namespace veterans_site.Areas.Specialist.Controllers
                         }
                     }
 
-                    // Видаляємо всі слоти для індивідуальних консультацій
                     if (consultation.Slots != null)
                     {
                         foreach (var slot in consultation.Slots.ToList())
@@ -483,7 +470,6 @@ namespace veterans_site.Areas.Specialist.Controllers
                         }
                     }
 
-                    // Видаляємо всі бронювання
                     var bookings = await _context.ConsultationBookings
                         .Where(b => b.ConsultationId == id)
                         .ToListAsync();
@@ -493,7 +479,6 @@ namespace veterans_site.Areas.Specialist.Controllers
                         _context.ConsultationBookings.Remove(booking);
                     }
 
-                    // Видаляємо всі запити на бронювання
                     var bookingRequests = await _context.ConsultationBookingRequests
                         .Where(r => r.ConsultationId == id)
                         .ToListAsync();
@@ -503,7 +488,6 @@ namespace veterans_site.Areas.Specialist.Controllers
                         _context.ConsultationBookingRequests.Remove(request);
                     }
 
-                    // Видаляємо саму консультацію
                     _context.Consultations.Remove(consultation);
 
                     await _context.SaveChangesAsync();
@@ -568,7 +552,6 @@ namespace veterans_site.Areas.Specialist.Controllers
                         request.IsApproved = true;
                         await _context.SaveChangesAsync();
 
-                        // Відправляємо підтвердження користувачу
                         try
                         {
                             await _emailService.SendConsultationConfirmationAsync(
@@ -592,12 +575,11 @@ namespace veterans_site.Areas.Specialist.Controllers
                         return View("Error", new ErrorViewModel { Message = "Не вдалося підтвердити бронювання." });
                     }
                 }
-                else // Відхилення запиту
+                else
                 {
                     using var transaction = await _context.Database.BeginTransactionAsync();
                     try
                     {
-                        // Видаляємо запис про бронювання, якщо він вже є
                         var booking = await _context.ConsultationBookings
                             .FirstOrDefaultAsync(b => b.ConsultationId == request.ConsultationId &&
                                                     b.UserId == request.UserId);
@@ -606,7 +588,6 @@ namespace veterans_site.Areas.Specialist.Controllers
                             _context.ConsultationBookings.Remove(booking);
                         }
 
-                        // Якщо це індивідуальна консультація, очищаємо дані слоту
                         if (request.SlotId.HasValue)
                         {
                             var slot = await _context.ConsultationSlots
@@ -618,20 +599,17 @@ namespace veterans_site.Areas.Specialist.Controllers
                             }
                         }
 
-                        // Зменшуємо лічильник учасників для групової консультації
                         if (request.Consultation.Format == ConsultationFormat.Group)
                         {
                             request.Consultation.BookedParticipants =
                                 Math.Max(0, request.Consultation.BookedParticipants - 1);
                         }
 
-                        // Видаляємо сам запит
                         _context.ConsultationBookingRequests.Remove(request);
 
                         await _context.SaveChangesAsync();
                         await transaction.CommitAsync();
 
-                        // Відправляємо повідомлення про відхилення
                         try
                         {
                             await _emailService.SendBookingRejectedEmailAsync(
@@ -682,10 +660,8 @@ namespace veterans_site.Areas.Specialist.Controllers
                     return Json(new { success = false, message = "У вас немає прав для скасування цього бронювання" });
                 }
 
-                // Оновлюємо кількість учасників
                 booking.Consultation.BookedParticipants--;
 
-                // Видаляємо бронювання
                 _context.ConsultationBookings.Remove(booking);
                 await _context.SaveChangesAsync();
 

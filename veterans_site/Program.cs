@@ -12,7 +12,7 @@ var builder = WebApplication.CreateBuilder(args);
 
 var connectionString = builder.Configuration.GetConnectionString("DefaultConnection");
 
-builder.Services.AddDbContext<VeteranSupportDBContext>(options => options.UseSqlServer(connectionString));
+builder.Services.AddDbContext<VeteranSupportDbContext>(options => options.UseSqlServer(connectionString));
 
 builder.Services.AddDefaultIdentity<ApplicationUser>(options =>
 {
@@ -24,7 +24,7 @@ builder.Services.AddDefaultIdentity<ApplicationUser>(options =>
     options.Password.RequiredLength = 4;
 })
 .AddRoles<IdentityRole>()
-.AddEntityFrameworkStores<VeteranSupportDBContext>()
+.AddEntityFrameworkStores<VeteranSupportDbContext>()
 .AddDefaultTokenProviders()
 .AddDefaultUI();
 

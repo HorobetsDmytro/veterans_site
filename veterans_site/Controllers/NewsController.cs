@@ -15,35 +15,28 @@ namespace veterans_site.Controllers
             _newsRepository = newsRepository;
         }
 
-        // GET: News
         public async Task<IActionResult> Index(string searchTitle, string sortOrder = "latest", int page = 1)
         {
-            // Зберігаємо параметри для пагінації
             ViewBag.CurrentSearch = searchTitle;
             ViewBag.CurrentSort = sortOrder;
             ViewBag.CurrentPage = page;
 
-            // Отримуємо всі новини
             var query = await _newsRepository.GetAllAsync();
 
-            // Застосовуємо фільтр пошуку
             if (!string.IsNullOrEmpty(searchTitle))
             {
                 query = query.Where(n => n.Title.Contains(searchTitle, StringComparison.OrdinalIgnoreCase));
             }
 
-            // Застосовуємо сортування
             query = sortOrder switch
             {
                 "oldest" => query.OrderBy(n => n.PublishDate),
                 _ => query.OrderByDescending(n => n.PublishDate)
             };
 
-            // Підраховуємо загальну кількість сторінок
             var totalItems = query.Count();
             ViewBag.TotalPages = (int)Math.Ceiling(totalItems / (double)PageSize);
 
-            // Застосовуємо пагінацію
             var news = query
             .Skip((page - 1) * PageSize)
                 .Take(PageSize);
@@ -51,7 +44,6 @@ namespace veterans_site.Controllers
             return View(news);
         }
 
-        // GET: News/Details/5
         public async Task<IActionResult> Details(int? id)
         {
             if (id == null)
@@ -65,7 +57,6 @@ namespace veterans_site.Controllers
                 return NotFound();
             }
 
-            // Отримуємо список останніх новин для відображення збоку
             var recentNews = await _newsRepository.GetLatestNewsAsync(5);
             var recentNewsExceptCurrent = recentNews.Where(n => n.Id != id);
 

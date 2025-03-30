@@ -12,12 +12,12 @@ namespace veterans_site.Areas.Admin.Controllers
     [Authorize(Roles = "Admin")]
     public class NewsController : Controller
     {
-        private readonly VeteranSupportDBContext _context;
+        private readonly VeteranSupportDbContext _context;
         private readonly INewsRepository _newsRepository;
         private readonly IWebHostEnvironment _hostEnvironment;
         private const int PageSize = 6;
 
-        public NewsController(VeteranSupportDBContext context, INewsRepository newsRepository, IWebHostEnvironment hostEnvironment)
+        public NewsController(VeteranSupportDbContext context, INewsRepository newsRepository, IWebHostEnvironment hostEnvironment)
         {
             _context = context;
             _newsRepository = newsRepository;

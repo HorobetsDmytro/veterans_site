@@ -12,8 +12,8 @@ using veterans_site.Data;
 namespace veterans_site.Migrations
 {
     [DbContext(typeof(VeteranSupportDbContext))]
-    [Migration("20241101223300_AddConsultationBookingRequests")]
-    partial class AddConsultationBookingRequests
+    [Migration("20250330191415_AddAvatarPathToUserModel")]
+    partial class AddAvatarPathToUserModel
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
@@ -170,6 +170,9 @@ namespace veterans_site.Migrations
                     b.Property<int>("AccessFailedCount")
                         .HasColumnType("int");
 
+                    b.Property<string>("AvatarPath")
+                        .HasColumnType("nvarchar(max)");
+
                     b.Property<string>("ConcurrencyStamp")
                         .IsConcurrencyToken()
                         .HasColumnType("nvarchar(max)");
@@ -288,6 +291,9 @@ namespace veterans_site.Migrations
 
                     b.Property<int>("Mode")
                         .HasColumnType("int");
+
+                    b.Property<bool>("NotificationSent")
+                        .HasColumnType("bit");
 
                     b.Property<double>("Price")
                         .HasColumnType("float");
@@ -441,6 +447,9 @@ namespace veterans_site.Migrations
                         .IsRequired()
                         .HasColumnType("nvarchar(max)");
 
+                    b.Property<int>("Duration")
+                        .HasColumnType("int");
+
                     b.Property<string>("Location")
                         .IsRequired()
                         .HasColumnType("nvarchar(max)");
@@ -459,6 +468,37 @@ namespace veterans_site.Migrations
                     b.HasKey("Id");
 
                     b.ToTable("Events");
+                });
+
+            modelBuilder.Entity("veterans_site.Models.EventComment", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<string>("Content")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<int>("EventId")
+                        .HasColumnType("int");
+
+                    b.Property<string>("UserId")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(450)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("EventId");
+
+                    b.HasIndex("UserId");
+
+                    b.ToTable("EventComments");
                 });
 
             modelBuilder.Entity("veterans_site.Models.EventParticipant", b =>
@@ -646,7 +686,7 @@ namespace veterans_site.Migrations
                     b.HasOne("veterans_site.Models.Consultation", "Consultation")
                         .WithMany("Bookings")
                         .HasForeignKey("ConsultationId")
-                        .OnDelete(DeleteBehavior.Cascade)
+                        .OnDelete(DeleteBehavior.ClientCascade)
                         .IsRequired();
 
                     b.HasOne("veterans_site.Models.ApplicationUser", "User")
@@ -665,18 +705,16 @@ namespace veterans_site.Migrations
                     b.HasOne("veterans_site.Models.Consultation", "Consultation")
                         .WithMany()
                         .HasForeignKey("ConsultationId")
-                        .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
                     b.HasOne("veterans_site.Models.ConsultationSlot", "Slot")
                         .WithMany()
-                        .HasForeignKey("SlotId")
-                        .OnDelete(DeleteBehavior.Restrict);
+                        .HasForeignKey("SlotId");
 
                     b.HasOne("veterans_site.Models.ApplicationUser", "User")
                         .WithMany()
                         .HasForeignKey("UserId")
-                        .OnDelete(DeleteBehavior.Restrict)
+                        .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
                     b.Navigation("Consultation");
@@ -700,6 +738,25 @@ namespace veterans_site.Migrations
                         .OnDelete(DeleteBehavior.SetNull);
 
                     b.Navigation("Consultation");
+
+                    b.Navigation("User");
+                });
+
+            modelBuilder.Entity("veterans_site.Models.EventComment", b =>
+                {
+                    b.HasOne("veterans_site.Models.Event", "Event")
+                        .WithMany("Comments")
+                        .HasForeignKey("EventId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("veterans_site.Models.ApplicationUser", "User")
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Event");
 
                     b.Navigation("User");
                 });
@@ -743,6 +800,8 @@ namespace veterans_site.Migrations
 
             modelBuilder.Entity("veterans_site.Models.Event", b =>
                 {
+                    b.Navigation("Comments");
+
                     b.Navigation("EventParticipants");
                 });
 #pragma warning restore 612, 618

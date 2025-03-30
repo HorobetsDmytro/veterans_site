@@ -41,7 +41,6 @@ namespace veterans_site.Services
                 DataStore = new FileDataStore("GoogleCalendarTokens")
             });
 
-            // Точно такий самий URI, як в Google Cloud Console
             var redirectUri = "https://localhost:7037/Events/GoogleCallback";
 
             return flow.CreateAuthorizationCodeRequest(redirectUri).Build().ToString();
@@ -103,14 +102,11 @@ namespace veterans_site.Services
                         UseDefault = false,
                         Overrides = new List<EventReminder>
                     {
-                        // Нагадування о 00:00 в день події
                         new EventReminder
                         {
                             Method = "popup",
-                            // Конвертуємо час до хвилин від початку дня до події
                             Minutes = (int)(eventDetails.Date - eventDetails.Date.Date).TotalMinutes
                         },
-                        // Нагадування за годину до початку
                         new EventReminder
                         {
                             Method = "popup",

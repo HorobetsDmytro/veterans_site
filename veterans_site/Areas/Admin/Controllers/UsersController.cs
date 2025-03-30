@@ -23,7 +23,7 @@ namespace veterans_site.Areas.Admin.Controllers
         private readonly IConsultationRepository _consultationRepository;
         private readonly IEventRepository _eventRepository;
         private readonly ILogger<UsersController> _logger;
-        private readonly VeteranSupportDBContext _context;
+        private readonly VeteranSupportDbContext _context;
         private readonly IConfiguration _configuration;
         private const int PageSize = 10;
 
@@ -34,7 +34,7 @@ namespace veterans_site.Areas.Admin.Controllers
             RoleManager<IdentityRole> roleManager,
             IEmailService emailService,
             ILogger<UsersController> logger,
-            VeteranSupportDBContext context,
+            VeteranSupportDbContext context,
             IConfiguration configuration)
         {
             _userManager = userManager;
@@ -85,7 +85,6 @@ namespace veterans_site.Areas.Admin.Controllers
                 });
             }
 
-            // Застосовуємо пошук
             if (!String.IsNullOrEmpty(searchString))
             {
                 userViewModels = userViewModels.Where(u =>
@@ -94,7 +93,6 @@ namespace veterans_site.Areas.Admin.Controllers
                     u.LastName.Contains(searchString)).ToList();
             }
 
-            // Застосовуємо сортування
             userViewModels = sortOrder switch
             {
                 "name_desc" => userViewModels.OrderByDescending(u => u.LastName).ToList(),

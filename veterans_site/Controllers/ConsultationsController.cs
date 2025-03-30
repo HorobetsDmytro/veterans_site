@@ -19,7 +19,7 @@ namespace veterans_site.Controllers
         private readonly ILogger<ConsultationsController> _logger;
         private readonly IPDFService _pdfService;
         private readonly UserManager<ApplicationUser> _userManager;
-        private readonly VeteranSupportDBContext _context;
+        private readonly VeteranSupportDbContext _context;
         private const int PageSize = 6;
 
         public ConsultationsController(
@@ -27,7 +27,7 @@ namespace veterans_site.Controllers
             UserManager<ApplicationUser> userManager,
             IEmailService emailService,
             ILogger<ConsultationsController> logger,
-            VeteranSupportDBContext context,
+            VeteranSupportDbContext context,
             IPDFService pdfService)
         {
             _consultationRepository = consultationRepository;
@@ -49,7 +49,6 @@ namespace veterans_site.Controllers
             var consultations = await _consultationRepository.GetAvailableConsultationsAsync(
                 type, format, minPrice, maxPrice, sortOrder, page, PageSize);
 
-            // Фільтруємо тільки заплановані консультації
             consultations = consultations.Where(c => c.Status == ConsultationStatus.Planned);
 
             if (User.Identity.IsAuthenticated)
@@ -101,7 +100,6 @@ namespace veterans_site.Controllers
 
             if (consultation.Format == ConsultationFormat.Individual)
             {
-                // Перевіряємо чи є доступні слоти
                 if (!consultation.Slots.Any(s => !s.IsBooked))
                 {
                     TempData["Error"] = "На жаль, всі слоти вже заброньовані.";
@@ -243,7 +241,6 @@ namespace veterans_site.Controllers
             if (consultation == null)
                 return NotFound();
 
-            // Перевіряємо статус бронювання для авторизованого користувача
             if (User.Identity.IsAuthenticated)
             {
                 var userId = _userManager.GetUserId(User);
@@ -376,7 +373,6 @@ namespace veterans_site.Controllers
                 var userId = _userManager.GetUserId(User);
                 var user = await _userManager.GetUserAsync(User);
 
-                // Перевіряємо чи користувач зареєстрований на цю консультацію
                 if (!await _consultationRepository.IsUserBookedForConsultationAsync(id, userId))
                 {
                     return Forbid();
@@ -390,7 +386,6 @@ namespace veterans_site.Controllers
 
                 var pdfBytes = _pdfService.GenerateConsultationConfirmation(consultation, user);
 
-                // Формуємо ім'я файлу
                 var fileName = $"consultation_{id}_{DateTime.Now:yyyyMMdd}.pdf";
 
                 return File(pdfBytes, "application/pdf", fileName);

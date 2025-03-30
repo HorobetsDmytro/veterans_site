@@ -15,7 +15,7 @@ namespace veterans_site.Controllers
         private readonly UserManager<ApplicationUser> _userManager;
         private readonly IEmailService _emailService;
         private readonly ILogger<EventsController> _logger;
-        private readonly VeteranSupportDBContext _context;
+        private readonly VeteranSupportDbContext _context;
         private readonly GoogleCalendarService _calendarService;
         private const int PageSize = 6;
 
@@ -24,7 +24,7 @@ namespace veterans_site.Controllers
             UserManager<ApplicationUser> userManager,
             IEmailService emailService,
             ILogger<EventsController> logger,
-            VeteranSupportDBContext context,
+            VeteranSupportDbContext context,
             GoogleCalendarService calendarService)
         {
             _eventRepository = eventRepository;
@@ -53,7 +53,6 @@ namespace veterans_site.Controllers
                     events = events.Where(e => e.Category == category);
                 }
 
-                // Застосовуємо сортування
                 events = sortOrder switch
                 {
                     "date_desc" => events.OrderByDescending(e => e.Date),
@@ -62,17 +61,14 @@ namespace veterans_site.Controllers
                     _ => events.OrderBy(e => e.Date)
                 };
 
-                // Підраховуємо загальну кількість сторінок
                 var totalItems = events.Count();
                 var totalPages = (int)Math.Ceiling(totalItems / (double)PageSize);
 
-                // Застосовуємо пагінацію
                 var pagedEvents = events
                     .Skip((page - 1) * PageSize)
                     .Take(PageSize)
                     .ToList();
 
-                // Якщо користувач авторизований, перевіряємо його реєстрації
                 if (User.Identity.IsAuthenticated)
                 {
                     var userId = _userManager.GetUserId(User);
@@ -115,7 +111,6 @@ namespace veterans_site.Controllers
                     return NotFound();
                 }
 
-                // Якщо користувач авторизований, перевіряємо чи він зареєстрований
                 if (User.Identity.IsAuthenticated)
                 {
                     var userId = _userManager.GetUserId(User);
@@ -194,7 +189,6 @@ namespace veterans_site.Controllers
                 var userId = _userManager.GetUserId(User);
                 var user = await _userManager.GetUserAsync(User);
 
-                // Перевірки
                 if (await _eventRepository.IsUserRegisteredForEventAsync(id, userId))
                 {
                     TempData["Error"] = "Ви вже зареєстровані на цю подію.";
@@ -219,14 +213,11 @@ namespace veterans_site.Controllers
                     return RedirectToAction(nameof(Details), new { id });
                 }
 
-                // Отримуємо URL для авторизації Google
                 var authUrl = await _calendarService.GetAuthorizationUrl(userId);
 
-                // Зберігаємо дані для використання після авторизації Google
                 TempData["PendingEventId"] = id;
                 TempData["ReturnUrl"] = Url.Action(nameof(Details), new { id });
 
-                // Перенаправляємо на сторінку авторизації Google
                 return Redirect(authUrl);
             }
             catch (Exception ex)
@@ -238,7 +229,7 @@ namespace veterans_site.Controllers
         }
 
         [Authorize]
-        [HttpGet] // Явно вказуємо, що це GET метод
+        [HttpGet]
         public async Task<IActionResult> GoogleCallback(string code, string error = null)
         {
             if (!string.IsNullOrEmpty(error))

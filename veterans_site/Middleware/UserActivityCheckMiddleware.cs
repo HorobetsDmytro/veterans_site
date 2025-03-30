@@ -19,7 +19,6 @@ namespace veterans_site.Middleware
                 var user = await userManager.GetUserAsync(context.User);
                 if (user != null && !user.IsActive)
                 {
-                    // Якщо користувач неактивний, виходимо з системи
                     var signInManager = context.RequestServices.GetRequiredService<SignInManager<ApplicationUser>>();
                     await signInManager.SignOutAsync();
                     context.Response.Redirect("/Identity/Account/Lockout");
@@ -31,7 +30,6 @@ namespace veterans_site.Middleware
         }
     }
 
-    // Розширення для додавання міддлвера
     public static class UserActivityCheckMiddlewareExtensions
     {
         public static IApplicationBuilder UseUserActivityCheck(

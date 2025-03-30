@@ -25,10 +25,9 @@ namespace veterans_site.Services
                 try
                 {
                     using var scope = _scopeFactory.CreateScope();
-                    var context = scope.ServiceProvider.GetRequiredService<VeteranSupportDBContext>();
+                    var context = scope.ServiceProvider.GetRequiredService<VeteranSupportDbContext>();
                     var currentTime = DateTime.Now;
 
-                    // Отримуємо події, які потребують оновлення статусу
                     var events = await context.Events
                         .Where(e => e.Status != EventStatus.Cancelled &&
                                    e.Status != EventStatus.Completed)
@@ -67,11 +66,10 @@ namespace veterans_site.Services
         private async Task ProcessEvents()
         {
             using var scope = _scopeFactory.CreateScope();
-            var context = scope.ServiceProvider.GetRequiredService<VeteranSupportDBContext>();
+            var context = scope.ServiceProvider.GetRequiredService<VeteranSupportDbContext>();
             var emailService = scope.ServiceProvider.GetRequiredService<IEmailService>();
             var currentDate = DateTime.Now.Date;
 
-            // Отримуємо всі події, які відбудуться сьогодні
             var todayEvents = await context.Events
                 .Include(e => e.EventParticipants)
                     .ThenInclude(ep => ep.User)
@@ -99,11 +97,10 @@ namespace veterans_site.Services
                 }
             }
 
-            // Оновлюємо статуси подій
             await UpdateEventStatuses(context);
         }
 
-        private async Task UpdateEventStatuses(VeteranSupportDBContext context)
+        private async Task UpdateEventStatuses(VeteranSupportDbContext context)
         {
             var currentTime = DateTime.Now;
             var eventsToUpdate = await context.Events

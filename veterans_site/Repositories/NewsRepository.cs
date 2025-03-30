@@ -10,9 +10,9 @@ namespace veterans_site.Repositories
 {
     public class NewsRepository : GenericRepository<News>, INewsRepository
     {
-        private readonly VeteranSupportDBContext _context;
+        private readonly VeteranSupportDbContext _context;
 
-        public NewsRepository(VeteranSupportDBContext context) : base(context)
+        public NewsRepository(VeteranSupportDbContext context) : base(context)
         {
             _context = context;
         }

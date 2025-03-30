@@ -1,4 +1,5 @@
-﻿using Microsoft.AspNetCore.Authorization;
+﻿using System.Security.Claims;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using veterans_site.Interfaces;
@@ -14,17 +15,20 @@ namespace veterans_site.Controllers
         private readonly IConsultationRepository _consultationRepository;
         private readonly IEventRepository _eventRepository;
         private readonly ILogger<ProfileController> _logger;
+        private readonly IWebHostEnvironment _webHostEnvironment;
 
         public ProfileController(
             UserManager<ApplicationUser> userManager,
             IConsultationRepository consultationRepository,
             IEventRepository eventRepository,
-            ILogger<ProfileController> logger)
+            ILogger<ProfileController> logger, 
+            IWebHostEnvironment webHostEnvironment)
         {
             _userManager = userManager;
             _consultationRepository = consultationRepository;
             _eventRepository = eventRepository;
             _logger = logger;
+            _webHostEnvironment = webHostEnvironment;
         }
 
         public async Task<IActionResult> Index()
@@ -35,7 +39,6 @@ namespace veterans_site.Controllers
                 return NotFound();
             }
 
-            // Отримуємо консультації користувача зі слотами
             var userConsultations = await _consultationRepository.GetUserConsultationsWithSlotsAsync(user.Id);
             var currentDate = DateTime.Now;
 
@@ -47,7 +50,6 @@ namespace veterans_site.Controllers
                 .Where(c => c.DateTime <= currentDate || c.Status == ConsultationStatus.Cancelled)
                 .OrderByDescending(c => c.DateTime);
 
-            // Отримуємо події користувача
             var userEvents = await _eventRepository.GetUserEventsAsync(user.Id);
 
             var upcomingEvents = userEvents
@@ -111,14 +113,12 @@ namespace veterans_site.Controllers
                 return NotFound();
             }
 
-            // Перевіряємо, чи можна скасувати консультацію
             if (consultation.DateTime <= DateTime.Now)
             {
                 TempData["Error"] = "Не можна скасувати консультацію, яка вже відбулась або триває.";
                 return RedirectToAction(nameof(Index));
             }
 
-            // Скасовуємо консультацію
             if (consultation.Format == ConsultationFormat.Group)
             {
                 consultation.BookedParticipants--;
@@ -196,6 +196,77 @@ namespace veterans_site.Controllers
             }
 
             return View(evt);
+        }
+        
+        [HttpPost]
+        public async Task<IActionResult> UploadAvatar(IFormFile avatarFile)
+        {
+            if (avatarFile == null || avatarFile.Length == 0)
+            {
+                TempData["Error"] = "Файл не вибрано";
+                return RedirectToAction("Index");
+            }
+
+            var allowedExtensions = new[] { ".jpg", ".jpeg", ".png", ".gif" };
+            var fileExtension = Path.GetExtension(avatarFile.FileName).ToLower();
+            if (!allowedExtensions.Contains(fileExtension))
+            {
+                TempData["Error"] = "Дозволені лише зображення (JPG, JPEG, PNG, GIF)";
+                return RedirectToAction("Index");
+            }
+
+            var fileName = $"{Guid.NewGuid()}{fileExtension}";
+            var uploadsFolder = Path.Combine(_webHostEnvironment.WebRootPath, "uploads", "avatars");
+            
+            Directory.CreateDirectory(uploadsFolder);
+            
+            var filePath = Path.Combine(uploadsFolder, fileName);
+
+            try
+            {
+                using (var fileStream = new FileStream(filePath, FileMode.Create))
+                {
+                    await avatarFile.CopyToAsync(fileStream);
+                }
+
+                var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+                var user = await _userManager.FindByIdAsync(userId);
+                
+                if (!string.IsNullOrEmpty(user.AvatarPath))
+                {
+                    var oldFilePath = Path.Combine(_webHostEnvironment.WebRootPath, user.AvatarPath.TrimStart('/'));
+                    if (System.IO.File.Exists(oldFilePath))
+                    {
+                        System.IO.File.Delete(oldFilePath);
+                    }
+                }
+
+                user.AvatarPath = $"/uploads/avatars/{fileName}";
+                var result = await _userManager.UpdateAsync(user);
+
+                if (result.Succeeded)
+                {
+                    TempData["Success"] = "Аватар успішно оновлено";
+                }
+                else
+                {
+                    TempData["Error"] = "Помилка при оновленні профілю";
+                    if (System.IO.File.Exists(filePath))
+                    {
+                        System.IO.File.Delete(filePath);
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                TempData["Error"] = $"Помилка: {ex.Message}";
+                if (System.IO.File.Exists(filePath))
+                {
+                    System.IO.File.Delete(filePath);
+                }
+            }
+
+            return RedirectToAction("Index");
         }
     }
 }

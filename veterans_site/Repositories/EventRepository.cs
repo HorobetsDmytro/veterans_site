@@ -7,7 +7,7 @@ namespace veterans_site.Repositories
 {
     public class EventRepository : GenericRepository<Event>, IEventRepository
     {
-        public EventRepository(VeteranSupportDBContext context) : base(context)
+        public EventRepository(VeteranSupportDbContext context) : base(context)
         {
         }
 

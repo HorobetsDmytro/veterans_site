@@ -5,9 +5,9 @@ using veterans_site.Models;
 
 namespace veterans_site.Data;
 
-public class VeteranSupportDBContext : IdentityDbContext<ApplicationUser>
+public class VeteranSupportDbContext : IdentityDbContext<ApplicationUser>
 {
-    public VeteranSupportDBContext(DbContextOptions<VeteranSupportDBContext> options)
+    public VeteranSupportDbContext(DbContextOptions<VeteranSupportDbContext> options)
         : base(options)
     {
     }
