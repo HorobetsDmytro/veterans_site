@@ -194,6 +194,18 @@
         border-radius: 1rem;
         border: none;
     }
+
+    .card .card-body canvas {
+        width: 100% !important;
+        height: 250px !important;
+    }
+
+    .card-title {
+        font-size: 1.1rem;
+        font-weight: 600;
+        margin-bottom: 1rem;
+        color: #1e293b;
+    }
 </style>
 
 <div class="profile-section">
@@ -253,7 +265,6 @@
                     </div>
                 </div>
             </div>
-
             <div class="col-md-8">
                 <div class="profile-card card mb-4">
                     <div class="card-body p-4">
@@ -519,10 +530,131 @@
                 </div>
             </div>
         </div>
+        
+        @if (User.IsInRole("Admin"))
+        {
+            <div class="admin-stats-section mt-4">
+                <div class="card profile-card">
+                    <div class="card-body p-4">
+                        <h3 class="h4 mb-4">
+                            <i class="fas fa-chart-line me-2"></i>Статистика платформи
+                        </h3>
+                        
+                        <div class="row mb-4">
+                            <div class="col-md-3">
+                                <div class="card bg-primary bg-opacity-10 h-100">
+                                    <div class="card-body text-center">
+                                        <i class="fas fa-users fa-2x mb-2 text-primary"></i>
+                                        <h5 class="counter-value mb-1" id="totalUsers">0</h5>
+                                        <p class="mb-0 text-muted">Користувачів</p>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-md-3">
+                                <div class="card bg-success bg-opacity-10 h-100">
+                                    <div class="card-body text-center">
+                                        <i class="fas fa-user-md fa-2x mb-2 text-success"></i>
+                                        <h5 class="counter-value mb-1" id="totalConsultations">0</h5>
+                                        <p class="mb-0 text-muted">Консультацій</p>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-md-3">
+                                <div class="card bg-info bg-opacity-10 h-100">
+                                    <div class="card-body text-center">
+                                        <i class="fas fa-calendar-check fa-2x mb-2 text-info"></i>
+                                        <h5 class="counter-value mb-1" id="totalEvents">0</h5>
+                                        <p class="mb-0 text-muted">Подій</p>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-md-3">
+                                <div class="card bg-warning bg-opacity-10 h-100">
+                                    <div class="card-body text-center">
+                                        <i class="fas fa-newspaper fa-2x mb-2 text-warning"></i>
+                                        <h5 class="counter-value mb-1" id="totalNews">0</h5>
+                                        <p class="mb-0 text-muted">Новин</p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="row g-4">
+                            <div class="col-md-6">
+                                <div class="card h-100">
+                                    <div class="card-body">
+                                        <h5 class="card-title">Розподіл консультацій за типами</h5>
+                                        <div class="chart-container" style="position: relative; height:250px;">
+                                            <canvas id="consultationTypesChart"></canvas>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <div class="col-md-6">
+                                <div class="card h-100">
+                                    <div class="card-body">
+                                        <h5 class="card-title">Статуси консультацій</h5>
+                                        <div class="chart-container" style="position: relative; height:250px;">
+                                            <canvas id="consultationStatusChart"></canvas>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <div class="col-md-6">
+                                <div class="card h-100">
+                                    <div class="card-body">
+                                        <h5 class="card-title">Динаміка консультацій за останні 6 місяців</h5>
+                                        <div class="chart-container" style="position: relative; height:250px;">
+                                            <canvas id="consultationTrendChart"></canvas>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <div class="col-md-6">
+                                <div class="card h-100">
+                                    <div class="card-body">
+                                        <h5 class="card-title">Розподіл подій за категоріями</h5>
+                                        <div class="chart-container" style="position: relative; height:250px;">
+                                            <canvas id="eventCategoriesChart"></canvas>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <div class="col-md-6">
+                                <div class="card h-100">
+                                    <div class="card-body">
+                                        <h5 class="card-title">Заповненість подій (% від максимальної кількості)</h5>
+                                        <div class="chart-container" style="position: relative; height:250px;">
+                                            <canvas id="eventAttendanceChart"></canvas>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <div class="col-md-6">
+                                <div class="card h-100">
+                                    <div class="card-body">
+                                        <h5 class="card-title">Динаміка реєстрацій користувачів</h5>
+                                        <div class="chart-container" style="position: relative; height:250px;">
+                                            <canvas id="userRegistrationChart"></canvas>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        }
     </div>
 </div>
 
 @section Scripts {
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script>
         document.addEventListener('DOMContentLoaded', function () {
             const avatarInput = document.getElementById('avatarInput');
@@ -590,6 +722,226 @@
                 if (tab) {
                     tab.click();
                 }
+            }
+
+            function animateCounters() {
+                const counters = document.querySelectorAll('.counter-value');
+                const speed = 200;
+
+                counters.forEach(counter => {
+                    const target = +counter.getAttribute('data-target');
+                    const count = +counter.innerText;
+                    const increment = target / speed;
+
+                    if (count < target) {
+                        counter.innerText = Math.ceil(count + increment);
+                        setTimeout(animateCounters, 1);
+                    } else {
+                        counter.innerText = target;
+                    }
+                });
+            }
+
+            async function loadStatistics() {
+                try {
+                    const response = await fetch('@Url.Action("GetDashboardData", "Statistics", new { area = "Admin" })');
+                    if (!response.ok) 
+                        throw new Error('Помилка завантаження даних');
+
+                    const data = await response.json();
+
+                    document.getElementById('totalUsers').textContent = data.totalUsers;
+                    document.getElementById('totalUsers').setAttribute('data-target', data.totalUsers);
+
+                    document.getElementById('totalConsultations').textContent = data.totalConsultations;
+                    document.getElementById('totalConsultations').setAttribute('data-target', data.totalConsultations);
+
+                    document.getElementById('totalEvents').textContent = data.totalEvents;
+                    document.getElementById('totalEvents').setAttribute('data-target', data.totalEvents);
+
+                    document.getElementById('totalNews').textContent = data.totalNews;
+                    document.getElementById('totalNews').setAttribute('data-target', data.totalNews);
+
+                    animateCounters();
+
+                    initCharts(data);
+
+                } catch (error) {
+                    console.error('Помилка:', error);
+                }
+            }
+
+            function initCharts(data) {
+                new Chart(
+                    document.getElementById('consultationTypesChart').getContext('2d'),
+                    {
+                        type: 'pie',
+                        data: {
+                            labels: ['Медичні', 'Психологічні', 'Юридичні'],
+                            datasets: [{
+                                data: data.consultationTypes.map(x => x.value),
+                                backgroundColor: [
+                                    'rgba(255, 99, 132, 0.7)',
+                                    'rgba(54, 162, 235, 0.7)',
+                                    'rgba(255, 206, 86, 0.7)'
+                                ],
+                                borderWidth: 1
+                            }]
+                        },
+                        options: {
+                            responsive: true,
+                            maintainAspectRatio: false,
+                            plugins: {
+                                legend: {
+                                    position: 'right',
+                                }
+                            }
+                        }
+                    }
+                );
+
+                new Chart(
+                    document.getElementById('consultationStatusChart').getContext('2d'),
+                    {
+                        type: 'doughnut',
+                        data: {
+                            labels: ['Заплановані', 'Завершені', 'Скасовані'],
+                            datasets: [{
+                                data: data.consultationStatuses.map(x => x.value),
+                                backgroundColor: [
+                                    'rgba(54, 162, 235, 0.7)',
+                                    'rgba(75, 192, 192, 0.7)',
+                                    'rgba(255, 99, 132, 0.7)'
+                                ],
+                                borderWidth: 1
+                            }]
+                        },
+                        options: {
+                            responsive: true,
+                            maintainAspectRatio: false,
+                            plugins: {
+                                legend: {
+                                    position: 'right',
+                                }
+                            }
+                        }
+                    }
+                );
+
+                new Chart(
+                    document.getElementById('consultationTrendChart').getContext('2d'),
+                    {
+                        type: 'line',
+                        data: {
+                            labels: data.consultationTrend.labels,
+                            datasets: [{
+                                label: 'Кількість консультацій',
+                                data: data.consultationTrend.data,
+                                borderColor: 'rgba(54, 162, 235, 1)',
+                                backgroundColor: 'rgba(54, 162, 235, 0.1)',
+                                fill: true,
+                                tension: 0.4
+                            }]
+                        },
+                        options: {
+                            scales: {
+                                y: {
+                                    beginAtZero: true,
+                                    ticks: {
+                                        precision: 0
+                                    }
+                                }
+                            }
+                        }
+                    }
+                );
+
+                new Chart(
+                    document.getElementById('eventCategoriesChart').getContext('2d'),
+                    {
+                        type: 'bar',
+                        data: {
+                            labels: ['Зустріч', 'Тренінг', 'Майстер-клас', 'Соціальний захід'],
+                            datasets: [{
+                                label: 'Кількість подій',
+                                data: data.eventCategories.map(x => x.value),
+                                backgroundColor: [
+                                    'rgba(255, 99, 132, 0.7)',
+                                    'rgba(54, 162, 235, 0.7)',
+                                    'rgba(255, 206, 86, 0.7)',
+                                    'rgba(75, 192, 192, 0.7)'
+                                ]
+                            }]
+                        },
+                        options: {
+                            scales: {
+                                y: {
+                                    beginAtZero: true,
+                                    ticks: {
+                                        precision: 0
+                                    }
+                                }
+                            }
+                        }
+                    }
+                );
+
+                new Chart(
+                    document.getElementById('eventAttendanceChart').getContext('2d'),
+                    {
+                        type: 'bar',
+                        data: {
+                            labels: ['Зустріч', 'Тренінг', 'Майстер-клас', 'Соціальний захід'],
+                            datasets: [{
+                                label: '% заповненості',
+                                data: data.eventAttendance.map(x => x.percentage),
+                                backgroundColor: 'rgba(75, 192, 192, 0.7)'
+                            }]
+                        },
+                        options: {
+                            indexAxis: 'y',
+                            scales: {
+                                x: {
+                                    beginAtZero: true,
+                                    max: 100,
+                                    title: { display: true, text: 'Відсоток заповненості' }
+                                }
+                            }
+                        }
+                    }
+                );
+
+                new Chart(
+                    document.getElementById('userRegistrationChart').getContext('2d'),
+                    {
+                        type: 'line',
+                        data: {
+                            labels: data.userRegistrations.labels,
+                            datasets: [{
+                                label: 'Нові користувачі',
+                                data: data.userRegistrations.data,
+                                borderColor: 'rgba(153, 102, 255, 1)',
+                                backgroundColor: 'rgba(153, 102, 255, 0.1)',
+                                fill: true,
+                                tension: 0.4
+                            }]  
+                        },
+                        options: {
+                            scales: {
+                                y: {
+                                    beginAtZero: true,
+                                    ticks: {
+                                        precision: 0
+                                    }
+                                }
+                            }
+                        }
+                    }
+                );
+            }
+
+            if (document.getElementById('consultationTypesChart')) {
+                loadStatistics();
             }
         });
     </script>

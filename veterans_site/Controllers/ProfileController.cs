@@ -1,7 +1,10 @@
 ﻿using System.Security.Claims;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
+using Microsoft.AspNetCore.Identity.UI.Services;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
+using veterans_site.Data;
 using veterans_site.Interfaces;
 using veterans_site.Models;
 using veterans_site.ViewModels;
@@ -14,6 +17,7 @@ namespace veterans_site.Controllers
         private readonly UserManager<ApplicationUser> _userManager;
         private readonly IConsultationRepository _consultationRepository;
         private readonly IEventRepository _eventRepository;
+        private readonly INewsRepository _newsRepository;
         private readonly ILogger<ProfileController> _logger;
         private readonly IWebHostEnvironment _webHostEnvironment;
 
@@ -22,13 +26,15 @@ namespace veterans_site.Controllers
             IConsultationRepository consultationRepository,
             IEventRepository eventRepository,
             ILogger<ProfileController> logger, 
-            IWebHostEnvironment webHostEnvironment)
+            IWebHostEnvironment webHostEnvironment, 
+            INewsRepository newsRepository)
         {
             _userManager = userManager;
             _consultationRepository = consultationRepository;
             _eventRepository = eventRepository;
             _logger = logger;
             _webHostEnvironment = webHostEnvironment;
+            _newsRepository = newsRepository;
         }
 
         public async Task<IActionResult> Index()
@@ -205,7 +211,7 @@ namespace veterans_site.Controllers
             {
                 TempData["Error"] = "Файл не вибрано";
                 return RedirectToAction("Index");
-            }
+            }   
 
             var allowedExtensions = new[] { ".jpg", ".jpeg", ".png", ".gif" };
             var fileExtension = Path.GetExtension(avatarFile.FileName).ToLower();

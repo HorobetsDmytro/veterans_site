@@ -673,6 +673,38 @@ namespace veterans_site.Areas.Specialist.Controllers
                 return Json(new { success = false, message = "Виникла помилка при скасуванні реєстрації" });
             }
         }
+        
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> Cancel(int id)
+        {
+            try
+            {
+                var consultation = await _consultationRepository.GetByIdAsync(id);
+                if (consultation == null)
+                {
+                    return NotFound();
+                }
+
+                if (consultation.Status != ConsultationStatus.Planned)
+                {
+                    TempData["Error"] = "Можна скасовувати тільки заплановані консультації";
+                    return RedirectToAction(nameof(Index));
+                }
+
+                consultation.Status = ConsultationStatus.Cancelled;
+                await _consultationRepository.UpdateAsync(consultation);
+
+                TempData["Success"] = "Консультацію успішно скасовано";
+                return RedirectToAction(nameof(Index));
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError($"Error cancelling consultation: {ex.Message}");
+                TempData["Error"] = "Виникла помилка при скасуванні консультації";
+                return RedirectToAction(nameof(Index));
+            }
+        }
 
         public class CancelBookingViewModel
         {
