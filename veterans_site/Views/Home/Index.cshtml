@@ -1,7 +1,10 @@
-﻿@using veterans_site.Extensions
+﻿@using Microsoft.AspNetCore.Identity
+@using Microsoft.AspNetCore.Mvc.TagHelpers
+@using veterans_site.Extensions
+@inject SignInManager<ApplicationUser> SignInManager
 
 @{
-    ViewData["Title"] = "Головна сторінка";
+    ViewData["Title"] = "Головна сторінка | Ветеран Хаб";
 }
 
 @section Styles {
@@ -9,644 +12,903 @@
     <style>
         .hero-section {
             position: relative;
-            min-height: 100vh;
-            background: linear-gradient(rgba(0, 0, 0, 0.7), rgba(0, 0, 0, 0.7)), url('/images/hero-bg.jpg');
+            min-height: 85vh;
+            background: linear-gradient(rgba(0, 0, 0, 0.65), rgba(0, 0, 0, 0.65)), url('/images/hero-bg.jpg');
             background-size: cover;
             background-position: center;
-            background-attachment: fixed;
+            color: white;
             display: flex;
             align-items: center;
-            justify-content: center;
-            color: white;
             text-align: center;
             padding: 2rem 0;
+            margin-top: -24px;
         }
 
         .hero-content {
-            max-width: 800px;
+            max-width: 900px;
             padding: 2rem;
-            /*animation: fadeIn 1s ease-out;*/
+            animation: fadeIn 1.5s ease-out;
         }
 
         .hero-title {
-            font-size: 4rem;
-            font-weight: 700;
+            font-size: 3.5rem;
+            font-weight: 800;
             margin-bottom: 1.5rem;
             line-height: 1.2;
+            text-shadow: 0 2px 10px rgba(0, 0, 0, 0.3);
         }
 
         .hero-subtitle {
-            font-size: 1.5rem;
+            font-size: 1.4rem;
             margin-bottom: 2rem;
-            opacity: 0.9;
+            opacity: 0.95;
+            text-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
+            font-weight: 300;
+            line-height: 1.6;
         }
 
         .hero-buttons {
             display: flex;
             gap: 1rem;
             justify-content: center;
-            margin-top: 2rem;
+            margin-top: 2.5rem;
         }
 
         .hero-btn {
-            padding: 1rem 2.5rem;
-            font-size: 1.1rem;
-            font-weight: 500;
+            padding: 1rem 2rem;
+            font-size: 1rem;
+            font-weight: 600;
             border-radius: 50px;
-            text-transform: uppercase;
             letter-spacing: 1px;
             transition: all 0.3s ease;
             text-decoration: none !important;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
         }
 
         .hero-btn:hover {
             transform: translateY(-3px);
             box-shadow: 0 10px 20px rgba(0, 0, 0, 0.2);
-            text-decoration: none !important;
         }
 
         .hero-btn-primary {
-            background: #0d6efd;
+            background: #2e51a2;
             border: none;
             color: white !important;
         }
 
         .hero-btn-primary:hover {
-            color: white !important;
+            background: #1d3e8a;
         }
 
-        .hero-btn-outline {
-            background: transparent;
-            border: 2px solid white;
-            color: white !important;
+        .hero-btn-secondary {
+            background: #f8ce46;
+            border: none;
+            color: #293241 !important;
         }
 
-        .hero-btn-outline:hover {
-            background: white;
-            color: #0d6efd !important;
-            text-decoration: none !important;
+        .hero-btn-secondary:hover {
+            background: #e9bd32;
         }
 
-        .parallax-bg {
+        .hero-badge {
+            display: inline-block;
+            background-color: #f8ce46;
+            color: #293241;
+            font-weight: 600;
+            padding: 0.5rem 1.5rem;
+            border-radius: 50px;
+            margin-bottom: 1.5rem;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            font-size: 0.9rem;
+        }
+
+        .services-section {
+            padding: 6rem 0;
+            background-color: white;
+        }
+
+        .section-title {
+            position: relative;
+            margin-bottom: 3rem;
+            text-align: center;
+        }
+
+        .section-title h6 {
+            color: #2e51a2;
+            text-transform: uppercase;
+            font-weight: 700;
+            letter-spacing: 2px;
+            margin-bottom: 1rem;
+        }
+
+        .section-title h2 {
+            font-size: 2.5rem;
+            font-weight: 700;
+            margin-bottom: 1.5rem;
+            color: #293241;
+        }
+
+        .section-title::after {
+            content: "";
+            position: absolute;
+            width: 80px;
+            height: 4px;
+            background-color: #f8ce46;
+            bottom: -15px;
+            left: 50%;
+            transform: translateX(-50%);
+            border-radius: 2px;
+        }
+
+        .service-card {
+            padding: 2.5rem;
+            border-radius: 12px;
+            transition: all 0.4s ease;
+            border: none;
+            height: 100%;
+            position: relative;
+            overflow: hidden;
+            z-index: 1;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.05);
+        }
+
+        .service-card::before {
+            content: '';
             position: absolute;
             top: 0;
             left: 0;
             width: 100%;
             height: 100%;
-            background-size: cover;
-            background-position: center;
-            background-repeat: no-repeat;
-            transform: translateZ(-1px) scale(1.2);
-        }
-
-        .z-1 { z-index: 1; }
-        .z-2 { z-index: 2; }
-
-        .service-card {
-            transition: all 0.3s ease;
-            overflow: hidden;
+            background-color: #2e51a2;
+            transition: all 0.4s ease;
+            z-index: -1;
+            opacity: 0;
         }
 
         .service-card:hover {
-            transform: translateY(-10px);
+            transform: translateY(-15px);
+            box-shadow: 0 15px 30px rgba(0, 0, 0, 0.1);
+        }
+
+        .service-card:hover::before {
+            opacity: 0.03;
         }
 
         .service-icon {
-            width: 70px;
-            height: 70px;
+            width: 80px;
+            height: 80px;
             display: flex;
             align-items: center;
             justify-content: center;
+            background-color: rgba(46, 81, 162, 0.1);
+            border-radius: 50%;
+            margin-bottom: 1.5rem;
+            color: #2e51a2;
+            font-size: 2rem;
+            transition: all 0.4s ease;
         }
 
-        /* Utility Classes */
-        .py-6 { 
-            padding-top: 5rem; 
-            padding-bottom: 5rem; 
-        }
-        .mb-6 { 
-            margin-bottom: 5rem; 
+        .service-card:hover .service-icon {
+            background-color: #2e51a2;
+            color: white;
+            transform: rotateY(180deg);
         }
 
-        .shadow-hover {
+        .service-title {
+            font-size: 1.4rem;
+            font-weight: 700;
+            margin-bottom: 1rem;
+            color: #293241;
+        }
+
+        .service-text {
+            color: #555;
+            margin-bottom: 1.5rem;
+            font-size: 1rem;
+            line-height: 1.7;
+        }
+
+        .service-link {
+            color: #2e51a2;
+            font-weight: 600;
+            display: inline-flex;
+            align-items: center;
             transition: all 0.3s ease;
         }
 
-        .shadow-hover:hover {
-            box-shadow: 0 1rem 3rem rgba(0,0,0,.175)!important;
+        .service-link:hover {
+            color: #1d3e8a;
+            transform: translateX(5px);
         }
 
-        .transition-300 {
-            transition: all 0.3s ease;
+        .news-section {
+            padding: 6rem 0;
+            background-color: #f8f9fa;
         }
 
-        /* Latest News Cards */
         .news-card {
+            border: none;
+            border-radius: 12px;
+            overflow: hidden;
+            transition: all 0.3s ease;
+            height: 100%;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.05);
+        }
+
+        .news-card:hover {
+            transform: translateY(-10px);
+            box-shadow: 0 15px 35px rgba(0, 0, 0, 0.1);
+        }
+
+        .news-img-container {
+            height: 220px;
             overflow: hidden;
         }
 
         .news-card img {
-            transition: transform 0.3s ease;
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            transition: transform 0.6s ease;
         }
 
         .news-card:hover img {
             transform: scale(1.1);
         }
 
-        /* Consultation Types */
-        /* .consultation-type {
+        .news-content {
+            padding: 1.5rem;
+        }
+
+        .news-category {
+            background-color: #2e51a2;
+            color: white;
+            padding: 0.4rem 1rem;
+            border-radius: 50px;
+            font-size: 0.8rem;
+            font-weight: 600;
+        }
+
+        .news-date {
+            color: #6c757d;
+            font-size: 0.9rem;
+        }
+
+        .news-title {
+            font-size: 1.2rem;
+            font-weight: 700;
+            line-height: 1.4;
+            margin: 1rem 0;
+            min-height: 60px;
+        }
+
+        .news-link {
+            color: #2e51a2;
+            font-weight: 600;
+            display: inline-flex;
+            align-items: center;
             transition: all 0.3s ease;
         }
 
-        .consultation-type:hover .rounded-circle {
-            background-color: var(--bs-primary)!important;
-            color: white!important;
-        } */
+        .news-link:hover {
+            color: #1d3e8a;
+            transform: translateX(5px);
+        }
 
-        .consultation-type {
+        .events-section {
+            padding: 6rem 0;
+            background-color: white;
+        }
+
+        .event-card {
+            border: none;
+            border-radius: 12px;
+            overflow: hidden;
+            transition: all 0.3s ease;
+            height: 100%;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.05);
+        }
+
+        .event-card:hover {
+            transform: translateY(-10px);
+            box-shadow: 0 15px 35px rgba(0, 0, 0, 0.1);
+        }
+
+        .event-date-badge {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            width: 60px;
+            height: 60px;
+            background-color: #f8ce46;
+            color: #293241;
+            border-radius: 8px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            font-weight: 700;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+        }
+
+        .event-day {
+            font-size: 1.4rem;
+            line-height: 1;
+        }
+
+        .event-month {
+            font-size: 0.9rem;
+            text-transform: uppercase;
+        }
+
+        .event-content {
+            padding: 1.5rem;
+        }
+
+        .event-time-location {
+            color: #6c757d;
+            font-size: 0.9rem;
+        }
+
+        .event-title {
+            font-size: 1.3rem;
+            font-weight: 700;
+            line-height: 1.4;
+            margin: 0.5rem 0 1rem;
+        }
+
+        .event-description {
+            color: #6c757d;
+            margin-bottom: 1.5rem;
+            font-size: 0.95rem;
+            min-height: 70px;
+        }
+
+        .event-category {
+            background-color: rgba(46, 81, 162, 0.1);
+            color: #2e51a2;
+            padding: 0.3rem 0.8rem;
+            border-radius: 50px;
+            font-size: 0.8rem;
+            font-weight: 600;
+            display: inline-block;
+            margin-bottom: 0.5rem;
+        }
+
+        .consultation-section {
+            padding: 6rem 0;
+            background-color: #f8f9fa;
+        }
+
+        .consultation-card {
+            padding: 3rem 2rem;
+            border-radius: 12px;
+            transition: all 0.4s ease;
+            border: none;
+            height: 100%;
+            text-align: center;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.05);
+            position: relative;
+            overflow: hidden;
+            z-index: 1;
+        }
+
+        .consultation-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: #2e51a2;
+            transition: all 0.4s ease;
+            z-index: -1;
+            opacity: 0;
+        }
+
+        .consultation-card:hover {
+            transform: translateY(-15px);
+            box-shadow: 0 15px 30px rgba(0, 0, 0, 0.1);
+        }
+
+        .consultation-card:hover::before {
+            opacity: 1;
+        }
+
+        .consultation-icon {
+            width: 100px;
+            height: 100px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background-color: rgba(46, 81, 162, 0.1);
+            border-radius: 50%;
+            margin: 0 auto 2rem;
+            color: #2e51a2;
+            font-size: 2.5rem;
+            transition: all 0.4s ease;
+        }
+
+        .consultation-card:hover .consultation-icon {
+            background-color: white;
+            color: #2e51a2;
+            transform: scale(0.9);
+        }
+
+        .consultation-title {
+            font-size: 1.4rem;
+            font-weight: 700;
+            margin-bottom: 1rem;
+            color: #293241;
             transition: all 0.3s ease;
         }
 
-            .consultation-type:hover {
-                transform: translateY(-10px);
-            }
-
-        .icon-wrapper {
-            transition: all 0.3s ease;
-        }
-
-        .consultation-type:hover .icon-wrapper {
-            background-color: var(--bs-primary) !important;
-        }
-
-        .icon-main {
-            transition: all 0.3s ease;
-        }
-
-        .consultation-type:hover .icon-main {
-            color: white !important;
-        }
-
-        .shadow-hover {
-            transition: all 0.3s ease;
-        }
-
-            .shadow-hover:hover {
-                box-shadow: 0 1rem 3rem rgba(0,0,0,.175) !important;
-            }
-
-        .statistics-section {
-            background: linear-gradient(45deg, #0d6efd, #0a58ca);
-            padding: 5rem 0;
+        .consultation-card:hover .consultation-title {
             color: white;
         }
+        
+        .consultation-text {
+            color: #555;
+            margin-bottom: 1.5rem;
+            font-size: 1rem;
+            line-height: 1.7;
+            transition: all 0.3s ease;
+        }
 
-        .stat-item {
+        .consultation-card:hover .consultation-text {
+            color: rgba(255, 255, 255, 0.9);
+        }
+
+        .statistics-section {
+            padding: 5rem 0;
+            background: linear-gradient(45deg, #293241, #2e51a2);
+            color: white;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .statistics-section::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            opacity: 0.05;
+            background-size: cover;
+        }
+
+        .statistic-item {
             text-align: center;
             padding: 2rem;
             border-radius: 1rem;
             transition: all 0.3s ease;
             background: rgba(255, 255, 255, 0.1);
             backdrop-filter: blur(5px);
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
         }
 
-            .stat-item:hover {
-                transform: translateY(-10px);
-                background: rgba(255, 255, 255, 0.15);
-            }
+        .statistic-item:hover {
+            transform: translateY(-10px);
+            background: rgba(255, 255, 255, 0.15);
+        }
 
-        .stat-number {
-            font-size: 3.5rem;
+        .statistic-icon {
+            font-size: 2.5rem;
+            margin-bottom: 1.5rem;
+            background-color: #f8ce46;
+            width: 80px;
+            height: 80px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #293241;
+            transition: all 0.3s ease;
+        }
+
+        .statistic-item:hover .statistic-icon {
+            transform: rotateY(180deg);
+        }
+
+        .statistic-number {
+            font-size: 3rem;
             font-weight: 800;
-            margin-bottom: 1rem;
+            margin-bottom: 0.5rem;
             background: linear-gradient(45deg, #ffffff, #e6e6e6);
             -webkit-background-clip: text;
             -webkit-text-fill-color: transparent;
             display: inline-block;
         }
 
-        .stat-icon {
-            font-size: 2.5rem;
-            margin-bottom: 1.5rem;
-            color: rgba(255, 255, 255, 0.9);
-        }
-
-        .stat-label {
+        .statistic-label {
             font-size: 1.1rem;
             opacity: 0.9;
             font-weight: 500;
             line-height: 1.4;
         }
 
-        .carousel-control-prev,
-        .carousel-control-next {
-            width: 40px;
-            height: 40px;
-            top: 50%;
-            transform: translateY(-50%);
-            opacity: 1;
-            margin: 0 -20px;
+        .cta-section {
+            padding: 4rem 0;
+            background-color: #2e51a2;
+            color: white;
+            text-align: center;
         }
 
-        .carousel-nav-button {
-            width: 40px;
-            height: 40px;
-            background: white;
-            border-radius: 50%;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            color: #0d6efd;
-            transition: all 0.3s ease;
+        .cta-title {
+            font-size: 2.5rem;
+            font-weight: 700;
+            margin-bottom: 1.5rem;
         }
 
-            .carousel-nav-button:hover {
-                background: #0d6efd;
-                color: white;
-            }
-
-        .card.shadow-hover {
-            transition: all 0.3s ease;
+        .cta-text {
+            font-size: 1.2rem;
+            opacity: 0.9;
+            max-width: 700px;
+            margin: 0 auto 2rem;
         }
 
-            .card.shadow-hover:hover {
-                transform: translateY(-5px);
-                box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.08) !important;
-            }
-
-        .badge {
-            font-size: 0.8rem;
-            padding: 0.5em 1em;
-        }
-
-        .card-title {
+        .cta-button {
+            background-color: #f8ce46;
+            color: #293241 !important;
             font-size: 1.1rem;
             font-weight: 600;
-            line-height: 1.4;
+            padding: 1rem 2.5rem;
+            border-radius: 50px;
+            display: inline-flex;
+            align-items: center;
+            transition: all 0.3s ease;
         }
 
-        .text-muted {
-            font-size: 0.9rem;
-        }
-
-        .btn-outline-primary {
-            padding: 0.5rem 1.25rem;
-            font-size: 0.9rem;
+        .cta-button:hover {
+            background-color: white;
+            transform: translateY(-5px);
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.2);
         }
     </style>
 }
 
-<!-- Hero Section -->
 <section class="hero-section">
-    <div class="hero-content container">
-        <h1 class="hero-title">
-            Підтримка Ветеранів України
-        </h1>
-        <p class="hero-subtitle">
-            Платформа для надання всебічної допомоги та підтримки ветеранам
+    <div class="container hero-content">
+        <span class="hero-badge animate__animated animate__fadeInDown">Підтримка ветеранів</span>
+        <h1 class="hero-title animate__animated animate__fadeInUp">Ветеран Хаб - Єдина Платформа Підтримки</h1>
+        <p class="hero-subtitle animate__animated animate__fadeInUp animate__delay-1s">
+            Наша місія - створити комплексну систему підтримки ветеранів України через надання якісних послуг,
+            інформації та можливостей для спілкування та інтеграції
         </p>
-        <div class="hero-buttons">
-            <a href="#services" class="hero-btn hero-btn-outline">
-                <i class="fas fa-chevron-down me-2"></i>
-                ДІЗНАТИСЬ БІЛЬШЕ
+        <div class="hero-buttons animate__animated animate__fadeInUp animate__delay-2s">
+            <a href="#services" class="hero-btn hero-btn-secondary">
+                <i class="fas fa-info-circle me-2"></i> Наші послуги
             </a>
             <a asp-controller="Consultations" asp-action="Index" class="hero-btn hero-btn-primary">
-                <i class="fas fa-calendar-check me-2"></i>
-                ЗАПИСАТИСЬ НА КОНСУЛЬТАЦІЮ
+                <i class="fas fa-handshake me-2"></i> Отримати допомогу
             </a>
         </div>
     </div>
 </section>
 
-<!-- Services Section -->
-<section id="services" class="py-6 bg-light">
+<section id="services" class="services-section">
     <div class="container">
-        <div class="text-center mb-6">
-            <h6 class="text-primary text-uppercase fw-bold mb-3">Наші послуги</h6>
-            <h2 class="display-5 fw-bold mb-4">Що ми пропонуємо</h2>
-            <div class="mx-auto" style="max-width: 600px;">
-                <p class="text-muted lead">Ми надаємо комплексну підтримку ветеранам через різноманітні послуги та заходи</p>
-            </div>
+        <div class="section-title">
+            <h6>Наша діяльність</h6>
+            <h2>Комплексна Підтримка Ветеранів</h2>
+            <p class="text-muted">Ми створили платформу для всебічної підтримки тих, хто захищав нашу країну</p>
         </div>
 
         <div class="row g-4">
-            <div class="col-lg-4">
-                <div class="card service-card h-100 border-0 shadow-hover transition-300">
-                    <div class="card-body p-5 text-center">
-                        <div class="service-icon bg-primary bg-opacity-10 text-primary rounded-circle p-3 mb-4 mx-auto">
-                            <i class="fas fa-calendar-alt fa-2x"></i>
-                        </div>
-                        <h4 class="mb-3">Події та Заходи</h4>
-                        <p class="text-muted mb-4">Регулярні зустрічі, тренінги та соціальні заходи для ветеранів. Можливість спілкування та обміну досвідом.</p>
-                        <a asp-controller="Events" asp-action="Index" class="btn btn-link text-primary p-0">
-                            Переглянути події <i class="fas fa-arrow-right ms-2"></i>
-                        </a>
+            <div class="col-lg-4 col-md-6">
+                <div class="service-card">
+                    <div class="service-icon">
+                        <i class="fas fa-calendar-alt"></i>
                     </div>
+                    <h3 class="service-title">Події та Заходи</h3>
+                    <p class="service-text">
+                        Зустрічі, тренінги, культурні та спортивні події для ветеранів. 
+                        Можливість соціалізації та інтеграції в спільноту.
+                    </p>
+                    <a asp-controller="Events" asp-action="Index" class="service-link">
+                        Переглянути події <i class="fas fa-arrow-right ms-2"></i>
+                    </a>
                 </div>
             </div>
 
-            <div class="col-lg-4">
-                <div class="card service-card h-100 border-0 shadow-hover transition-300">
-                    <div class="card-body p-5 text-center">
-                        <div class="service-icon bg-primary bg-opacity-10 text-primary rounded-circle p-3 mb-4 mx-auto">
-                            <i class="fas fa-user-md fa-2x"></i>
-                        </div>
-                        <h4 class="mb-3">Консультації</h4>
-                        <p class="text-muted mb-4">Професійні консультації від кваліфікованих спеціалістів у сферах медицини, психології та права.</p>
-                        <a asp-controller="Consultations" asp-action="Index" class="btn btn-link text-primary p-0">
-                            Записатись <i class="fas fa-arrow-right ms-2"></i>
-                        </a>
+            <div class="col-lg-4 col-md-6">
+                <div class="service-card">
+                    <div class="service-icon">
+                        <i class="fas fa-user-md"></i>
                     </div>
+                    <h3 class="service-title">Фахові Консультації</h3>
+                    <p class="service-text">
+                        Професійні консультації від кваліфікованих спеціалістів у сферах 
+                        медицини, психології та права.
+                    </p>
+                    <a asp-controller="Consultations" asp-action="Index" class="service-link">
+                        Записатись на консультацію <i class="fas fa-arrow-right ms-2"></i>
+                    </a>
                 </div>
             </div>
 
-            <div class="col-lg-4">
-                <div class="card service-card h-100 border-0 shadow-hover transition-300 d-flex flex-column">
-                    <div class="card-body p-5 text-center d-flex flex-column">
-                        <div class="service-icon bg-primary bg-opacity-10 text-primary rounded-circle p-3 mb-4 mx-auto">
-                            <i class="fas fa-newspaper fa-2x"></i>
-                        </div>
-                        <h4 class="mb-3">Новини</h4>
-                        <p class="text-muted mb-4">Актуальні новини та важлива інформація для ветеранів. Будьте в курсі останніх подій та змін.</p>
-                        <div class="mt-auto">
-                            <a asp-controller="News" asp-action="Index" class="btn btn-link text-primary p-0">
-                                Читати новини <i class="fas fa-arrow-right ms-2"></i>
-                            </a>
-                        </div>
+            <div class="col-lg-4 col-md-6">
+                <div class="service-card">
+                    <div class="service-icon">
+                        <i class="fas fa-newspaper"></i>
                     </div>
+                    <h3 class="service-title">Новини та Інформація</h3>
+                    <p class="service-text">
+                        Актуальні новини та важлива інформація для ветеранів. 
+                        Будьте в курсі останніх подій та законодавчих змін.
+                    </p>
+                    <a asp-controller="News" asp-action="Index" class="service-link">
+                        Читати новини <i class="fas fa-arrow-right ms-2"></i>
+                    </a>
                 </div>
             </div>
         </div>
     </div>
 </section>
 
-<!-- Latest News Section -->
-<section class="py-6">
+<section class="news-section">
     <div class="container">
-        <div class="text-center mb-6">
-            <h6 class="text-primary text-uppercase fw-bold mb-3">Останні новини</h6>
-            <h2 class="display-5 fw-bold mb-4">Будьте в курсі подій</h2>
+        <div class="section-title">
+            <h6>Новини та Оновлення</h6>
+            <h2>Останні Новини</h2>
+            <p class="text-muted">Будьте в курсі важливих подій та корисної інформації</p>
         </div>
 
         <div class="row g-4">
-            @foreach (var news in ViewBag.LatestNews ?? new List<News>())
+            @if (ViewBag.LatestNews != null && ((List<News>)ViewBag.LatestNews).Any())
             {
-                <div class="col-lg-4">
-                    <div class="card news-card h-100 border-0 shadow-hover d-flex flex-column">
-                        <div class="overflow-hidden">
-                            @if (!string.IsNullOrEmpty(news.ImagePath))
-                            {
-                                <img src="@news.ImagePath" class="card-img-top" alt="@news.Title"
-                                     style="height: 250px; object-fit: cover;">
-                            }
-                        </div>
-                        <div class="card-body d-flex flex-column p-4">
-                            <div class="d-flex justify-content-between align-items-center mb-3">
-                                <span class="badge bg-primary rounded-pill px-3">Новина</span>
-                                <small class="text-muted">@news.PublishDate.ToString("dd.MM.yyyy")</small>
+                @foreach (var news in ViewBag.LatestNews)
+                {
+                    <div class="col-lg-4 col-md-6">
+                        <div class="news-card h-100 d-flex flex-column">
+                            <div class="news-img-container">
+                                @if (!string.IsNullOrEmpty(news.ImagePath))
+                                {
+                                    <img src="@news.ImagePath" alt="@news.Title" class="img-fluid">
+                                }
+                                else
+                                {
+                                    <img src="/images/news-placeholder.jpg" alt="Новини" class="img-fluid">
+                                }
                             </div>
-                            <h5 class="card-title mb-3">@news.Title</h5>
-                            <div class="mt-auto">
-                                <a asp-controller="News" asp-action="Details" asp-route-id="@news.Id"
-                                   class="btn btn-link text-primary p-0">
-                                    Читати далі <i class="fas fa-long-arrow-alt-right ms-2"></i>
-                                </a>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            }
-        </div>
-
-        <div class="text-center mt-5">
-            <a asp-controller="News" asp-action="Index" class="btn btn-outline-primary btn-lg rounded-pill px-5">
-                Всі новини <i class="fas fa-arrow-right ms-2"></i>
-            </a>
-        </div>
-    </div>
-</section>
-
-<!-- Events Section -->
-<section class="py-6 bg-light">
-    <div class="container">
-        <div class="text-center mb-6">
-            <h6 class="text-primary text-uppercase fw-bold mb-3">ПОДІЇ</h6>
-            <h2 class="display-5 fw-bold">Найближчі Події</h2>
-        </div>
-
-        <div class="position-relative px-5">
-            @if (ViewBag.UpcomingEvents != null && ((List<Event>)ViewBag.UpcomingEvents).Any())
-            {
-                <div id="eventsCarousel" class="carousel slide" data-bs-ride="carousel">
-                    <div class="carousel-inner">
-                        @{
-                            var events = ((List<Event>)ViewBag.UpcomingEvents)
-                            .OrderBy(e => e.Date)
-                            .ToList();
-
-                            for (int i = 0; i < events.Count; i += 2)
-                            {
-                                <div class="carousel-item @(i == 0 ? "active" : "")">
-                                    <div class="row g-4">
-                                        @{
-                                            var firstEvent = events[i];
-                                            <div class="col-md-6">
-                                                <div class="card border-0 shadow-hover h-100">
-                                                    <div class="card-body p-4">
-                                                        <div class="d-flex align-items-center mb-3">
-                                                            <span class="badge bg-primary rounded-pill me-2">
-                                                                @(firstEvent.Category.GetDisplayName())
-                                                            </span>
-                                                            <span class="text-muted ms-auto">
-                                                                <i class="far fa-calendar-alt me-1"></i>
-                                                                @firstEvent.Date.ToString("dd.MM.yyyy")
-                                                            </span>
-                                                        </div>
-                                                        <h5 class="card-title mb-3">@firstEvent.Title</h5>
-                                                        <div class="d-flex align-items-center text-muted mb-2">
-                                                            <i class="fas fa-clock me-2"></i>
-                                                            <span>@firstEvent.Date.ToString("HH:mm")</span>
-                                                        </div>
-                                                        <div class="d-flex align-items-center text-muted mb-3">
-                                                            <i class="fas fa-map-marker-alt me-2"></i>
-                                                            <span>@firstEvent.Location</span>
-                                                        </div>
-                                                        <a asp-controller="Events" asp-action="Details" asp-route-id="@firstEvent.Id"
-                                                           class="btn btn-outline-primary rounded-pill mt-auto">
-                                                            Деталі події <i class="fas fa-arrow-right ms-1"></i>
-                                                        </a>
-                                                    </div>
-                                                </div>
-                                            </div>
-
-                                            if (i + 1 < events.Count)
-                                            {
-                                                var secondEvent = events[i + 1];
-                                                <div class="col-md-6">
-                                                    <div class="card border-0 shadow-hover h-100">
-                                                        <div class="card-body p-4">
-                                                            <div class="d-flex align-items-center mb-3">
-                                                                <span class="badge bg-primary rounded-pill me-2">
-                                                                    @(secondEvent.Category.GetDisplayName())
-                                                                </span>
-                                                                <span class="text-muted ms-auto">
-                                                                    <i class="far fa-calendar-alt me-1"></i>
-                                                                    @secondEvent.Date.ToString("dd.MM.yyyy")
-                                                                </span>
-                                                            </div>
-                                                            <h5 class="card-title mb-3">@secondEvent.Title</h5>
-                                                            <div class="d-flex align-items-center text-muted mb-2">
-                                                                <i class="fas fa-clock me-2"></i>
-                                                                <span>@secondEvent.Date.ToString("HH:mm")</span>
-                                                            </div>
-                                                            <div class="d-flex align-items-center text-muted mb-3">
-                                                                <i class="fas fa-map-marker-alt me-2"></i>
-                                                                <span>@secondEvent.Location</span>
-                                                            </div>
-                                                            <a asp-controller="Events" asp-action="Details" asp-route-id="@secondEvent.Id"
-                                                               class="btn btn-outline-primary rounded-pill mt-auto">
-                                                                Деталі події <i class="fas fa-arrow-right ms-1"></i>
-                                                            </a>
-                                                        </div>
-                                                    </div>
-                                                </div>
-                                            }
-                                        }
-                                    </div>
+                            <div class="news-content flex-grow-1 d-flex flex-column">
+                                <div class="d-flex justify-content-between align-items-center mb-3">
+                                    <span class="news-category">Новина</span>
+                                    <span class="news-date">
+                                        <i class="far fa-calendar-alt me-1"></i> @news.PublishDate.ToString("dd.MM.yyyy")
+                                    </span>
                                 </div>
-                            }
-                        }
+                                <h4 class="news-title mb-3">@news.Title</h4>
+                                <div class="mt-auto">
+                                    <a asp-controller="News" asp-action="Details" asp-route-id="@news.Id" class="news-link d-inline-flex align-items-center">
+                                        Читати повністю <i class="fas fa-arrow-right ms-2"></i>
+                                    </a>
+                                </div>
+                            </div>
+                        </div>
                     </div>
-                </div>
-
-                <!-- Кнопки навігації -->
-                <button class="carousel-control-prev" type="button" data-bs-target="#eventsCarousel" data-bs-slide="prev">
-                    <div class="carousel-nav-button shadow">
-                        <i class="fas fa-chevron-left"></i>
-                    </div>
-                </button>
-                <button class="carousel-control-next" type="button" data-bs-target="#eventsCarousel" data-bs-slide="next">
-                    <div class="carousel-nav-button shadow">
-                        <i class="fas fa-chevron-right"></i>
-                    </div>
-                </button>
+                }
             }
             else
             {
-                <div class="alert alert-info text-center">
-                    <i class="fas fa-info-circle me-2"></i>
-                    Наразі немає запланованих подій
+                <div class="col-12">
+                    <div class="alert alert-info text-center">
+                        <i class="fas fa-info-circle me-2"></i> Новини скоро з'являться. Слідкуйте за оновленнями.
+                    </div>
                 </div>
             }
         </div>
 
         <div class="text-center mt-5">
-            <a asp-controller="Events" asp-action="Index" class="btn btn-outline-primary rounded-pill px-4">
-                Всі події <i class="fas fa-arrow-right ms-2"></i>
+            <a asp-controller="News" asp-action="Index" class="btn btn-outline-primary rounded-pill px-4 py-2">
+                Переглянути всі новини <i class="fas fa-arrow-right ms-2"></i>
             </a>
         </div>
     </div>
 </section>
 
-<!-- Consultation Types Section -->
-<section class="py-6">
+<section class="events-section">
     <div class="container">
-        <div class="text-center mb-6">
-            <h6 class="text-primary text-uppercase fw-bold mb-3">КОНСУЛЬТАЦІЇ</h6>
-            <h2 class="display-5 fw-bold">Види Консультацій</h2>
+        <div class="section-title">
+            <h6>Календар Подій</h6>
+            <h2>Найближчі Заходи</h2>
+            <p class="text-muted">Долучайтесь до наших заходів та станьте частиною спільноти</p>
         </div>
 
         <div class="row g-4">
-            <div class="col-md-4">
-                <div class="card consultation-type h-100 border-0 shadow-hover transition-300">
-                    <div class="card-body p-5 text-center">
-                        <div class="icon-wrapper rounded-circle bg-primary bg-opacity-10 p-4 mx-auto mb-4" style="width: fit-content;">
-                            <i class="fas fa-heartbeat fa-3x text-primary icon-main"></i>
+            @if (ViewBag.UpcomingEvents != null && ((List<Event>)ViewBag.UpcomingEvents).Any())
+            {
+                var upcomingEvents = ((List<Event>)ViewBag.UpcomingEvents)
+                    .OrderBy(e => e.Date)
+                    .Take(3)
+                    .ToList();
+
+                foreach (var evt in upcomingEvents)
+                {
+                    <div class="col-lg-4 col-md-6">
+                        <div class="event-card position-relative d-flex flex-column h-100">
+                            <div class="text-center mt-4">
+                                <span class="event-category badge bg-light text-primary">@evt.Category.GetDisplayName()</span>
+                            </div>
+                            
+                            <div class="event-date-badge position-absolute top-0 start-0 m-3 z-3">
+                                <span class="event-day d-block">@evt.Date.Day</span>
+                                <span class="event-month d-block">@evt.Date.ToString("MMM").ToUpper()</span>
+                            </div>
+
+                            <div class="event-content p-4 pt-3 d-flex flex-column flex-grow-1">
+                                <h4 class="event-title mb-3">@evt.Title</h4>
+                                <div class="event-time-location mb-3">
+                                    <div class="d-flex align-items-center mb-2">
+                                        <i class="fas fa-clock me-2 text-primary"></i>
+                                        <span>@evt.Date.ToString("HH:mm")</span>
+                                    </div>
+                                    <div class="d-flex align-items-center">
+                                        <i class="fas fa-map-marker-alt me-2 text-primary"></i>
+                                        <span>@evt.Location</span>
+                                    </div>
+                                </div>
+                                <p class="event-description flex-grow-1">
+                                    @(evt.Description != null && evt.Description.Length > 100
+                                        ? evt.Description.Substring(0, 100) + "..."
+                                        : evt.Description)
+                                </p>
+                                <div class="mt-auto">
+                                    <a asp-controller="Events" asp-action="Details" asp-route-id="@evt.Id"
+                                       class="btn btn-outline-primary rounded-pill w-100">
+                                        Деталі події <i class="fas fa-arrow-right ms-2"></i>
+                                    </a>
+                                </div>
+                            </div>
                         </div>
-                        <h4>Медичні Консультації</h4>
-                        <p class="text-muted">Професійні консультації з питань здоров'я та реабілітації. Індивідуальний підхід та підтримка на кожному етапі.</p>
+                    </div>
+                }
+            }
+            else
+            {
+                <div class="col-12">
+                    <div class="alert alert-info text-center">
+                        <i class="fas fa-info-circle me-2"></i> Наразі немає запланованих подій. Слідкуйте за оновленнями.
                     </div>
                 </div>
-            </div>
-            <div class="col-md-4">
-                <div class="card consultation-type h-100 border-0 shadow-hover transition-300">
-                    <div class="card-body p-5 text-center">
-                        <div class="icon-wrapper rounded-circle bg-primary bg-opacity-10 p-4 mx-auto mb-4" style="width: fit-content;">
-                            <i class="fas fa-brain fa-3x text-primary icon-main"></i>
-                        </div>
-                        <h4>Психологічні Консультації</h4>
-                        <p class="text-muted">Професійна підтримка та допомога у подоланні психологічних труднощів. Конфіденційність та безпека.</p>
+            }
+        </div>
+
+        <div class="text-center mt-5">
+            <a asp-controller="Events" asp-action="Index" class="btn btn-outline-primary rounded-pill px-4 py-2">
+                Переглянути всі події <i class="fas fa-arrow-right ms-2"></i>
+            </a>
+        </div>
+    </div>
+</section>
+
+<section class="consultation-section">
+    <div class="container">
+        <div class="section-title">
+            <h6>Консультації для Ветеранів</h6>
+            <h2>Фахова Допомога</h2>
+            <p class="text-muted">Наші фахівці готові надати кваліфіковану допомогу у різних сферах</p>
+        </div>
+
+        <div class="row g-4">
+            <div class="col-lg-4 col-md-6">
+                <div class="consultation-card">
+                    <div class="consultation-icon">
+                        <i class="fas fa-heartbeat"></i>
                     </div>
+                    <h3 class="consultation-title">Медичні консультації</h3>
+                    <p class="consultation-text">
+                        Консультації з питань фізичного здоров'я, реабілітації 
+                        та відновлення після травм. Допомога у вирішенні 
+                        медичних питань.
+                    </p>
                 </div>
             </div>
-            <div class="col-md-4">
-                <div class="card consultation-type h-100 border-0 shadow-hover transition-300">
-                    <div class="card-body p-5 text-center">
-                        <div class="icon-wrapper rounded-circle bg-primary bg-opacity-10 p-4 mx-auto mb-4" style="width: fit-content;">
-                            <i class="fas fa-balance-scale fa-3x text-primary icon-main"></i>
-                        </div>
-                        <h4>Юридичні Консультації</h4>
-                        <p class="text-muted">Професійна правова допомога та консультації з юридичних питань. Захист ваших прав та інтересів.</p>
+            <div class="col-lg-4 col-md-6">
+                <div class="consultation-card">
+                    <div class="consultation-icon">
+                        <i class="fas fa-brain"></i>
                     </div>
+                    <h3 class="consultation-title">Психологічна підтримка</h3>
+                    <p class="consultation-text">
+                        Професійна допомога у подоланні психологічних 
+                        труднощів, стресу та ПТСР. Індивідуальний 
+                        підхід та конфіденційність.
+                    </p>
+                </div>
+            </div>
+            <div class="col-lg-4 col-md-6">
+                <div class="consultation-card">
+                    <div class="consultation-icon">
+                        <i class="fas fa-balance-scale"></i>
+                    </div>
+                    <h3 class="consultation-title">Юридична допомога</h3>
+                    <p class="consultation-text">
+                        Консультації з правових питань, допомога 
+                        в оформленні документів, захист прав та 
+                        інтересів ветеранів.
+                    </p>
                 </div>
             </div>
         </div>
 
         <div class="text-center mt-5">
-            <a asp-controller="Consultations" asp-action="Index" class="btn btn-outline-primary btn-lg rounded-pill px-5">
-                Всі консультації <i class="fas fa-arrow-right ms-2"></i>
+            <a asp-controller="Consultations" asp-action="Index" class="btn btn-outline-primary rounded-pill px-4 py-2">
+                Записатись на консультацію <i class="fas fa-arrow-right ms-2"></i>
             </a>
         </div>
     </div>
 </section>
 
-<!-- Statistics Section -->
-<section class="statistics-section py-6">
+<section class="statistics-section">
     <div class="container">
         <div class="row g-4">
-            <div class="col-md-3">
-                <div class="stat-item">
-                    <div class="stat-icon">
+            <div class="col-md-3 col-sm-6">
+                <div class="statistic-item">
+                    <div class="statistic-icon">
                         <i class="fas fa-users"></i>
                     </div>
-                    <div class="stat-number">@ViewBag.Statistics.TotalVeterans</div>
-                    <div class="stat-label">Ветеранів отримали<br>допомогу</div>
+                    <div class="statistic-number">@ViewBag.Statistics.TotalVeterans</div>
+                    <div class="statistic-label">Ветеранів отримали допомогу</div>
                 </div>
             </div>
-            <div class="col-md-3">
-                <div class="stat-item">
-                    <div class="stat-icon">
+            <div class="col-md-3 col-sm-6">
+                <div class="statistic-item">
+                    <div class="statistic-icon">
                         <i class="fas fa-handshake"></i>
                     </div>
-                    <div class="stat-number">@ViewBag.Statistics.CompletedConsultations</div>
-                    <div class="stat-label">Проведених<br>консультацій</div>
+                    <div class="statistic-number">@ViewBag.Statistics.CompletedConsultations</div>
+                    <div class="statistic-label">Проведених консультацій</div>
                 </div>
             </div>
-            <div class="col-md-3">
-                <div class="stat-item">
-                    <div class="stat-icon">
+            <div class="col-md-3 col-sm-6">
+                <div class="statistic-item">
+                    <div class="statistic-icon">
                         <i class="fas fa-calendar-check"></i>
                     </div>
-                    <div class="stat-number">@ViewBag.Statistics.CompletedEvents</div>
-                    <div class="stat-label">Організованих<br>подій</div>
+                    <div class="statistic-number">@ViewBag.Statistics.CompletedEvents</div>
+                    <div class="statistic-label">Організованих заходів</div>
                 </div>
             </div>
-            <div class="col-md-3">
-                <div class="stat-item">
-                    <div class="stat-icon">
+            <div class="col-md-3 col-sm-6">
+                <div class="statistic-item">
+                    <div class="statistic-icon">
                         <i class="fas fa-user-md"></i>
                     </div>
-                    <div class="stat-number">@ViewBag.Statistics.TotalSpecialists</div>
-                    <div class="stat-label">Професійних<br>спеціалістів</div>
+                    <div class="statistic-number">@ViewBag.Statistics.TotalSpecialists</div>
+                    <div class="statistic-label">Професійних спеціалістів</div>
                 </div>
             </div>
         </div>
     </div>
 </section>
 
+@if (!SignInManager.IsSignedIn(User))
+{
+    <section class="cta-section">
+        <div class="container">
+            <h2 class="cta-title">Потрібна допомога?</h2>
+            <p class="cta-text">
+                Ми готові надати підтримку ветеранам та їхнім сім'ям. 
+                Зареєструйтеся на платформі або зверніться до нас для отримання консультації.
+            </p>
+            <a asp-area="Identity" asp-page="/Account/Register" class="cta-button">
+                <i class="fas fa-user-plus me-2"></i> Приєднатися до спільноти
+            </a>
+        </div>
+    </section>
+}
+
 @section Scripts {
     <script>
-        // Smooth scroll for anchor links
         document.querySelectorAll('a[href^="#"]').forEach(anchor => {
             anchor.addEventListener('click', function (e) {
                 e.preventDefault();
@@ -655,5 +917,36 @@
                 });
             });
         });
+
+        function animateValue(obj, start, end, duration) {
+            let startTimestamp = null;
+            const step = (timestamp) => {
+                if (!startTimestamp) startTimestamp = timestamp;
+                const progress = Math.min((timestamp - startTimestamp) / duration, 1);
+                obj.innerHTML = Math.floor(progress * (end - start) + start);
+                if (progress < 1) {
+                    window.requestAnimationFrame(step);
+                }
+            };
+            window.requestAnimationFrame(step);
+        }
+
+        const observer = new IntersectionObserver((entries) => {
+            entries.forEach(entry => {
+                if (entry.isIntersecting) {
+                    const statItems = document.querySelectorAll('.statistic-number');
+                    statItems.forEach(item => {
+                        const value = parseInt(item.textContent);
+                        animateValue(item, 0, value, 2000);
+                    });
+                    observer.unobserve(entry.target);
+                }
+            });
+        }, { threshold: 0.1 });
+
+        const statsSection = document.querySelector('.statistics-section');
+        if (statsSection) {
+            observer.observe(statsSection);
+        }
     </script>
 }

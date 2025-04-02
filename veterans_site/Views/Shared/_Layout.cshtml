@@ -3,60 +3,111 @@
 @inject UserManager<ApplicationUser> UserManager
 
 <!DOCTYPE html>
-<html lang="en">
+<html lang="uk">
 <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>@ViewData["Title"] - veterans_site</title>
+    <title>@ViewData["Title"] - Ветеран Хаб</title>
 
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     @RenderSection("Styles", required: false)
     <style>
+        body {
+            font-family: 'Roboto', sans-serif;
+            color: #333;
+            background-color: #f9f9f9;
+        }
+
         .navbar {
             background-color: white;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-            padding: 1rem 0;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            padding: 0.75rem 0;
         }
 
         .navbar-brand {
-            font-weight: 600;
-            color: #0d6efd !important;
+            font-weight: 700;
+            color: #2e51a2 !important;
+            font-size: 1.5rem;
         }
 
         .nav-link {
-            color: #333 !important;
+            color: #293241 !important;
             font-weight: 500;
             padding: 0.5rem 1rem !important;
-            transition: color 0.3s ease;
+            transition: all 0.3s ease;
+            position: relative;
         }
 
-            .nav-link:hover {
-                color: #0d6efd !important;
-            }
+        .nav-link:hover,
+        .nav-link.active {
+            color: #2e51a2 !important;
+        }
+
+        .nav-link::after {
+            content: '';
+            position: absolute;
+            width: 0;
+            height: 2px;
+            bottom: 0;
+            left: 50%;
+            background-color: #2e51a2;
+            transition: all 0.3s ease;
+        }
+
+        .nav-link:hover::after,
+        .nav-link.active::after {
+            width: 80%;
+            left: 10%;
+        }
 
         .btn-primary {
+            background-color: #2e51a2;
+            border-color: #2e51a2;
             padding: 0.5rem 1.5rem;
             border-radius: 0.5rem;
+            font-weight: 500;
+            transition: all 0.3s ease;
+        }
+
+        .btn-primary:hover {
+            background-color: #1d3e8a;
+            border-color: #1d3e8a;
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(46, 81, 162, 0.2);
+        }
+
+        .btn-outline-primary {
+            color: #2e51a2;
+            border-color: #2e51a2;
+            font-weight: 500;
+            transition: all 0.3s ease;
+        }
+
+        .btn-outline-primary:hover {
+            background-color: #2e51a2;
+            color: white;
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(46, 81, 162, 0.2);
         }
 
         .user-info {
             display: flex;
             align-items: center;
-            gap: 0.5rem;
+            gap: 0.75rem;
         }
 
         .user-avatar {
-            width: 35px;
-            height: 35px;
+            width: 40px;
+            height: 40px;
             border-radius: 50%;
             object-fit: cover;
-            background-color: #0d6efd;
+            background-color: #2e51a2;
             color: white;
             display: flex;
             align-items: center;
             justify-content: center;
-            font-weight: 500;
+            font-weight: 600;
             background-size: cover;
             background-position: center;
         }
@@ -72,104 +123,247 @@
         .main-container {
             margin-top: 2rem;
         }
+
+        .flag-colors {
+            height: 4px;
+            background: linear-gradient(to right, #f8ce46 50%, #2e51a2 50%);
+        }
+
+        footer {
+            background-color: #293241;
+            color: white;
+            padding: 3rem 0 2rem;
+        }
+
+        .footer-heading {
+            font-weight: 600;
+            margin-bottom: 1.5rem;
+            color: #f8ce46;
+        }
+
+        .footer-link {
+            color: #adb5bd;
+            text-decoration: none;
+            transition: all 0.3s ease;
+            display: block;
+            margin-bottom: 0.5rem;
+        }
+
+        .footer-link:hover {
+            color: white;
+            transform: translateX(5px);
+        }
+
+        .social-icon {
+            width: 36px;
+            height: 36px;
+            background-color: rgba(255, 255, 255, 0.1);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            transition: all 0.3s ease;
+            margin-right: 0.5rem;
+        }
+
+        .social-icon:hover {
+            background-color: #f8ce46;
+            color: #293241;
+            transform: translateY(-3px);
+        }
+
+        .copyright {
+            background-color: rgba(0, 0, 0, 0.2);
+            padding: 1rem 0;
+            margin-top: 2rem;
+        }
     </style>
 </head>
 <body>
-    <header>
-        <nav class="navbar navbar-expand-sm navbar-light bg-white border-bottom box-shadow mb-3">
-            <div class="container-fluid">
-                <a class="navbar-brand" asp-area="" asp-controller="Home" asp-action="Index">
-                    <i class="fas fa-shield-alt me-2"></i>Ветерани України
-                </a>
-                <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target=".navbar-collapse" aria-controls="navbarSupportedContent"
-                        aria-expanded="false" aria-label="Toggle navigation">
-                    <span class="navbar-toggler-icon"></span>
-                </button>
-                <div class="collapse navbar-collapse d-sm-inline-flex justify-content-between">
-                    <ul class="navbar-nav flex-grow-1">
+<div class="flag-colors"></div>
+<header>
+    <nav class="navbar navbar-expand-lg navbar-light bg-white border-bottom box-shadow mb-3">
+        <div class="container">
+            <a class="navbar-brand d-flex align-items-center" asp-area="" asp-controller="Home" asp-action="Index">
+                <i class="fas fa-shield-alt me-2"></i>Ветеран Хаб
+            </a>
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target=".navbar-collapse"
+                    aria-controls="navbarSupportedContent" aria-expanded="false" aria-label="Toggle navigation">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            <div class="collapse navbar-collapse d-lg-flex justify-content-between">
+                <ul class="navbar-nav">
+                    <li class="nav-item">
+                        <a class="nav-link @(ViewContext.RouteData.Values["controller"]?.ToString() == "Home" &&
+                                             ViewContext.RouteData.Values["action"]?.ToString() == "Index" ? "active" : "")"
+                           asp-area="" asp-controller="Home" asp-action="Index">
+                            <i class="fas fa-home me-1"></i> Головна
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link @(ViewContext.RouteData.Values["controller"]?.ToString() == "Events" ? "active" : "")"
+                           asp-area="" asp-controller="Events" asp-action="Index">
+                            <i class="fas fa-calendar-alt me-1"></i> Заходи
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link @(ViewContext.RouteData.Values["controller"]?.ToString() == "Consultations" ? "active" : "")"
+                           asp-area="" asp-controller="Consultations" asp-action="Index">
+                            <i class="fas fa-user-md me-1"></i> Консультації
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link @(ViewContext.RouteData.Values["controller"]?.ToString() == "News" ? "active" : "")"
+                           asp-area="" asp-controller="News" asp-action="Index">
+                            <i class="fas fa-newspaper me-1"></i> Новини
+                        </a>
+                    </li>
+
+                    @if (SignInManager.IsSignedIn(User))
+                    {
                         <li class="nav-item">
-                            <a class="nav-link text-dark" asp-area="" asp-controller="Home" asp-action="Index">
-                                <i class="fas fa-house"></i> Головна
+                            <a class="nav-link @(ViewContext.RouteData.Values["controller"]?.ToString() == "Profile" ? "active" : "")"
+                               asp-area="" asp-controller="Profile" asp-action="Index">
+                                <i class="fas fa-user me-1"></i> Мій профіль
                             </a>
-                        </li>   
-                        @if (SignInManager.IsSignedIn(User))
+                        </li>
+
+                        @if (User.IsInRole("Admin"))
+                        {
+                            <li class="nav-item dropdown">
+                                <a class="nav-link dropdown-toggle" href="#" id="adminDropdown" role="button"
+                                   data-bs-toggle="dropdown" aria-expanded="false">
+                                    <i class="fas fa-cog me-1"></i> Адміністрування
+                                </a>
+                                <ul class="dropdown-menu" aria-labelledby="adminDropdown">
+                                    <li>
+                                        <a class="dropdown-item" asp-area="Admin" asp-controller="Event" asp-action="Index">
+                                            <i class="fas fa-calendar-alt me-2"></i> Управління заходами
+                                        </a>
+                                    </li>
+                                    <li>
+                                        <a class="dropdown-item" asp-area="Admin" asp-controller="News" asp-action="Index">
+                                            <i class="fas fa-newspaper me-2"></i> Управління новинами
+                                        </a>
+                                    </li>
+                                    <li>
+                                        <a class="dropdown-item" asp-area="Admin" asp-controller="Consultation" asp-action="Index">
+                                            <i class="fas fa-user-md me-2"></i> Управління консультаціями
+                                        </a>
+                                    </li>
+                                    <li><hr class="dropdown-divider"></li>
+                                    <li>
+                                        <a class="dropdown-item" asp-area="Admin" asp-controller="Users" asp-action="Index">
+                                            <i class="fas fa-users me-2"></i> Користувачі
+                                        </a>
+                                    </li>
+                                </ul>
+                            </li>
+                        }
+
+                        @if (User.IsInRole("Specialist"))
                         {
                             <li class="nav-item">
-                                <a class="nav-link text-dark" asp-area="" asp-controller="Profile" asp-action="Index">
-                                    <i class="fas fa-user"></i> Профіль
+                                <a class="nav-link @(ViewContext.RouteData.Values["area"]?.ToString() == "Specialist" ? "active" : "")"
+                                   asp-area="Specialist" asp-controller="Consultation" asp-action="Index">
+                                    <i class="fas fa-stethoscope me-1"></i> Мої консультації
                                 </a>
                             </li>
-
-                            @if (User.IsInRole("Admin"))
-                            {
-                                <li class="nav-item">
-                                    <a class="nav-link text-dark" asp-area="Admin" asp-controller="Event" asp-action="Index">
-                                        <i class="fas fa-calendar-alt"></i> Заходи
-                                    </a>
-                                </li>
-                                <li class="nav-item">
-                                    <a class="nav-link text-dark" asp-area="Admin" asp-controller="News" asp-action="Index">
-                                        <i class="fas fa-newspaper"></i> Новини
-                                    </a>
-                                </li>
-                                <li class="nav-item">
-                                    <a class="nav-link text-dark" asp-area="Admin" asp-controller="Consultation" asp-action="Index">
-                                        <i class="fas fa-user-md"></i> Консультації
-                                    </a>
-                                </li>
-                                <li class="nav-item">
-                                    <a class="nav-link" asp-area="Admin" asp-controller="Users" asp-action="Index">
-                                        <i class="fas fa-users"></i> Користувачі
-                                    </a>
-                                </li>
-                            }
-
-                            @if (User.IsInRole("Specialist"))
-                            {
-                                <li class="nav-item">
-                                    <a class="nav-link text-dark" asp-area="Specialist" asp-controller="Consultation" asp-action="Index">
-                                        <i class="fas fa-user-md"></i> Консультації
-                                    </a>
-                                </li>
-                            }
                         }
-                    </ul>
-                    <ul class="navbar-nav">
-                        @if (SignInManager.IsSignedIn(User))
-                        {
-                            var user = await UserManager.GetUserAsync(User);
-                            <div class="user-info me-3">
-                                <div class="user-avatar" style="@(!string.IsNullOrEmpty(user.AvatarPath) ? $"background-image: url('{Url.Content(user.AvatarPath)}')" : "")">
-                                    @if (string.IsNullOrEmpty(user.AvatarPath))
-                                    {
-                                        <span class="avatar-placeholder">@user.FirstName[0]</span>
-                                    }
-                                </div>
-                                <span>@user.FirstName @user.LastName</span>
+                    }
+                </ul>
+                <div class="d-flex align-items-center">
+                    @if (SignInManager.IsSignedIn(User))
+                    {
+                        var user = await UserManager.GetUserAsync(User);
+                        <div class="user-info me-3">
+                            <div class="user-avatar" style="@(!string.IsNullOrEmpty(user?.AvatarPath) ? $"background-image: url('{Url.Content(user.AvatarPath)}')" : "")">
+                                @if (string.IsNullOrEmpty(user?.AvatarPath))
+                                {
+                                    <span class="avatar-placeholder">@(user?.FirstName != null ? user.FirstName[0] : "")</span>
+                                }
                             </div>
-                            <form asp-area="Identity" asp-page="/Account/Logout"
-                                  asp-route-returnUrl="@Url.Action("Index", "Home", new { area = "" })" method="post">
-                                <button type="submit" class="btn btn-outline-primary">Вийти</button>
-                            </form>
-                        }
-                        else
-                        {
-                            <a class="btn btn-outline-primary me-2" asp-area="Identity" asp-page="/Account/Login">Увійти</a>
-                            <a class="btn btn-primary" asp-area="Identity" asp-page="/Account/Register">Реєстрація</a>
-                        }
-                    </ul>
+                            <div>
+                                <span class="d-none d-md-inline">@(user?.FirstName) @(user?.LastName)</span>
+                                @if (User.IsInRole("Admin"))
+                                {
+                                    <span class="badge bg-danger ms-1">Адмін</span>
+                                }
+                                else if (User.IsInRole("Specialist"))
+                                {
+                                    <span class="badge bg-info ms-1">Спеціаліст</span>
+                                }
+                                else if (User.IsInRole("Veteran"))
+                                {
+                                    <span class="badge bg-primary ms-1">Ветеран</span>
+                                }
+                            </div>
+                        </div>
+                        <form asp-area="Identity" asp-page="/Account/Logout"
+                              asp-route-returnUrl="@Url.Action("Index", "Home", new { area = "" })" method="post">
+                            <button type="submit" class="btn btn-outline-primary">
+                                    <i class="fas fa-sign-out-alt me-1"></i> Вийти
+                                </button>
+                        </form>
+                    }
+                    else
+                    {
+                        <a class="btn btn-outline-primary me-2" asp-area="Identity" asp-page="/Account/Login">
+                            <i class="fas fa-sign-in-alt me-1"></i> Увійти
+                        </a>
+                        <a class="btn btn-primary" asp-area="Identity" asp-page="/Account/Register">
+                            <i class="fas fa-user-plus me-1"></i> Реєстрація
+                        </a>
+                    }
                 </div>
             </div>
-        </nav>
-    </header>
-    <div class="container">
-        <main role="main" class="pb-3">
-            @RenderBody()
-        </main>
-    </div>
+        </div>
+    </nav>
+</header>
+<div class="container main-container">
+    <main role="main" class="pb-3">
+        @RenderBody()
+    </main>
+</div>
 
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    @await RenderSectionAsync("Scripts", required: false)
+<footer class="mt-5">
+    <div class="container py-4">
+        <div class="row justify-content-center">
+            <div class="col-lg-4 mb-4 mb-lg-0 text-center">
+                <h5 class="footer-heading">Ветеран Хаб</h5>
+                <p>Платформа для надання всебічної допомоги та підтримки ветеранам України. Разом ми створюємо спільноту, що піклується про тих, хто захищав нашу країну.</p>
+                <div class="d-flex justify-content-center mt-3">
+                    <a href="#" class="social-icon"><i class="fab fa-facebook-f"></i></a>
+                    <a href="#" class="social-icon"><i class="fab fa-twitter"></i></a>
+                    <a href="#" class="social-icon"><i class="fab fa-instagram"></i></a>
+                    <a href="#" class="social-icon"><i class="fab fa-youtube"></i></a>
+                </div>
+            </div>
+            <div class="col-6 col-lg-2 mb-4 mb-lg-0 text-center">
+                <h6 class="footer-heading">Навігація</h6>
+                <a href="/" class="footer-link">Головна</a>
+                <a href="/News" class="footer-link">Новини</a>
+                <a href="/Events" class="footer-link">Заходи</a>
+                <a href="/Consultations" class="footer-link">Консультації</a>
+            </div>
+            <div class="col-12 col-lg-4 mb-4 mb-lg-0 text-center"> <!-- Замінили col-lg-3 на col-lg-4 -->
+                <h6 class="footer-heading">Контакти</h6>
+                <p class="mb-2"><i class="fas fa-map-marker-alt me-2"></i> м. Хмельницький, вул. Зарічанська, 10</p>
+                <p class="mb-2"><i class="fas fa-phone me-2"></i> +380 97 123 4567</p>
+                <p class="mb-2"><i class="fas fa-envelope me-2"></i> info@veteranhub.ua</p>
+            </div>
+        </div>
+    </div>
+    <div class="copyright text-center">
+        <div class="container">
+            <p class="mb-0">© @DateTime.Now.Year Ветеран Хаб. Всі права захищено.</p>
+        </div>
+    </div>
+</footer>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+@await RenderSectionAsync("Scripts", required: false)
 </body>
 </html>

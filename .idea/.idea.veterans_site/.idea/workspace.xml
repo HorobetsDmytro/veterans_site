@@ -10,14 +10,7 @@
   </component>
   <component name="ChangeListManager">
     <list default="true" id="45da0b46-9209-4d54-8008-0a4672c787ee" name="Changes" comment="">
-      <change afterPath="$PROJECT_DIR$/veterans_site/Areas/Admin/Controllers/StatisticsController.cs" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/.idea.veterans_site/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/.idea.veterans_site/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/veterans_site/Areas/Admin/Views/Consultation/Index.cshtml" beforeDir="false" afterPath="$PROJECT_DIR$/veterans_site/Areas/Admin/Views/Consultation/Index.cshtml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/veterans_site/Areas/Specialist/Controllers/ConsultationController.cs" beforeDir="false" afterPath="$PROJECT_DIR$/veterans_site/Areas/Specialist/Controllers/ConsultationController.cs" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/veterans_site/Areas/Specialist/Views/Consultation/Index.cshtml" beforeDir="false" afterPath="$PROJECT_DIR$/veterans_site/Areas/Specialist/Views/Consultation/Index.cshtml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/veterans_site/Controllers/ProfileController.cs" beforeDir="false" afterPath="$PROJECT_DIR$/veterans_site/Controllers/ProfileController.cs" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/veterans_site/Views/Profile/Index.cshtml" beforeDir="false" afterPath="$PROJECT_DIR$/veterans_site/Views/Profile/Index.cshtml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/veterans_site/Views/Shared/_Layout.cshtml" beforeDir="false" afterPath="$PROJECT_DIR$/veterans_site/Views/Shared/_Layout.cshtml" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -115,7 +108,7 @@
       <workItem from="1743258337955" duration="1386000" />
       <workItem from="1743259777406" duration="2768000" />
       <workItem from="1743356862894" duration="12766000" />
-      <workItem from="1743412224213" duration="18253000" />
+      <workItem from="1743412224213" duration="19727000" />
     </task>
     <servers />
   </component>
