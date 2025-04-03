@@ -1,0 +1,628 @@
+using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Identity;
+using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
+using System.Threading.Tasks;
+using veterans_site.Data;
+using veterans_site.Models;
+
+namespace veterans_site.Controllers
+{
+    [Authorize(Roles = "Veteran")]
+    public class ChatController : Controller
+    {
+        private readonly VeteranSupportDbContext _context;
+        private readonly UserManager<ApplicationUser> _userManager;
+        
+        public ChatController(VeteranSupportDbContext context, UserManager<ApplicationUser> userManager)
+        {
+            _context = context;
+            _userManager = userManager;
+        }
+        
+        public async Task<IActionResult> Index()
+        {
+            var currentUserId = _userManager.GetUserId(User);
+            
+            // Отримуємо список усіх ветеранів
+            var veterans = await _userManager.GetUsersInRoleAsync("Veteran");
+            
+            // Виключаємо поточного користувача
+            var filteredVeterans = veterans.Where(v => v.Id != currentUserId).ToList();
+            
+            return View(filteredVeterans);
+        }
+        
+        public async Task<IActionResult> Conversation(string userId)
+        {
+            var currentUserId = _userManager.GetUserId(User);
+            
+            if (string.IsNullOrEmpty(userId))
+                return NotFound();
+                
+            var user = await _userManager.FindByIdAsync(userId);
+            if (user == null)
+                return NotFound();
+                
+            // Отримуємо історію повідомлень
+            var messages = await _context.ChatMessages
+                .Where(m => 
+                    (m.SenderId == currentUserId && m.ReceiverId == userId) ||
+                    (m.SenderId == userId && m.ReceiverId == currentUserId))
+                .OrderBy(m => m.SentAt)
+                .ToListAsync();
+                
+            // Позначаємо всі непрочитані повідомлення як прочитані
+            var unreadMessages = messages
+                .Where(m => m.ReceiverId == currentUserId && !m.IsRead)
+                .ToList();
+                
+            if (unreadMessages.Any())
+            {
+                foreach (var message in unreadMessages)
+                {
+                    message.IsRead = true;
+                }
+                
+                await _context.SaveChangesAsync();
+            }
+            
+            ViewBag.CurrentUserId = currentUserId;
+            ViewBag.ReceiverId = userId;
+            ViewBag.ReceiverName = $"{user.FirstName} {user.LastName}";
+            ViewBag.ReceiverAvatar = user.AvatarPath;
+            
+            return View(messages);
+        }
+        
+        [HttpGet]
+        public async Task<IActionResult> GetUnreadMessagesCount()
+        {
+            var currentUserId = _userManager.GetUserId(User);
+            
+            var count = await _context.ChatMessages
+                .CountAsync(m => m.ReceiverId == currentUserId && !m.IsRead);
+                
+            return Json(new { count });
+        }
+        
+        [HttpGet]
+        public async Task<IActionResult> GetUnreadCount()
+        {
+            var currentUserId = _userManager.GetUserId(User);
+            var count = await _context.ChatMessages
+                .CountAsync(m => m.ReceiverId == currentUserId && !m.IsRead);
+        
+            return Json(new { count });
+        }
+    }
+}
+
+
+
+
+
+using Microsoft.AspNetCore.SignalR;
+using Microsoft.EntityFrameworkCore;
+using System;
+using System.Collections.Concurrent;
+using System.Threading.Tasks;
+using veterans_site.Data;
+using veterans_site.Models;
+using System.Security.Claims;
+
+namespace veterans_site.Hubs
+{
+    public class ChatHub : Hub
+    {
+        private static readonly ConcurrentDictionary<string, UserConnection> _connections = 
+            new ConcurrentDictionary<string, UserConnection>();
+            
+        private readonly VeteranSupportDbContext _context;
+        
+        public ChatHub(VeteranSupportDbContext context)
+        {
+            _context = context;
+        }
+        
+        public override async Task OnConnectedAsync()
+        {
+            var userId = Context.User?.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+            
+            if (!string.IsNullOrEmpty(userId))
+            {
+                var connection = new UserConnection
+                {
+                    UserId = userId,
+                    ConnectionId = Context.ConnectionId,
+                    IsOnline = true,
+                    LastSeen = DateTime.Now
+                };
+                
+                _connections.AddOrUpdate(userId, connection, (key, oldValue) => connection);
+                
+                // Оновлюємо статус користувача в базі
+                var user = await _context.Users.FindAsync(userId);
+                if (user != null)
+                {
+                    user.IsOnline = true;
+                    user.LastOnline = DateTime.Now;
+                    await _context.SaveChangesAsync();
+                }
+                
+                // Повідомляємо всіх про зміну статусу
+                await Clients.All.SendAsync("UserStatusChanged", userId, true, DateTime.Now);
+            }
+            
+            await base.OnConnectedAsync();
+        }
+        
+        public override async Task OnDisconnectedAsync(Exception exception)
+        {
+            var userId = Context.User?.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+            
+            if (!string.IsNullOrEmpty(userId) && _connections.TryRemove(userId, out var connection))
+            {
+                // Оновлюємо статус користувача в базі
+                var user = await _context.Users.FindAsync(userId);
+                if (user != null)
+                {
+                    user.IsOnline = false;
+                    user.LastOnline = DateTime.Now;
+                    await _context.SaveChangesAsync();
+                }
+                
+                // Повідомляємо всіх про зміну статусу
+                await Clients.All.SendAsync("UserStatusChanged", userId, false, DateTime.Now);
+            }
+            
+            await base.OnDisconnectedAsync(exception);
+        }
+        
+        public async Task SendPrivateMessage(string receiverId, string message)
+        {
+            var senderId = Context.User?.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+            
+            if (string.IsNullOrEmpty(senderId) || string.IsNullOrEmpty(receiverId))
+                return;
+                
+            // Зберігаємо повідомлення в базі даних
+            var chatMessage = new ChatMessage
+            {
+                SenderId = senderId,
+                ReceiverId = receiverId,
+                Content = message,
+                SentAt = DateTime.Now
+            };
+            
+            _context.ChatMessages.Add(chatMessage);
+            await _context.SaveChangesAsync();
+            
+            // Оновлюємо інформацію про час останньої активності
+            var user = await _context.Users.FindAsync(senderId);
+            if (user != null)
+            {
+                user.LastOnline = DateTime.Now;
+                await _context.SaveChangesAsync();
+            }
+            
+            // Отримуємо інформацію про відправника для показу в повідомленні
+            var sender = await _context.Users
+                .Where(u => u.Id == senderId)
+                .Select(u => new {
+                    u.Id,
+                    u.FirstName,
+                    u.LastName,
+                    u.AvatarPath
+                })
+                .FirstOrDefaultAsync();
+            
+            // Відправляємо повідомлення отримувачу, якщо він онлайн
+            if (_connections.TryGetValue(receiverId, out var receiverConnection))
+            {
+                await Clients.Client(receiverConnection.ConnectionId).SendAsync("ReceiveMessage", 
+                    chatMessage.Id,
+                    sender.Id,
+                    $"{sender.FirstName} {sender.LastName}",
+                    sender.AvatarPath,
+                    message,
+                    chatMessage.SentAt);
+            }
+            
+            // Також відправляємо повідомлення відправнику для відображення у його чаті
+            await Clients.Caller.SendAsync("MessageSent", 
+                chatMessage.Id,
+                receiverId,
+                message,
+                chatMessage.SentAt);
+        }
+        
+        public async Task MarkMessageAsRead(int messageId)
+        {
+            var message = await _context.ChatMessages.FindAsync(messageId);
+            if (message != null)
+            {
+                message.IsRead = true;
+                await _context.SaveChangesAsync();
+                
+                // Повідомляємо відправника, що його повідомлення прочитане
+                if (_connections.TryGetValue(message.SenderId, out var senderConnection))
+                {
+                    await Clients.Client(senderConnection.ConnectionId).SendAsync("MessageRead", messageId);
+                }
+            }
+        }
+    }
+}
+
+
+
+
+
+using System.ComponentModel.DataAnnotations;
+using System.ComponentModel.DataAnnotations.Schema;
+
+namespace veterans_site.Models;
+
+public class ChatMessage
+{
+    public int Id { get; set; }
+        
+    public string SenderId { get; set; }
+    [ForeignKey("SenderId")]
+    public ApplicationUser Sender { get; set; }
+        
+    public string ReceiverId { get; set; }
+    [ForeignKey("ReceiverId")]
+    public ApplicationUser Receiver { get; set; }
+        
+    public string Content { get; set; }
+        
+    public DateTime SentAt { get; set; } = DateTime.Now;
+        
+    public bool IsRead { get; set; } = false;
+}
+
+
+
+namespace veterans_site.Models;
+
+public class UserConnection
+{
+    public int Id { get; set; }
+    public string UserId { get; set; }
+    public string ConnectionId { get; set; }
+    public bool IsOnline { get; set; }
+    public DateTime LastSeen { get; set; }
+}
+
+
+
+@model IEnumerable<ChatMessage>
+@{
+    ViewData["Title"] = $"Чат з {ViewBag.ReceiverName}";
+    var currentUserId = ViewBag.CurrentUserId;
+    var receiverId = ViewBag.ReceiverId;
+}
+
+<div class="container mt-4">
+    <div class="row">
+        <div class="col-md-12">
+            <div class="card shadow">
+                <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
+                    <div class="d-flex align-items-center">
+                        @if (!string.IsNullOrEmpty(ViewBag.ReceiverAvatar))
+                        {
+                            <img src="@Url.Content(ViewBag.ReceiverAvatar)" class="rounded-circle me-2" width="40" height="40" alt="@ViewBag.ReceiverName">
+                        }
+                        else
+                        {
+                            <div class="user-avatar me-2" style="width: 40px; height: 40px; background-color: #2e51a2; border-radius: 50%; display: flex; align-items: center; justify-content: center; color: white;">
+                                <span>@(ViewBag.ReceiverName.Substring(0, 1))</span>
+                            </div>
+                        }
+                        <h5 class="mb-0">@ViewBag.ReceiverName</h5>
+                        <span id="typing-indicator" class="ms-2 small d-none">набирає повідомлення...</span>
+                    </div>
+                    <a asp-controller="Chat" asp-action="Index" class="btn btn-light btn-sm">
+                        <i class="fas fa-arrow-left me-1"></i> Назад до списку
+                    </a>
+                </div>
+                <div class="card-body">
+                    <div id="chat-messages" class="chat-messages overflow-auto mb-3" style="height: 400px;">
+                        @foreach (var message in Model)
+                        {
+                            bool isCurrentUserMessage = message.SenderId == currentUserId;
+                            <div class="message @(isCurrentUserMessage ? "sender-message text-end" : "receiver-message")">
+                                <div class="message-bubble @(isCurrentUserMessage ? "sender" : "receiver") p-3 mb-2 d-inline-block rounded" style="max-width: 75%; background-color: @(isCurrentUserMessage ? "#dcf8c6" : "#f1f0f0"); color: #333;">
+                                    <div class="message-text">@message.Content</div>
+                                    <div class="message-time text-muted small">
+                                        @message.SentAt.ToString("HH:mm")
+                                        @if (isCurrentUserMessage)
+                                        {
+                                            <i class="fas @(message.IsRead ? "fa-check-double" : "fa-check") ms-1" data-message-id="@message.Id"></i>
+                                        }
+                                    </div>
+                                </div>
+                            </div>
+                        }
+                    </div>
+                    <div class="message-input border-top pt-3">
+                        <div class="input-group">
+                            <input type="text" id="message-text" class="form-control" placeholder="Введіть повідомлення..." autocomplete="off">
+                            <button id="send-message" class="btn btn-primary">
+                                <i class="fas fa-paper-plane"></i>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/microsoft-signalr/6.0.6/signalr.min.js"></script>
+    <script>
+        $(function() {
+            const receiverId = '@receiverId';
+            const currentUserId = '@currentUserId';
+            const chatMessages = document.getElementById('chat-messages');
+
+            // Прокручуємо до останнього повідомлення
+            chatMessages.scrollTop = chatMessages.scrollHeight;
+
+            const connection = new signalR.HubConnectionBuilder()
+                .withUrl("/chatHub")
+                .withAutomaticReconnect()
+                .build();
+
+            // Обробка помилок підключення
+            connection.onclose(async (error) => {
+                console.log("Connection closed due to error: " + error);
+                // Спробуємо переконектитись через 5 секунд
+                await new Promise(resolve => setTimeout(resolve, 5000));
+                await startConnection();
+            });
+
+            // Отримання нового повідомлення
+            connection.on("ReceiveMessage", function(messageId, senderId, senderName, senderAvatar, message, sentAt) {
+                if (senderId === receiverId) {
+                    appendMessage(message, false, new Date(sentAt), messageId);
+
+                    // Позначаємо повідомлення як прочитане
+                    connection.invoke("MarkMessageAsRead", messageId).catch(function(err) {
+                        console.error(err);
+                    });
+
+                    // Додаємо звуковий сигнал при отриманні повідомлення
+                    playMessageSound();
+                }
+            });
+
+            // Повідомлення відправлене
+            connection.on("MessageSent", function(messageId, receiverId, message, sentAt) {
+                appendMessage(message, true, new Date(sentAt), messageId);
+            });
+
+            // Повідомлення прочитане
+            connection.on("MessageRead", function(messageId) {
+                $(`i[data-message-id="${messageId}"]`).removeClass('fa-check').addClass('fa-check-double');
+            });
+
+            // Функція для звукового сигналу
+            function playMessageSound() {
+                const audio = new Audio('/sounds/message.mp3');
+                audio.play().catch(e => console.error("Error playing sound:", e));
+            }
+
+            // Функція для додавання повідомлення до чату
+            function appendMessage(message, isSender, time, messageId) {
+                const messageDiv = document.createElement('div');
+                messageDiv.className = `message ${isSender ? 'sender-message text-end' : 'receiver-message'}`;
+
+                const formattedTime = `${time.getHours().toString().padStart(2, '0')}:${time.getMinutes().toString().padStart(2, '0')}`;
+
+                messageDiv.innerHTML = `
+                    <div class="message-bubble ${isSender ? 'sender' : 'receiver'} p-3 mb-2 d-inline-block rounded" style="max-width: 75%; background-color: ${isSender ? '#dcf8c6' : '#f1f0f0'}; color: #333;">
+                        <div class="message-text">${message}</div>
+                        <div class="message-time text-muted small">
+                            ${formattedTime}
+                            ${isSender ? `<i class="fas fa-check ms-1" data-message-id="${messageId}"></i>` : ''}
+                        </div>
+                    </div>
+                `;
+
+                chatMessages.appendChild(messageDiv);
+                chatMessages.scrollTop = chatMessages.scrollHeight;
+            }
+
+            // Обробник відправки повідомлення
+            $("#send-message").click(function() {
+                sendMessage();
+            });
+
+            // Відправка повідомлення при натисканні Enter
+            $("#message-text").keypress(function(e) {
+                if (e.which === 13) {
+                    sendMessage();
+                    return false;
+                }
+            });
+
+            // Функція відправки повідомлення
+            function sendMessage() {
+                const message = $("#message-text").val().trim();
+                if (message) {
+                    // Зберігаємо повідомлення в змінній, щоб показати його навіть якщо є тимчасові проблеми зі з'єднанням
+                    const currentMessage = message;
+                    $("#message-text").val('').focus();
+
+                    connection.invoke("SendPrivateMessage", receiverId, currentMessage)
+                        .catch(function(err) {
+                            console.error("Error sending message:", err);
+                            // Показуємо повідомлення про помилку
+                            appendErrorMessage("Не вдалося відправити повідомлення. Спробуйте знову.");
+                        });
+                }
+            }
+
+            // Функція для показу повідомлення про помилку
+            function appendErrorMessage(errorText) {
+                const errorDiv = document.createElement('div');
+                errorDiv.className = "alert alert-danger p-2 mb-2 text-center small";
+                errorDiv.textContent = errorText;
+
+                chatMessages.appendChild(errorDiv);
+                chatMessages.scrollTop = chatMessages.scrollHeight;
+
+                // Автоматично приховуємо повідомлення про помилку через 5 секунд
+                setTimeout(() => {
+                    errorDiv.remove();
+                }, 5000);
+            }
+
+            // Підключення до хабу
+            async function startConnection() {
+                try {
+                    await connection.start();
+                    console.log("SignalR підключено.");
+                } catch (err) {
+                    console.error("SignalR Connection Error:", err);
+                    // Показуємо повідомлення про помилку підключення
+                    appendErrorMessage("Проблема з підключенням до чату. Пробуємо відновити з'єднання...");
+                    setTimeout(startConnection, 5000);
+                }
+            }
+
+            startConnection();
+        });
+    </script>
+}
+
+
+
+
+
+
+@model IEnumerable<ApplicationUser>
+@{
+    ViewData["Title"] = "Чат між ветеранами";
+}
+
+<div class="container mt-4">
+    <div class="row">
+        <div class="col-md-12 mb-4">
+            <div class="card shadow">
+                <div class="card-header bg-primary text-white">
+                    <h5 class="mb-0"><i class="fas fa-users me-2"></i>Ветерани</h5>
+                </div>
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table table-hover">
+                            <thead>
+                            <tr>
+                                <th>Користувач</th>
+                                <th>Статус</th>
+                                <th>Остання активність</th>
+                                <th>Дії</th>
+                            </tr>
+                            </thead>
+                            <tbody>
+                            @foreach (var veteran in Model)
+                            {
+                                <tr>
+                                    <td>
+                                        <div class="d-flex align-items-center">
+                                            @if (!string.IsNullOrEmpty(veteran.AvatarPath))
+                                            {
+                                                <img src="@Url.Content(veteran.AvatarPath)" class="rounded-circle me-2" width="40" height="40" alt="@veteran.FirstName">
+                                            }
+                                            else
+                                            {
+                                                <div class="user-avatar me-2" style="width: 40px; height: 40px; background-color: #2e51a2; display: flex; align-items: center; justify-content: center; border-radius: 50%;">
+                                                    <span class="text-white">@veteran.FirstName[0]</span>
+                                                </div>
+                                            }
+                                            <div>
+                                                <strong>@veteran.FirstName @veteran.LastName</strong>
+                                            </div>
+                                        </div>
+                                    </td>
+                                    <td>
+                                            <span id="status-@veteran.Id" class="badge @(veteran.IsOnline ? "bg-success" : "bg-secondary")">
+                                                @(veteran.IsOnline ? "Онлайн" : "Офлайн")
+                                            </span>
+                                    </td>
+                                    <td id="last-seen-@veteran.Id">
+                                        @(veteran.IsOnline ? "Зараз на сайті" : $"Був(ла) {veteran.LastOnline.ToString("dd.MM.yyyy HH:mm")}")
+                                    </td>
+                                    <td>
+                                        <a asp-controller="Chat" asp-action="Conversation" asp-route-userId="@veteran.Id" class="btn btn-primary btn-sm">
+                                            <i class="fas fa-comment me-1"></i> Написати
+                                        </a>
+                                    </td>
+                                </tr>
+                            }
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/microsoft-signalr/6.0.6/signalr.min.js"></script>
+    <script>
+        $(function() {
+            const connection = new signalR.HubConnectionBuilder()
+                .withUrl("/chatHub")
+                .withAutomaticReconnect()
+                .build();
+
+            connection.on("UserStatusChanged", function (userId, isOnline, lastSeen) {
+                const statusElement = $(`#status-${userId}`);
+                const lastSeenElement = $(`#last-seen-${userId}`);
+
+                if (statusElement.length) {
+                    if (isOnline) {
+                        statusElement.removeClass("bg-secondary").addClass("bg-success");
+                        statusElement.text("Онлайн");
+                        lastSeenElement.text("Зараз на сайті");
+                    } else {
+                        statusElement.removeClass("bg-success").addClass("bg-secondary");
+                        statusElement.text("Офлайн");
+
+                        // Форматуємо дату останнього перебування онлайн
+                        const lastSeenDate = new Date(lastSeen);
+                        const formattedDate = `${lastSeenDate.getDate().toString().padStart(2, '0')}.${(lastSeenDate.getMonth() + 1).toString().padStart(2, '0')}.${lastSeenDate.getFullYear()} ${lastSeenDate.getHours().toString().padStart(2, '0')}:${lastSeenDate.getMinutes().toString().padStart(2, '0')}`;
+
+                        lastSeenElement.text(`Був(ла) ${formattedDate}`);
+                    }
+                }
+            });
+
+            // Обробка помилок підключення
+            connection.onclose(async (error) => {
+                console.log("Connection closed due to error: " + error);
+                // Спробуємо переконектитись через 5 секунд
+                await new Promise(resolve => setTimeout(resolve, 5000));
+                await startConnection();
+            });
+
+            async function startConnection() {
+                try {
+                    await connection.start();
+                    console.log("SignalR підключено.");
+                } catch (err) {
+                    console.error("SignalR Connection Error:", err);
+                    setTimeout(startConnection, 5000);
+                }
+            }
+
+            startConnection();
+        });
+    </script>
+}

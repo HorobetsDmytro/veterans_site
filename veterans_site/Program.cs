@@ -1,7 +1,9 @@
+using Microsoft.AspNetCore.Http.Connections;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using veterans_site.Areas.Specialist.Controllers;
 using veterans_site.Data;
+using veterans_site.Hubs;
 using veterans_site.Interfaces;
 using veterans_site.Middleware;
 using veterans_site.Models;
@@ -34,6 +36,12 @@ builder.Services.Configure<IdentityOptions>(options =>
 });
 
 builder.Services.AddScoped<IUserClaimsPrincipalFactory<ApplicationUser>, UserClaimsPrincipalFactory<ApplicationUser, IdentityRole>>();
+
+builder.Services.AddSignalR(options => {
+    options.EnableDetailedErrors = true;
+    options.ClientTimeoutInterval = TimeSpan.FromMinutes(1);
+    options.KeepAliveInterval = TimeSpan.FromSeconds(15);
+});
 
 builder.Services.ConfigureApplicationCookie(options =>
 {
@@ -128,5 +136,7 @@ app.MapControllerRoute(
 
 app.MapDefaultControllerRoute();
 app.MapRazorPages();
+
+app.MapHub<ChatHub>("/chatHub");
 
 app.Run();

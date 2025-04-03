@@ -22,7 +22,8 @@ public class VeteranSupportDbContext : IdentityDbContext<ApplicationUser>
     public DbSet<ConsultationSlot> ConsultationSlots { get; set; }
     public DbSet<ConsultationBookingRequest> ConsultationBookingRequests { get; set; }
     public DbSet<EventComment> EventComments { get; set; }
-
+    public DbSet<ChatMessage> ChatMessages { get; set; }
+    public DbSet<UserConnection> UsersConnections { get; set; }
 
     protected override void OnModelCreating(ModelBuilder builder)
     {
@@ -85,5 +86,14 @@ public class VeteranSupportDbContext : IdentityDbContext<ApplicationUser>
             .HasOne(r => r.User)
             .WithMany()
             .HasForeignKey(r => r.UserId);
+
+        builder.Entity<ChatMessage>()
+            .HasOne(cm => cm.Receiver)
+            .WithMany(u => u.ReceivedMessages)
+            .HasForeignKey(cm => cm.ReceiverId)
+            .OnDelete(DeleteBehavior.Restrict);
+        
+        builder.Entity<UserConnection>()
+            .HasKey(uc => uc.Id);
     }
 }

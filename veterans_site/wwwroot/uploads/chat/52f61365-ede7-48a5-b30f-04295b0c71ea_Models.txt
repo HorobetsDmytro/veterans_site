@@ -1,4 +1,461 @@
-﻿@using Microsoft.AspNetCore.Identity
+using Microsoft.AspNetCore.Identity;
+using System.ComponentModel.DataAnnotations;
+
+namespace veterans_site.Models
+{
+    public class ApplicationUser : IdentityUser
+    {
+        [Required]
+        [StringLength(50)]
+        public string FirstName { get; set; }
+
+        [Required]
+        [StringLength(50)]
+        public string LastName { get; set; }
+
+        public bool IsActive { get; set; } = true;
+
+        public DateTime RegistrationDate { get; set; } = DateTime.Now;
+        public string? AvatarPath { get; set; }
+
+        public virtual ICollection<ConsultationBooking> ConsultationBookings { get; set; }
+        public virtual ICollection<EventParticipant> EventParticipants { get; set; }
+    }
+}
+
+
+
+using System.ComponentModel.DataAnnotations;
+using System.ComponentModel.DataAnnotations.Schema;
+
+namespace veterans_site.Models
+{
+    public class Consultation
+    {
+        public int Id { get; set; }
+
+        [Required(ErrorMessage = "Поле Назва є обов'язковим")]
+        [StringLength(100)]
+        [Display(Name = "Назва")]
+        public string Title { get; set; }
+
+        [Required(ErrorMessage = "Поле Опис є обов'язковим")]
+        [Display(Name = "Опис")]
+        public string Description { get; set; }
+
+        [Required(ErrorMessage = "Поле Дата та час є обов'язковим")]
+        [Display(Name = "Дата та час")]
+        public DateTime DateTime { get; set; }
+
+        [Required(ErrorMessage = "Поле Тривалість є обов'язковим")]
+        [Range(10, 180, ErrorMessage = "Тривалість повинна бути від 10 до 180 хвилин")]
+        [Display(Name = "Тривалість (хв)")]
+        public int Duration { get; set; }
+
+        [Required(ErrorMessage = "Поле Тип консультації є обов'язковим")]
+        [Display(Name = "Тип консультації")]
+        public ConsultationType Type { get; set; }
+
+        [Required(ErrorMessage = "Поле Формат консультації є обов'язковим")]
+        [Display(Name = "Формат консультації")]
+        public ConsultationFormat Format { get; set; }
+
+        [Required(ErrorMessage = "Поле Статус є обов'язковим")]
+        [Display(Name = "Статус")]
+        public ConsultationStatus Status { get; set; }
+
+        [Required(ErrorMessage = "Поле Ціна є обов'язковим")]
+        [Range(0, double.MaxValue, ErrorMessage = "Ціна повинна бути більше 0")]
+        [Display(Name = "Ціна")]
+        public double Price { get; set; }
+
+        [Required(ErrorMessage = "Поле Ім'я спеціаліста є обов'язковим")]
+        [Display(Name = "Ім'я спеціаліста")]
+        public string SpecialistName { get; set; }
+
+        [Display(Name = "Час завершення")]
+        public DateTime? EndDateTime { get; set; }
+
+        [Display(Name = "Максимум учасників")]
+        public int? MaxParticipants { get; set; }
+
+        [Display(Name = "Кількість слотів")]
+        public int? SlotsCount { get; set; }
+
+        public string? UserId { get; set; }
+
+        [ForeignKey("UserId")]
+        public ApplicationUser? User { get; set; }
+
+        public bool IsBooked { get; set; } = false;
+
+        [Display(Name = "Кількість зареєстрованих учасників")]
+        public int BookedParticipants { get; set; } = 0;
+
+        public ICollection<ConsultationBooking> Bookings { get; set; } = new List<ConsultationBooking>();
+
+        [Required(ErrorMessage = "Оберіть формат проведення консультації")]
+        [Display(Name = "Формат проведення")]
+        public ConsultationMode Mode { get; set; }
+
+        [Display(Name = "Місце проведення")]
+        public string? Location { get; set; }
+
+        public ICollection<ConsultationSlot> Slots { get; set; } = new List<ConsultationSlot>();
+
+        public bool IsParent { get; set; } = false;
+
+        public bool NotificationSent { get; set; } = false;
+
+        [NotMapped]
+        public DateTime? EndTime
+        {
+            get
+            {
+                if (Format == ConsultationFormat.Individual)
+                    return EndDateTime;
+
+                return DateTime > DateTime.MinValue ? DateTime.AddMinutes(Duration) : null;
+            }
+        }
+    }
+
+    public enum ConsultationType
+    {
+        [Display(Name = "Медична")]
+        Medical,
+        [Display(Name = "Психологічна")]
+        Psychological,
+        [Display(Name = "Юридична")]
+        Legal
+    }
+
+    public enum ConsultationFormat
+    {
+        [Display(Name = "Індивідуальна")]
+        Individual,
+        [Display(Name = "Групова")]
+        Group
+    }
+
+    public enum ConsultationStatus
+    {
+        [Display(Name = "Заплановано")]
+        Planned,
+        [Display(Name = "Проходить")]
+        InProgress,
+        [Display(Name = "Завершено")]
+        Completed,
+        [Display(Name = "Скасовано")]
+        Cancelled
+    }
+
+    public enum ConsultationMode
+    {
+        [Display(Name = "Онлайн")]
+        Online,
+        [Display(Name = "Офлайн")]
+        Offline
+    }
+
+    public class TimeSlot
+    {
+        public DateTime StartTime { get; set; }
+        public DateTime EndTime { get; set; }
+        public bool IsAvailable { get; set; }
+    }
+}
+
+
+
+
+namespace veterans_site.Models
+{
+    public class ConsultationBooking
+    {
+        public int Id { get; set; }
+
+        public int ConsultationId { get; set; }
+        public Consultation Consultation { get; set; }
+
+        public string UserId { get; set; }
+        public ApplicationUser User { get; set; }
+
+        public DateTime BookingTime { get; set; }
+    }
+}
+
+
+using System.ComponentModel.DataAnnotations;
+using System.ComponentModel.DataAnnotations.Schema;
+
+namespace veterans_site.Models
+{
+    public class ConsultationBookingRequest
+    {
+        public int Id { get; set; }
+
+        public int ConsultationId { get; set; }
+        [ForeignKey("ConsultationId")]
+        public Consultation Consultation { get; set; }
+
+        public int? SlotId { get; set; }
+        [ForeignKey("SlotId")]
+        public ConsultationSlot Slot { get; set; }
+
+        public string UserId { get; set; }
+        [ForeignKey("UserId")]
+        public ApplicationUser User { get; set; }
+
+        public DateTime RequestTime { get; set; }
+        public string Token { get; set; }
+        public bool? IsApproved { get; set; }
+        public DateTime ExpiryTime { get; set; }
+    }
+}
+
+
+
+
+using System.ComponentModel.DataAnnotations.Schema;
+
+namespace veterans_site.Models
+{
+    public class ConsultationSlot
+    {
+        public int Id { get; set; }
+
+        public int ConsultationId { get; set; }
+        public Consultation Consultation { get; set; }
+
+        public DateTime DateTime { get; set; }
+
+        public bool IsBooked { get; set; }
+        public string? UserId { get; set; }
+        [ForeignKey("UserId")]
+        public ApplicationUser? User { get; set; }
+    }
+}
+
+
+
+
+
+namespace veterans_site.Models
+{
+    public class EmailSettings
+    {
+        public string FromEmail { get; set; }
+        public string SmtpServer { get; set; }
+        public int SmtpPort { get; set; }
+        public string Username { get; set; }
+        public string Password { get; set; }
+    }
+}
+
+
+
+
+namespace veterans_site.Models
+{
+    public class ErrorViewModel
+    {
+        public string? RequestId { get; set; }
+
+        public bool ShowRequestId => !string.IsNullOrEmpty(RequestId);
+
+        public string? Message { get; set; }
+    }
+}
+
+
+
+
+
+using System.ComponentModel.DataAnnotations;
+using System.ComponentModel.DataAnnotations.Schema;
+
+namespace veterans_site.Models
+{
+    public class Event
+    {
+        public int Id { get; set; }
+
+        [Required]
+        [StringLength(100)]
+        [Display(Name = "Назва")]
+        public string Title { get; set; }
+
+        [Required]
+        [Display(Name = "Опис")]
+        public string Description { get; set; }
+
+        [Required]
+        [Display(Name = "Дата")]
+        public DateTime Date { get; set; }
+
+        [Required]
+        [Display(Name = "Місце проведення")]
+        public string Location { get; set; }
+
+        [Display(Name = "Максимум учасників")]
+        public int? MaxParticipants { get; set; }
+
+        [Required]
+        [Display(Name = "Статус")]
+        public EventStatus Status { get; set; }
+
+        [Required]
+        [Display(Name = "Категорія")]
+        public EventCategory Category { get; set; }
+
+        [Required]
+        [Range(10, 480, ErrorMessage = "Тривалість повинна бути від 10 до 480 хвилин")]
+        [Display(Name = "Тривалість (хв)")]
+        public int Duration { get; set; }
+
+        public ICollection<EventParticipant> EventParticipants { get; set; } = new List<EventParticipant>();
+
+        [NotMapped]
+        public int AvailableSpots => MaxParticipants.HasValue
+            ? MaxParticipants.Value - EventParticipants.Count
+            : int.MaxValue;
+
+        [NotMapped]
+        public bool CanRegister => !MaxParticipants.HasValue || EventParticipants.Count < MaxParticipants.Value;
+
+        [NotMapped]
+        public DateTime EndTime => Date.AddMinutes(Duration);
+
+        public ICollection<EventComment> Comments { get; set; } = new List<EventComment>();
+    }
+
+
+    public enum EventStatus
+    {
+        [Display(Name = "Заплановано")]
+        Planned,    // Заплановано
+        [Display(Name = "Проходить")]
+        InProgress, // Проходить
+        [Display(Name = "Завершено")]
+        Completed,  // Завершено
+        [Display(Name = "Скасовано")]
+        Cancelled   // Скасовано
+    }
+
+    public enum EventCategory
+    {
+        [Display(Name = "Зустріч")]
+        Meeting,        // Зустріч
+        [Display(Name = "Тренінг")]
+        Training,       // Тренінг
+        [Display(Name = "Майстер-клас")]
+        Workshop,       // Майстер-клас
+        [Display(Name = "Соціальний захід")]
+        SocialEvent     // Соціальний захід
+    }
+}
+
+
+
+
+using System.ComponentModel.DataAnnotations;
+using System.ComponentModel.DataAnnotations.Schema;
+
+namespace veterans_site.Models
+{
+    public class EventComment
+    {
+        public int Id { get; set; }
+
+        [Required]
+        public string Content { get; set; }
+
+        public DateTime CreatedAt { get; set; }
+
+        public int EventId { get; set; }
+        public Event Event { get; set; }
+
+        public string UserId { get; set; }
+        public ApplicationUser User { get; set; }
+    }
+}
+
+
+
+
+namespace veterans_site.Models
+{
+    public class EventParticipant
+    {
+        public int Id { get; set; }
+
+        public int EventId { get; set; }
+        public Event Event { get; set; }
+
+        public string UserId { get; set; }
+        public ApplicationUser User { get; set; }
+
+        public DateTime RegistrationDate { get; set; }
+    }
+}
+
+
+
+
+
+namespace veterans_site.Models
+{
+    public class HomeStatisticsViewModel
+    {
+        public int TotalVeterans { get; set; }
+        public int CompletedConsultations { get; set; }
+        public int CompletedEvents { get; set; }
+        public int TotalSpecialists { get; set; }
+    }
+}
+
+
+
+
+
+using System.ComponentModel.DataAnnotations;
+
+namespace veterans_site.Models
+{
+    public class News
+    {
+        public int Id { get; set; }
+        public string Title { get; set; }
+        public string Content { get; set; }
+        public DateTime PublishDate { get; set; }
+
+        // Зробіть поле ImagePath nullable
+        public string? ImagePath { get; set; }
+    }
+
+}
+
+
+
+
+namespace veterans_site.Models
+{
+    public class RoleChangeRequest
+    {
+        public int Id { get; set; }
+        public string UserId { get; set; }
+        public string NewRole { get; set; }
+        public string Token { get; set; }
+        public DateTime ExpiryTime { get; set; }
+        public bool IsConfirmed { get; set; }
+    }
+}
+
+
+
+
+@using Microsoft.AspNetCore.Identity
 @inject SignInManager<ApplicationUser> SignInManager
 @inject UserManager<ApplicationUser> UserManager
 
@@ -261,33 +718,6 @@
                                 </ul>
                             </li>
                         }
-                        
-                        @if (SignInManager.IsSignedIn(User) && User.IsInRole("Veteran"))
-                        {
-                            <script>
-                                $(function() {
-                                    function checkUnreadMessages() {
-                                        $.get("/Chat/GetUnreadCount", function(data) {
-                                            if (data.count > 0) {
-                                                $("#chat-notification").text(data.count).show();
-                                            } else {
-                                                $("#chat-notification").hide();
-                                            }
-                                        });
-                                    }
-                                    
-                                    checkUnreadMessages();
-                                    setInterval(checkUnreadMessages, 30000);
-                                });
-                                </script>
-                            <li class="nav-item">
-                                <a class="nav-link @(ViewContext.RouteData.Values["controller"]?.ToString() == "Chat" ? "active" : "")"
-                                   asp-controller="Chat" asp-action="Index">
-                                    <i class="fas fa-comments me-1"></i> Чат для спілкування
-                                    <span id="chat-notification" class="badge bg-danger rounded-pill" style="display: none;"></span>
-                                </a>
-                            </li>
-                        }
 
                         @if (User.IsInRole("Specialist"))
                         {
@@ -389,12 +819,11 @@
     </div>
 </footer>
 
-<script src="~/lib/jquery/dist/jquery.min.js"></script>
-<script src="~/lib/jquery-validation/dist/jquery.validate.min.js"></script>
-<script src="~/lib/jquery-validation-unobtrusive/jquery.validate.unobtrusive.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/microsoft-signalr/6.0.6/signalr.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 @await RenderSectionAsync("Scripts", required: false)
 </body>
 </html>
+
+
+

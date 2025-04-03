@@ -1,0 +1,1495 @@
+html {
+  font-size: 14px;
+}
+
+@media (min-width: 768px) {
+  html {
+    font-size: 16px;
+  }
+}
+
+.btn:focus, .btn:active:focus, .btn-link.nav-link:focus, .form-control:focus, .form-check-input:focus {
+  box-shadow: 0 0 0 0.1rem white, 0 0 0 0.25rem #258cfb;
+}
+
+html {
+  position: relative;
+  min-height: 100%;
+}
+
+body {
+  margin-bottom: 60px;
+}
+
+.chat-messages {
+  display: flex;
+  flex-direction: column;
+}
+
+.message-bubble {
+  border-radius: 12px;
+  box-shadow: 0 1px 2px rgba(0,0,0,0.1);
+  position: relative;
+}
+
+.message-bubble.sender {
+  border-bottom-right-radius: 4px;
+  background-color: #dcf8c6;
+}
+
+.message-bubble.receiver {
+  border-bottom-left-radius: 4px;
+  background-color: #f1f0f0;
+}
+
+.message-actions {
+  opacity: 0.7;
+}
+
+.message-bubble:hover .message-actions {
+  opacity: 1;
+}
+
+.audio-message audio {
+  height: 40px;
+}
+
+.pulse {
+  animation: pulse 1s infinite;
+}
+
+@keyframes pulse {
+  0% { opacity: 1; }
+  50% { opacity: 0.5; }
+  100% { opacity: 1; }
+}
+
+.file-message {
+  background: rgba(0,0,0,0.03);
+  padding: 8px;
+  border-radius: 8px;
+}
+
+.file-name {
+  max-width: 150px;
+  display: inline-block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+#recording-controls {
+  background-color: #fff9f9;
+  border: 1px solid #ffeeee;
+  border-radius: 4px;
+  padding: 8px;
+}
+
+.recording-indicator {
+  color: #dc3545;
+}
+
+#status-indicator.text-success .fa-circle {
+  color: #28a745;
+}
+
+#status-indicator.text-secondary .fa-circle {
+  color: #6c757d;
+}
+
+.toast-container {
+  z-index: 1050;
+}
+
+
+
+
+
+
+using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Identity;
+using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
+using System.Threading.Tasks;
+using veterans_site.Data;
+using veterans_site.Models;
+using System.IO;
+
+namespace veterans_site.Controllers
+{
+    [Authorize(Roles = "Veteran")]
+    public class ChatController : Controller
+    {
+        private readonly VeteranSupportDbContext _context;
+        private readonly UserManager<ApplicationUser> _userManager;
+        private readonly IWebHostEnvironment _environment;
+        
+        public ChatController(VeteranSupportDbContext context, UserManager<ApplicationUser> userManager, IWebHostEnvironment environment)
+        {
+            _context = context;
+            _userManager = userManager;
+            _environment = environment;
+        }
+        
+        public async Task<IActionResult> Index()
+        {
+            var currentUserId = _userManager.GetUserId(User);
+            
+            // Отримуємо список усіх ветеранів
+            var veterans = await _userManager.GetUsersInRoleAsync("Veteran");
+            
+            // Виключаємо поточного користувача
+            var filteredVeterans = veterans.Where(v => v.Id != currentUserId).ToList();
+            
+            return View(filteredVeterans);
+        }
+        
+        public async Task<IActionResult> Conversation(string userId)
+        {
+            var currentUserId = _userManager.GetUserId(User);
+            
+            if (string.IsNullOrEmpty(userId))
+                return NotFound();
+                
+            var user = await _userManager.FindByIdAsync(userId);
+            if (user == null)
+                return NotFound();
+                
+            // Отримуємо історію повідомлень (без видалених повідомлень)
+            var messages = await _context.ChatMessages
+                .Where(m => 
+                    (m.SenderId == currentUserId && m.ReceiverId == userId ||
+                    m.SenderId == userId && m.ReceiverId == currentUserId) && 
+                    !m.IsDeleted)
+                .OrderBy(m => m.SentAt)
+                .ToListAsync();
+                
+            // Позначаємо всі непрочитані повідомлення як прочитані
+            var unreadMessages = messages
+                .Where(m => m.ReceiverId == currentUserId && !m.IsRead)
+                .ToList();
+                
+            if (unreadMessages.Any())
+            {
+                foreach (var message in unreadMessages)
+                {
+                    message.IsRead = true;
+                }
+                
+                await _context.SaveChangesAsync();
+            }
+            
+            ViewBag.CurrentUserId = currentUserId;
+            ViewBag.ReceiverId = userId;
+            ViewBag.ReceiverName = $"{user.FirstName} {user.LastName}";
+            ViewBag.ReceiverAvatar = user.AvatarPath;
+            ViewBag.IsOnline = user.IsOnline;
+            ViewBag.LastOnline = user.LastOnline;
+            
+            return View(messages);
+        }
+        
+        [HttpGet]
+        public async Task<IActionResult> GetUnreadMessagesCount()
+        {
+            var currentUserId = _userManager.GetUserId(User);
+            
+            var count = await _context.ChatMessages
+                .CountAsync(m => m.ReceiverId == currentUserId && !m.IsRead);
+                
+            return Json(new { count });
+        }
+        
+        [HttpGet]
+        public async Task<IActionResult> GetUnreadCount()
+        {
+            var currentUserId = _userManager.GetUserId(User);
+            var count = await _context.ChatMessages
+                .CountAsync(m => m.ReceiverId == currentUserId && !m.IsRead);
+        
+            return Json(new { count });
+        }
+        
+        [HttpPost]
+        public async Task<IActionResult> DeleteMessage(int messageId)
+        {
+            var currentUserId = _userManager.GetUserId(User);
+            var message = await _context.ChatMessages.FindAsync(messageId);
+            
+            if (message == null)
+                return NotFound();
+            
+            // Перевіряємо, чи це повідомлення поточного користувача
+            if (message.SenderId != currentUserId)
+                return Forbid();
+            
+            message.IsDeleted = true;
+            await _context.SaveChangesAsync();
+            
+            return Ok();
+        }
+        
+        [HttpPost]
+        public async Task<IActionResult> EditMessage(int messageId, string newContent)
+        {
+            var currentUserId = _userManager.GetUserId(User);
+            var message = await _context.ChatMessages.FindAsync(messageId);
+            
+            if (message == null)
+                return NotFound();
+            
+            // Перевіряємо, чи це повідомлення поточного користувача
+            if (message.SenderId != currentUserId)
+                return Forbid();
+            
+            // Можна редагувати тільки текстові повідомлення
+            if (message.MessageType != "text")
+                return BadRequest("Можна редагувати тільки текстові повідомлення");
+            
+            message.Content = newContent;
+            message.IsEdited = true;
+            message.EditedAt = DateTime.Now;
+            
+            await _context.SaveChangesAsync();
+            
+            return Ok();
+        }
+        
+        [HttpPost]
+        public async Task<IActionResult> UploadFile(IFormFile file, string receiverId)
+        {
+            if (file == null || file.Length == 0)
+                return BadRequest("Файл не вибрано");
+                
+            var currentUserId = _userManager.GetUserId(User);
+            
+            // Створюємо директорію для файлів, якщо вона не існує
+            var uploadsFolder = Path.Combine(_environment.WebRootPath, "uploads", "chat");
+            if (!Directory.Exists(uploadsFolder))
+            {
+                Directory.CreateDirectory(uploadsFolder);
+            }
+            
+            // Генеруємо унікальне ім'я файлу
+            var fileName = $"{Guid.NewGuid()}_{Path.GetFileName(file.FileName)}";
+            var filePath = Path.Combine(uploadsFolder, fileName);
+            
+            // Зберігаємо файл
+            using (var stream = new FileStream(filePath, FileMode.Create))
+            {
+                await file.CopyToAsync(stream);
+            }
+            
+            // Визначаємо тип повідомлення: voice або file
+            string messageType = "file";
+            
+            // Перевірка на аудіо файл
+            if (file.ContentType.StartsWith("audio/"))
+            {
+                messageType = "voice";
+            }
+            
+            // Створюємо повідомлення в базі даних
+            var chatMessage = new ChatMessage
+            {
+                SenderId = currentUserId,
+                ReceiverId = receiverId,
+                Content = file.ContentType.StartsWith("image/") ? "Зображення" : "Файл: " + file.FileName,
+                MessageType = messageType,
+                FilePath = $"/uploads/chat/{fileName}",
+                FileName = file.FileName,
+                MimeType = file.ContentType,
+                SentAt = DateTime.Now
+            };
+            
+            _context.ChatMessages.Add(chatMessage);
+            await _context.SaveChangesAsync();
+            
+            return Ok(new { 
+                messageId = chatMessage.Id,
+                filePath = chatMessage.FilePath,
+                fileName = chatMessage.FileName,
+                mimeType = chatMessage.MimeType,
+                messageType = chatMessage.MessageType
+            });
+        }
+        
+        [HttpGet]
+        public async Task<IActionResult> GetUserStatus(string userId)
+        {
+            var user = await _context.Users.FindAsync(userId);
+            if (user == null)
+                return NotFound();
+                
+            return Json(new { 
+                isOnline = user.IsOnline,
+                lastOnline = user.LastOnline
+            });
+        }
+    }
+}
+
+
+
+
+
+
+using Microsoft.AspNetCore.SignalR;
+using Microsoft.EntityFrameworkCore;
+using System;
+using System.Collections.Concurrent;
+using System.Threading.Tasks;
+using veterans_site.Data;
+using veterans_site.Models;
+using System.Security.Claims;
+
+namespace veterans_site.Hubs
+{
+    public class ChatHub : Hub
+    {
+        private static readonly ConcurrentDictionary<string, UserConnection> _connections = 
+            new ConcurrentDictionary<string, UserConnection>();
+            
+        private readonly VeteranSupportDbContext _context;
+        
+        public ChatHub(VeteranSupportDbContext context)
+        {
+            _context = context;
+        }
+        
+        public override async Task OnConnectedAsync()
+        {
+            var userId = Context.User?.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+            
+            if (!string.IsNullOrEmpty(userId))
+            {
+                var connection = new UserConnection
+                {
+                    UserId = userId,
+                    ConnectionId = Context.ConnectionId,
+                    IsOnline = true,
+                    LastSeen = DateTime.Now
+                };
+                
+                _connections.AddOrUpdate(userId, connection, (key, oldValue) => connection);
+                
+                // Оновлюємо статус користувача в базі
+                var user = await _context.Users.FindAsync(userId);
+                if (user != null)
+                {
+                    user.IsOnline = true;
+                    user.LastOnline = DateTime.Now;
+                    await _context.SaveChangesAsync();
+                }
+                
+                // Повідомляємо всіх про зміну статусу
+                await Clients.All.SendAsync("UserStatusChanged", userId, true, DateTime.Now);
+            }
+            
+            await base.OnConnectedAsync();
+        }
+        
+        public override async Task OnDisconnectedAsync(Exception exception)
+        {
+            var userId = Context.User?.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+            
+            if (!string.IsNullOrEmpty(userId) && _connections.TryRemove(userId, out var connection))
+            {
+                // Оновлюємо статус користувача в базі
+                var user = await _context.Users.FindAsync(userId);
+                if (user != null)
+                {
+                    user.IsOnline = false;
+                    user.LastOnline = DateTime.Now;
+                    await _context.SaveChangesAsync();
+                }
+                
+                // Повідомляємо всіх про зміну статусу
+                await Clients.All.SendAsync("UserStatusChanged", userId, false, DateTime.Now);
+            }
+            
+            await base.OnDisconnectedAsync(exception);
+        }
+        
+        public async Task SendPrivateMessage(string receiverId, string message)
+        {
+            var senderId = Context.User?.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+            
+            if (string.IsNullOrEmpty(senderId) || string.IsNullOrEmpty(receiverId))
+                return;
+                
+            // Зберігаємо повідомлення в базі даних
+            var chatMessage = new ChatMessage
+            {
+                SenderId = senderId,
+                ReceiverId = receiverId,
+                Content = message,
+                MessageType = "text",
+                SentAt = DateTime.Now
+            };
+            
+            _context.ChatMessages.Add(chatMessage);
+            await _context.SaveChangesAsync();
+            
+            // Оновлюємо інформацію про час останньої активності
+            var user = await _context.Users.FindAsync(senderId);
+            if (user != null)
+            {
+                user.LastOnline = DateTime.Now;
+                await _context.SaveChangesAsync();
+            }
+            
+            // Отримуємо інформацію про відправника для показу в повідомленні
+            var sender = await _context.Users
+                .Where(u => u.Id == senderId)
+                .Select(u => new {
+                    u.Id,
+                    u.FirstName,
+                    u.LastName,
+                    u.AvatarPath
+                })
+                .FirstOrDefaultAsync();
+            
+            // Відправляємо повідомлення отримувачу, якщо він онлайн
+            if (_connections.TryGetValue(receiverId, out var receiverConnection))
+            {
+                await Clients.Client(receiverConnection.ConnectionId).SendAsync("ReceiveMessage", 
+                    chatMessage.Id,
+                    sender.Id,
+                    $"{sender.FirstName} {sender.LastName}",
+                    sender.AvatarPath,
+                    message,
+                    chatMessage.SentAt,
+                    chatMessage.MessageType,
+                    null, // filePath
+                    null, // fileName
+                    null  // mimeType
+                );
+            }
+            
+            // Також відправляємо повідомлення відправнику для відображення у його чаті
+            await Clients.Caller.SendAsync("MessageSent", 
+                chatMessage.Id,
+                receiverId,
+                message,
+                chatMessage.SentAt,
+                chatMessage.MessageType,
+                null, // filePath
+                null, // fileName
+                null  // mimeType
+            );
+        }
+        
+        public async Task DeleteMessage(int messageId)
+        {
+            var senderId = Context.User?.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+            
+            if (string.IsNullOrEmpty(senderId))
+                return;
+                
+            var message = await _context.ChatMessages.FindAsync(messageId);
+            if (message == null || message.SenderId != senderId)
+                return;
+                
+            message.IsDeleted = true;
+            await _context.SaveChangesAsync();
+            
+            // Повідомляємо отримувача про видалення повідомлення, якщо він онлайн
+            if (_connections.TryGetValue(message.ReceiverId, out var receiverConnection))
+            {
+                await Clients.Client(receiverConnection.ConnectionId).SendAsync("MessageDeleted", messageId);
+            }
+            
+            // Також повідомляємо відправника
+            await Clients.Caller.SendAsync("MessageDeleted", messageId);
+        }
+        
+        public async Task EditMessage(int messageId, string newContent)
+        {
+            var senderId = Context.User?.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+            
+            if (string.IsNullOrEmpty(senderId))
+                return;
+                
+            var message = await _context.ChatMessages.FindAsync(messageId);
+            if (message == null || message.SenderId != senderId || message.MessageType != "text")
+                return;
+                
+            message.Content = newContent;
+            message.IsEdited = true;
+            message.EditedAt = DateTime.Now;
+            await _context.SaveChangesAsync();
+            
+            // Повідомляємо отримувача про редагування повідомлення, якщо він онлайн
+            if (_connections.TryGetValue(message.ReceiverId, out var receiverConnection))
+            {
+                await Clients.Client(receiverConnection.ConnectionId).SendAsync("MessageEdited", messageId, newContent, message.EditedAt);
+            }
+            
+            // Також повідомляємо відправника
+            await Clients.Caller.SendAsync("MessageEdited", messageId, newContent, message.EditedAt);
+        }
+        
+        public async Task MarkMessageAsRead(int messageId)
+        {
+            var message = await _context.ChatMessages.FindAsync(messageId);
+            if (message != null)
+            {
+                message.IsRead = true;
+                await _context.SaveChangesAsync();
+                
+                // Повідомляємо відправника, що його повідомлення прочитане
+                if (_connections.TryGetValue(message.SenderId, out var senderConnection))
+                {
+                    await Clients.Client(senderConnection.ConnectionId).SendAsync("MessageRead", messageId);
+                }
+            }
+        }
+        
+        public async Task SendTypingIndicator(string receiverId, bool isTyping)
+        {
+            var senderId = Context.User?.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+            
+            if (string.IsNullOrEmpty(senderId) || string.IsNullOrEmpty(receiverId))
+                return;
+                
+            if (_connections.TryGetValue(receiverId, out var receiverConnection))
+            {
+                var sender = await _context.Users
+                    .Where(u => u.Id == senderId)
+                    .Select(u => new { u.FirstName, u.LastName })
+                    .FirstOrDefaultAsync();
+                    
+                await Clients.Client(receiverConnection.ConnectionId).SendAsync(
+                    "UserTyping", 
+                    senderId, 
+                    $"{sender.FirstName} {sender.LastName}", 
+                    isTyping);
+            }
+        }
+    }
+}
+
+
+
+
+
+
+@model IEnumerable<ChatMessage>
+@{
+    ViewData["Title"] = $"Чат з {ViewBag.ReceiverName}";
+    var currentUserId = ViewBag.CurrentUserId;
+    var receiverId = ViewBag.ReceiverId;
+    var isReceiverOnline = ViewBag.IsOnline;
+    var lastOnline = ViewBag.LastOnline;
+}
+
+<div class="container mt-4">
+    <div class="row">
+        <div class="col-md-12">
+            <div class="card shadow">
+                <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
+                    <div class="d-flex align-items-center">
+                        @if (!string.IsNullOrEmpty(ViewBag.ReceiverAvatar))
+                        {
+                            <img src="@Url.Content(ViewBag.ReceiverAvatar)" class="rounded-circle me-2" width="40" height="40" alt="@ViewBag.ReceiverName">
+                        }
+                        else
+                        {
+                            <div class="user-avatar me-2" style="width: 40px; height: 40px; background-color: #2e51a2; border-radius: 50%; display: flex; align-items: center; justify-content: center; color: white;">
+                                <span>@(ViewBag.ReceiverName.Substring(0, 1))</span>
+                            </div>
+                        }
+                        <div>
+                            <h5 class="mb-0">@ViewBag.ReceiverName</h5>
+                            <div class="small">
+                                <span id="status-indicator" class="@(isReceiverOnline ? "text-success" : "text-secondary")">
+                                    <i class="fas fa-circle" style="font-size: 10px;"></i>
+                                    <span id="status-text">@(isReceiverOnline ? "Онлайн" : "Офлайн")</span>
+                                </span>
+                                <span id="last-seen" class="ms-2">
+                                    @(isReceiverOnline ? "Зараз на сайті" : $"Був(ла) {lastOnline.ToString("dd.MM.yyyy HH:mm")}")
+                                </span>
+                            </div>
+                        </div>
+                        <span id="typing-indicator" class="ms-2 small d-none">набирає повідомлення...</span>
+                    </div>
+                    <a asp-controller="Chat" asp-action="Index" class="btn btn-light btn-sm">
+                        <i class="fas fa-arrow-left me-1"></i> Назад до списку
+                    </a>
+                </div>
+                <div class="card-body">
+                    <div id="chat-messages" class="chat-messages overflow-auto mb-3" style="height: 400px;">
+                        @foreach (var message in Model)
+                        {
+                            bool isCurrentUserMessage = message.SenderId == currentUserId;
+                            <div class="message @(isCurrentUserMessage ? "sender-message text-end" : "receiver-message")" id="message-@message.Id">
+                                <div class="message-bubble @(isCurrentUserMessage ? "sender" : "receiver") p-3 mb-2 d-inline-block rounded" style="max-width: 75%; background-color: @(isCurrentUserMessage ? "#dcf8c6" : "#f1f0f0"); color: #333;">
+                                    @if (message.MessageType == "text")
+                                    {
+                                        <div class="message-text" id="message-content-@message.Id">@message.Content</div>
+                                    }
+                                    else if (message.MessageType == "file" && message.MimeType.StartsWith("image/"))
+                                    {
+                                        <div class="text-center mb-2">
+                                            <img src="@message.FilePath" alt="@message.FileName" class="img-fluid rounded" style="max-height: 200px;">
+                                        </div>
+                                        <div class="d-flex justify-content-between align-items-center">
+                                            <span class="text-truncate">@message.FileName</span>
+                                            <a href="@message.FilePath" download="@message.FileName" class="btn btn-sm btn-outline-primary">
+                                                <i class="fas fa-download"></i>
+                                            </a>
+                                        </div>
+                                    }
+                                    else if (message.MessageType == "voice")
+                                    {
+                                        <div class="audio-message">
+                                            <audio controls class="w-100">
+                                                <source src="@message.FilePath" type="@message.MimeType">
+                                                Ваш браузер не підтримує аудіо елемент.
+                                            </audio>
+                                        </div>
+                                    }
+                                    else if (message.MessageType == "file")
+                                    {
+                                        <div class="file-message d-flex justify-content-between align-items-center">
+                                            <div class="file-info">
+                                                <i class="fas fa-file me-2"></i>
+                                                <span class="file-name text-truncate">@message.FileName</span>
+                                            </div>
+                                            <a href="@message.FilePath" download="@message.FileName" class="btn btn-sm btn-outline-primary ms-2">
+                                                <i class="fas fa-download"></i>
+                                            </a>
+                                        </div>
+                                    }
+                                    <div class="message-time text-muted small">
+                                        @message.SentAt.ToString("HH:mm")
+                                        @if (message.IsEdited)
+                                        {
+                                            <span class="ms-1">(ред.)</span>
+                                        }
+                                        @if (isCurrentUserMessage)
+                                        {
+                                            <i class="fas @(message.IsRead ? "fa-check-double" : "fa-check") ms-1" data-message-id="@message.Id"></i>
+                                        }
+                                    </div>
+                                    @if (isCurrentUserMessage && message.MessageType == "text")
+                                    {
+                                        <div class="message-actions mt-1 d-none">
+                                            <button class="btn btn-sm btn-link p-0 copy-message" data-message-id="@message.Id" title="Копіювати">
+                                                <i class="fas fa-copy"></i>
+                                            </button>
+                                            <button class="btn btn-sm btn-link p-0 ms-2 edit-message" data-message-id="@message.Id" title="Редагувати">
+                                                <i class="fas fa-edit"></i>
+                                            </button>
+                                            <button class="btn btn-sm btn-link p-0 ms-2 delete-message" data-message-id="@message.Id" title="Видалити">
+                                                <i class="fas fa-trash"></i>
+                                            </button>
+                                        </div>
+                                    }
+                                </div>
+                            </div>
+                        }
+                    </div>
+                    
+                    <!-- Форма редагування повідомлення -->
+                    <div id="edit-message-form" class="d-none mb-3">
+                        <div class="input-group">
+                            <input type="text" id="edit-message-text" class="form-control" placeholder="Редагувати повідомлення...">
+                            <input type="hidden" id="edit-message-id">
+                            <button id="save-edited-message" class="btn btn-success">
+                                <i class="fas fa-check"></i>
+                            </button>
+                            <button id="cancel-edit" class="btn btn-secondary">
+                                <i class="fas fa-times"></i>
+                            </button>
+                        </div>
+                    </div>
+                    
+                    <div class="message-input border-top pt-3">
+                        <div class="input-group mb-2">
+                            <input type="text" id="message-text" class="form-control" placeholder="Введіть повідомлення..." autocomplete="off">
+                            <button id="send-message" class="btn btn-primary">
+                                <i class="fas fa-paper-plane"></i>
+                            </button>
+                        </div>
+                        <div class="d-flex">
+                            <div class="btn-group">
+                                <label for="file-upload" class="btn btn-outline-secondary" title="Прикріпити файл">
+                                    <i class="fas fa-paperclip"></i>
+                                    <input type="file" id="file-upload" style="display: none;">
+                                </label>
+                                <button id="voice-record" class="btn btn-outline-secondary" title="Записати голосове повідомлення">
+                                    <i class="fas fa-microphone"></i>
+                                </button>
+                            </div>
+                            <div id="recording-controls" class="d-none ms-2 flex-grow-1">
+                                <div class="d-flex align-items-center">
+                                    <div class="recording-indicator me-2">
+                                        <i class="fas fa-circle text-danger pulse"></i> Запис...
+                                    </div>
+                                    <span id="recording-time">00:00</span>
+                                    <div class="ms-auto">
+                                        <button id="stop-recording" class="btn btn-sm btn-danger">
+                                            <i class="fas fa-stop"></i> Зупинити
+                                        </button>
+                                        <button id="cancel-recording" class="btn btn-sm btn-secondary ms-1">
+                                            <i class="fas fa-times"></i> Скасувати
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/microsoft-signalr/6.0.6/signalr.min.js"></script>
+    <script>
+        $(function() {
+            const receiverId = '@receiverId';
+            const currentUserId = '@currentUserId';
+            const chatMessages = document.getElementById('chat-messages');
+            let mediaRecorder;
+            let audioChunks = [];
+            let typingTimeout;
+            let isEditing = false;
+
+            // Додаємо CSS для індикатора запису
+            const style = document.createElement('style');
+            style.textContent = `
+                
+                .pulse {
+                    animation: pulse 1s infinite;
+                }
+                .message-bubble:hover .message-actions {
+                    display: block !important;
+                }
+            `;
+            document.head.appendChild(style);
+
+            // Прокручуємо до останнього повідомлення
+            chatMessages.scrollTop = chatMessages.scrollHeight;
+
+            const connection = new signalR.HubConnectionBuilder()
+                .withUrl("/chatHub")
+                .withAutomaticReconnect()
+                .build();
+
+            // Обробка помилок підключення
+            connection.onclose(async (error) => {
+                console.log("Connection closed due to error: " + error);
+                // Спробуємо переконектитись через 5 секунд
+                await new Promise(resolve => setTimeout(resolve, 5000));
+                await startConnection();
+            });
+
+            // Отримання нового повідомлення
+            connection.on("ReceiveMessage", function(messageId, senderId, senderName, senderAvatar, message, sentAt, messageType, filePath, fileName, mimeType) {
+                if (senderId === receiverId) {
+                    appendMessage(messageId, message, false, new Date(sentAt), messageType, filePath, fileName, mimeType);
+
+                    // Позначаємо повідомлення як прочитане
+                    connection.invoke("MarkMessageAsRead", messageId).catch(function(err) {
+                        console.error(err);
+                    });
+
+                    // Додаємо звуковий сигнал при отриманні повідомлення
+                    playMessageSound();
+                }
+            });
+
+            // Повідомлення відправлене
+            connection.on("MessageSent", function(messageId, receiverId, message, sentAt, messageType, filePath, fileName, mimeType) {
+                appendMessage(messageId, message, true, new Date(sentAt), messageType, filePath, fileName, mimeType);
+            });
+
+            // Повідомлення прочитане
+            connection.on("MessageRead", function(messageId) {
+                $(`i[data-message-id="${messageId}"]`).removeClass('fa-check').addClass('fa-check-double');
+            });
+
+            // Обробник індикатора набору повідомлення
+            connection.on("UserTyping", function(userId, userName, isTyping) {
+                if (userId === receiverId) {
+                    const typingIndicator = $("#typing-indicator");
+                    if (isTyping) {
+                        typingIndicator.removeClass('d-none').text(`${userName} набирає повідомлення...`);
+                    } else {
+                        typingIndicator.addClass('d-none');
+                    }
+                }
+            });
+
+            // Обробник видалення повідомлення
+            connection.on("MessageDeleted", function(messageId) {
+                $(`#message-${messageId}`).fadeOut(300, function() {
+                    $(this).remove();
+                });
+            });
+
+            // Обробник редагування повідомлення
+            connection.on("MessageEdited", function(messageId, newContent, editedAt) {
+                $(`#message-content-${messageId}`).text(newContent);
+                
+                // Додаємо позначку про редагування, якщо її ще немає
+                const timeElement = $(`#message-content-${messageId}`).siblings('.message-time');
+                if (!timeElement.find('span.edited-mark').length) {
+                    timeElement.contents().first().after(' <span class="edited-mark">(ред.)</span>');
+                }
+            });
+
+            // Оновлення статусу користувача
+            connection.on("UserStatusChanged", function(userId, isOnline, lastSeen) {
+                if (userId === receiverId) {
+                    const statusIndicator = $("#status-indicator");
+                    const statusText = $("#status-text");
+                    const lastSeenElement = $("#last-seen");
+                    
+                    if (isOnline) {
+                        statusIndicator.removeClass("text-secondary").addClass("text-success");
+                        statusText.text("Онлайн");
+                        lastSeenElement.text("Зараз на сайті");
+                    } else {
+                        statusIndicator.removeClass("text-success").addClass("text-secondary");
+                        statusText.text("Офлайн");
+                        
+                        // Форматуємо дату останнього перебування онлайн
+                        const lastSeenDate = new Date(lastSeen);
+                        const formattedDate = `${lastSeenDate.getDate().toString().padStart(2, '0')}.${(lastSeenDate.getMonth() + 1).toString().padStart(2, '0')}.${lastSeenDate.getFullYear()} ${lastSeenDate.getHours().toString().padStart(2, '0')}:${lastSeenDate.getMinutes().toString().padStart(2, '0')}`;
+                        
+                        lastSeenElement.text(`Був(ла) ${formattedDate}`);
+                    }
+                }
+            });
+
+            // Функція для звукового сигналу
+            function playMessageSound() {
+                const audio = new Audio('/sounds/message.mp3');
+                audio.play().catch(e => console.error("Error playing sound:", e));
+            }
+
+            // Функція для додавання повідомлення до чату
+            function appendMessage(messageId, message, isSender, time, messageType, filePath, fileName, mimeType) {
+                const messageDiv = document.createElement('div');
+                messageDiv.className = `message ${isSender ? 'sender-message text-end' : 'receiver-message'}`;
+                messageDiv.id = `message-${messageId}`;
+
+                const formattedTime = `${time.getHours().toString().padStart(2, '0')}:${time.getMinutes().toString().padStart(2, '0')}`;
+                
+                let messageContent = '';
+                
+                if (messageType === 'text') {
+                    messageContent = `
+                        <div class="message-text" id="message-content-${messageId}">${message}</div>
+                    `;
+                } else if (messageType === 'file' && mimeType && mimeType.startsWith('image/')) {
+                    messageContent = `
+                        <div class="text-center mb-2">
+                            <img src="${filePath}" alt="${fileName}" class="img-fluid rounded" style="max-height: 200px;">
+                        </div>
+                        <div class="d-flex justify-content-between align-items-center">
+                            <span class="text-truncate">${fileName}</span>
+                            <a href="${filePath}" download="${fileName}" class="btn btn-sm btn-outline-primary">
+                                <i class="fas fa-download"></i>
+                            </a>
+                        </div>
+                    `;
+                } else if (messageType === 'voice') {
+                    messageContent = `
+                        <div class="audio-message">
+                            <audio controls class="w-100">
+                                <source src="${filePath}" type="${mimeType}">
+                                Ваш браузер не підтримує аудіо елемент.
+                            </audio>
+                        </div>
+                    `;
+                } else if (messageType === 'file') {
+                    messageContent = `
+                        <div class="file-message d-flex justify-content-between align-items-center">
+                            <div class="file-info">
+                                <i class="fas fa-file me-2"></i>
+                                <span class="file-name text-truncate">${fileName}</span>
+                            </div>
+                            <a href="${filePath}" download="${fileName}" class="btn btn-sm btn-outline-primary ms-2">
+                                <i class="fas fa-download"></i>
+                            </a>
+                        </div>
+                    `;
+                }
+
+                let messageActions = '';
+                if (isSender && messageType === 'text') {
+                    messageActions = `
+                        <div class="message-actions mt-1 d-none">
+                            <button class="btn btn-sm btn-link p-0 copy-message" data-message-id="${messageId}" title="Копіювати">
+                                <i class="fas fa-copy"></i>
+                            </button>
+                            <button class="btn btn-sm btn-link p-0 ms-2 edit-message" data-message-id="${messageId}" title="Редагувати">
+                                <i class="fas fa-edit"></i>
+                            </button>
+                            <button class="btn btn-sm btn-link p-0 ms-2 delete-message" data-message-id="${messageId}" title="Видалити">
+                                <i class="fas fa-trash"></i>
+                            </button>
+                        </div>
+                    `;
+                }
+
+                messageDiv.innerHTML = `
+                    <div class="message-bubble ${isSender ? 'sender' : 'receiver'} p-3 mb-2 d-inline-block rounded" style="max-width: 75%; background-color: ${isSender ? '#dcf8c6' : '#f1f0f0'}; color: #333;">
+                        ${messageContent}
+                        <div class="message-time text-muted small">
+                            ${formattedTime}
+                            ${isSender ? `<i class="fas fa-check ms-1" data-message-id="${messageId}"></i>` : ''}
+                        </div>
+                        ${messageActions}
+                    </div>
+                `;
+
+                chatMessages.appendChild(messageDiv);
+                chatMessages.scrollTop = chatMessages.scrollHeight;
+                
+                // Додаємо обробники подій для нових повідомлень
+                if (isSender && messageType === 'text') {
+                    $(`#message-${messageId} .copy-message`).click(function() {
+                        copyMessageToClipboard(messageId);
+                    });
+                    
+                    $(`#message-${messageId} .edit-message`).click(function() {
+                        startEditingMessage(messageId);
+                    });
+                    
+                    $(`#message-${messageId} .delete-message`).click(function() {
+                        deleteMessage(messageId);
+                    });
+                }
+            }
+
+            // Функція копіювання повідомлення
+            function copyMessageToClipboard(messageId) {
+                const messageText = $(`#message-content-${messageId}`).text();
+                navigator.clipboard.writeText(messageText).then(
+                    function() {
+                        showToast('Повідомлення скопійовано в буфер обміну');
+                    },
+                    function(err) {
+                        console.error('Помилка копіювання: ', err);
+                    }
+                );
+            }
+            
+            // Функція для початку редагування повідомлення
+            function startEditingMessage(messageId) {
+                if (isEditing) return;
+                
+                isEditing = true;
+                const messageText = $(`#message-content-${messageId}`).text();
+                $('#edit-message-text').val(messageText);
+                $('#edit-message-id').val(messageId);
+                $('#edit-message-form').removeClass('d-none');
+                $('#message-text').prop('disabled', true);
+                $('#send-message').prop('disabled', true);
+                $('#file-upload').prop('disabled', true);
+                $('#voice-record').prop('disabled', true);
+                
+                $('#edit-message-text').focus();
+            }
+            
+            // Функція для збереження відредагованого повідомлення
+            function saveEditedMessage() {
+                const messageId = parseInt($('#edit-message-id').val());
+                const newContent = $('#edit-message-text').val().trim();
+                
+                if (newContent) {
+                    connection.invoke("EditMessage", messageId, newContent)
+                        .catch(function(err) {
+                            console.error("Error editing message:", err);
+                            showToast('Помилка редагування повідомлення', true);
+                        });
+                }
+                
+                cancelEditing();
+            }
+            
+            // Функція для скасування редагування
+            function cancelEditing() {
+                $('#edit-message-form').addClass('d-none');
+                $('#message-text').prop('disabled', false);
+                $('#send-message').prop('disabled', false);
+                $('#file-upload').prop('disabled', false);
+                $('#voice-record').prop('disabled', false);
+                isEditing = false;
+            }
+            
+            // Функція для видалення повідомлення
+            function deleteMessage(messageId) {
+                if (confirm('Ви впевнені, що хочете видалити це повідомлення?')) {
+                    connection.invoke("DeleteMessage", messageId)
+                        .catch(function(err) {
+                            console.error("Error deleting message:", err);
+                            showToast('Помилка видалення повідомлення', true);
+                        });
+                }
+            }
+            
+            // Функція для показу спливаючого повідомлення
+            function showToast(message, isError = false) {
+                const toastDiv = $('<div>')
+                    .addClass(`toast align-items-center ${isError ? 'bg-danger' : 'bg-success'} text-white border-0`)
+                    .attr('role', 'alert')
+                    .attr('aria-live', 'assertive')
+                    .attr('aria-atomic', 'true');
+                    
+                const toastBody = $('<div>')
+                    .addClass('toast-body d-flex')
+                    .html(`
+                        <div class="me-auto">${message}</div>
+                        <button type="button" class="btn-close btn-close-white ms-2" data-bs-dismiss="toast" aria-label="Close"></button>
+                    `);
+                    
+                toastDiv.append(toastBody);
+                
+                if (!$('#toast-container').length) {
+                    $('body').append('<div id="toast-container" class="toast-container position-fixed bottom-0 end-0 p-3"></div>');
+                }
+                
+                $('#toast-container').append(toastDiv);
+                
+                const toast = new bootstrap.Toast(toastDiv[0], {
+                    delay: 3000
+                });
+                toast.show();
+                
+                toastDiv.on('hidden.bs.toast', function() {
+                    $(this).remove();
+                });
+            }
+
+            // Обробник відправки повідомлення
+            $("#send-message").click(function() {
+                sendMessage();
+            });
+
+            // Відправка повідомлення при натисканні Enter
+            $("#message-text").keypress(function(e) {
+                if (e.which === 13) {
+                    sendMessage();
+                    return false;
+                }
+            });
+
+            // Надсилаємо індикатор набору тексту
+            $("#message-text").on('input', function() {
+                // Очищаємо попередній таймаут, якщо він є
+                if (typingTimeout) {
+                    clearTimeout(typingTimeout);
+                }
+                
+                // Надсилаємо статус "друкує"
+                connection.invoke("SendTypingIndicator", receiverId, true)
+                    .catch(function(err) {
+                        console.error("Error sending typing indicator:", err);
+                    });
+                
+                // Встановлюємо таймаут для скасування статусу "друкує" через 2 секунди бездіяльності
+                typingTimeout = setTimeout(function() {
+                    connection.invoke("SendTypingIndicator", receiverId, false)
+                        .catch(function(err) {
+                            console.error("Error sending typing indicator:", err);
+                        });
+                }, 2000);
+            });
+
+            // Обробник події для копіювання повідомлень
+            $(document).on('click', '.copy-message', function() {
+                const messageId = $(this).data('message-id');
+                copyMessageToClipboard(messageId);
+            });
+            
+            // Обробник події для редагування повідомлень
+            $(document).on('click', '.edit-message', function() {
+                const messageId = $(this).data('message-id');
+                startEditingMessage(messageId);
+            });
+            
+            // Обробник події для видалення повідомлень
+            $(document).on('click', '.delete-message', function() {
+                const messageId = $(this).data('message-id');
+                deleteMessage(messageId);
+            });
+            
+            // Обробники для форми редагування повідомлення
+            $('#save-edited-message').click(saveEditedMessage);
+            $('#cancel-edit').click(cancelEditing);
+            
+            // Обробка завантаження файлів
+            $('#file-upload').change(function() {
+                const file = this.files[0];
+                if (!file) return;
+                
+                const formData = new FormData();
+                formData.append('file', file);
+                formData.append('receiverId', receiverId);
+                
+                $.ajax({
+                    url: '/Chat/UploadFile',
+                    type: 'POST',
+                    data: formData,
+                    processData: false,
+                    contentType: false,
+                    success: function(response) {
+                        // Очищаємо поле вибору файлу для наступного завантаження
+                        $('#file-upload').val('');
+                    },
+                    error: function(error) {
+                        console.error('Error uploading file:', error);
+                        showToast('Помилка завантаження файлу', true);
+                        // Очищаємо поле вибору файлу
+                        $('#file-upload').val('');
+                    }
+                });
+            });
+            
+            // Обробники запису голосового повідомлення
+            $('#voice-record').click(function() {
+                startVoiceRecording();
+            });
+            
+            $('#stop-recording').click(function() {
+                stopVoiceRecording();
+            });
+            
+            $('#cancel-recording').click(function() {
+                cancelVoiceRecording();
+            });
+            
+            // Функція для початку запису голосового повідомлення
+            function startVoiceRecording() {
+                if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
+                    navigator.mediaDevices.getUserMedia({ audio: true })
+                        .then(function(stream) {
+                            mediaRecorder = new MediaRecorder(stream);
+                            audioChunks = [];
+                            
+                            mediaRecorder.ondataavailable = function(e) {
+                                audioChunks.push(e.data);
+                            };
+                            
+                            mediaRecorder.onstop = function() {
+                                // Закриваємо потік після зупинки запису
+                                stream.getTracks().forEach(track => track.stop());
+                            };
+                            
+                            // Починаємо запис
+                            mediaRecorder.start();
+                            
+                            // Показуємо елементи керування записом
+                            $('#recording-controls').removeClass('d-none');
+                            $('#message-text').prop('disabled', true);
+                            $('#send-message').prop('disabled', true);
+                            $('#file-upload').prop('disabled', true);
+                            $('#voice-record').prop('disabled', true);
+                            
+                            // Запускаємо таймер
+                            let seconds = 0;
+                            recordingTimer = setInterval(function() {
+                                seconds++;
+                                const minutes = Math.floor(seconds / 60);
+                                const remainingSeconds = seconds % 60;
+                                $('#recording-time').text(
+                                    `${minutes.toString().padStart(2, '0')}:${remainingSeconds.toString().padStart(2, '0')}`
+                                );
+                                
+                                // Обмежуємо час запису до 2 хвилин
+                                if (seconds >= 120) {
+                                    stopVoiceRecording();
+                                }
+                            }, 1000);
+                        })
+                        .catch(function(err) {
+                            console.error('Error accessing microphone:', err);
+                            showToast('Не вдалося отримати доступ до мікрофона', true);
+                        });
+                } else {
+                    showToast('Ваш браузер не підтримує запис аудіо', true);
+                }
+            }
+            
+            // Функція для зупинки запису голосового повідомлення
+            function stopVoiceRecording() {
+                if (!mediaRecorder) return;
+                
+                // Зупиняємо запис
+                mediaRecorder.stop();
+                
+                // Зупиняємо таймер
+                clearInterval(recordingTimer);
+                
+                // Створюємо аудіо-файл з фрагментів
+                const audioBlob = new Blob(audioChunks, { type: 'audio/webm' });
+                
+                // Створюємо форму для відправки файлу
+                const formData = new FormData();
+                formData.append('file', audioBlob, 'voice-message.webm');
+                formData.append('receiverId', receiverId);
+                
+                // Відправляємо на сервер
+                $.ajax({
+                    url: '/Chat/UploadFile',
+                    type: 'POST',
+                    data: formData,
+                    processData: false,
+                    contentType: false,
+                    success: function(response) {
+                        // Приховуємо елементи керування записом
+                        resetRecordingUI();
+                    },
+                    error: function(error) {
+                        console.error('Error uploading voice message:', error);
+                        showToast('Помилка відправки голосового повідомлення', true);
+                        resetRecordingUI();
+                    }
+                });
+            }
+            
+            // Функція для скасування запису голосового повідомлення
+            function cancelVoiceRecording() {
+                if (!mediaRecorder) return;
+                
+                // Зупиняємо запис без збереження
+                mediaRecorder.stop();
+                
+                // Зупиняємо таймер
+                clearInterval(recordingTimer);
+                
+                // Приховуємо елементи керування записом
+                resetRecordingUI();
+            }
+            
+            // Функція для скидання інтерфейсу запису
+            function resetRecordingUI() {
+                $('#recording-controls').addClass('d-none');
+                $('#recording-time').text('00:00');
+                $('#message-text').prop('disabled', false);
+                $('#send-message').prop('disabled', false);
+                $('#file-upload').prop('disabled', false);
+                $('#voice-record').prop('disabled', false);
+            }
+
+            // Функція відправки повідомлення
+            function sendMessage() {
+                const message = $("#message-text").val().trim();
+                if (message) {
+                    // Зберігаємо повідомлення в змінній, щоб показати його навіть якщо є тимчасові проблеми зі з'єднанням
+                    const currentMessage = message;
+                    $("#message-text").val('').focus();
+
+                    // Очищуємо індикатор набору тексту
+                    if (typingTimeout) {
+                        clearTimeout(typingTimeout);
+                        connection.invoke("SendTypingIndicator", receiverId, false)
+                            .catch(function(err) {
+                                console.error("Error clearing typing indicator:", err);
+                            });
+                    }
+
+                    connection.invoke("SendPrivateMessage", receiverId, currentMessage)
+                        .catch(function(err) {
+                            console.error("Error sending message:", err);
+                            // Показуємо повідомлення про помилку
+                            appendErrorMessage("Не вдалося відправити повідомлення. Спробуйте знову.");
+                        });
+                }
+            }
+
+            // Функція для показу повідомлення про помилку
+            function appendErrorMessage(errorText) {
+                const errorDiv = document.createElement('div');
+                errorDiv.className = "alert alert-danger p-2 mb-2 text-center small";
+                errorDiv.textContent = errorText;
+
+                chatMessages.appendChild(errorDiv);
+                chatMessages.scrollTop = chatMessages.scrollHeight;
+
+                // Автоматично приховуємо повідомлення про помилку через 5 секунд
+                setTimeout(() => {
+                    errorDiv.remove();
+                }, 5000);
+            }
+
+            // Підключення до хабу
+            async function startConnection() {
+                try {
+                    await connection.start();
+                    console.log("SignalR підключено.");
+                    
+                    // Оновлюємо статус користувача кожні 30 секунд
+                    setInterval(function() {
+                        $.ajax({
+                            url: `/Chat/GetUserStatus?userId=${receiverId}`,
+                            type: 'GET',
+                            success: function(data) {
+                                const statusIndicator = $("#status-indicator");
+                                const statusText = $("#status-text");
+                                const lastSeenElement = $("#last-seen");
+                                
+                                if (data.isOnline) {
+                                    statusIndicator.removeClass("text-secondary").addClass("text-success");
+                                    statusText.text("Онлайн");
+                                    lastSeenElement.text("Зараз на сайті");
+                                } else {
+                                    statusIndicator.removeClass("text-success").addClass("text-secondary");
+                                    statusText.text("Офлайн");
+                                    
+                                    // Форматуємо дату останнього перебування онлайн
+                                    const lastSeenDate = new Date(data.lastOnline);
+                                    const formattedDate = `${lastSeenDate.getDate().toString().padStart(2, '0')}.${(lastSeenDate.getMonth() + 1).toString().padStart(2, '0')}.${lastSeenDate.getFullYear()} ${lastSeenDate.getHours().toString().padStart(2, '0')}:${lastSeenDate.getMinutes().toString().padStart(2, '0')}`;
+                                    
+                                    lastSeenElement.text(`Був(ла) ${formattedDate}`);
+                                }
+                            }
+                        });
+                    }, 30000);
+                    
+                } catch (err) {
+                    console.error("SignalR Connection Error:", err);
+                    // Показуємо повідомлення про помилку підключення
+                    appendErrorMessage("Проблема з підключенням до чату. Пробуємо відновити з'єднання...");
+                    setTimeout(startConnection, 5000);
+                }
+            }
+
+            startConnection();
+        });
+    </script>
+}
+
+
+
+
+
+
+@model IEnumerable<ApplicationUser>
+@{
+    ViewData["Title"] = "Чат між ветеранами";
+}
+
+<div class="container mt-4">
+    <div class="row">
+        <div class="col-md-12 mb-4">
+            <div class="card shadow">
+                <div class="card-header bg-primary text-white">
+                    <h5 class="mb-0"><i class="fas fa-users me-2"></i>Ветерани</h5>
+                </div>
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table table-hover">
+                            <thead>
+                            <tr>
+                                <th>Користувач</th>
+                                <th>Статус</th>
+                                <th>Остання активність</th>
+                                <th>Дії</th>
+                            </tr>
+                            </thead>
+                            <tbody>
+                            @foreach (var veteran in Model)
+                            {
+                                <tr>
+                                    <td>
+                                        <div class="d-flex align-items-center">
+                                            @if (!string.IsNullOrEmpty(veteran.AvatarPath))
+                                            {
+                                                <img src="@Url.Content(veteran.AvatarPath)" class="rounded-circle me-2" width="40" height="40" alt="@veteran.FirstName">
+                                            }
+                                            else
+                                            {
+                                                <div class="user-avatar me-2" style="width: 40px; height: 40px; background-color: #2e51a2; display: flex; align-items: center; justify-content: center; border-radius: 50%;">
+                                                    <span class="text-white">@veteran.FirstName[0]</span>
+                                                </div>
+                                            }
+                                            <div>
+                                                <strong>@veteran.FirstName @veteran.LastName</strong>
+                                            </div>
+                                        </div>
+                                    </td>
+                                    <td>
+                                            <span id="status-@veteran.Id" class="badge @(veteran.IsOnline ? "bg-success" : "bg-secondary")">
+                                                @(veteran.IsOnline ? "Онлайн" : "Офлайн")
+                                            </span>
+                                    </td>
+                                    <td id="last-seen-@veteran.Id">
+                                        @(veteran.IsOnline ? "Зараз на сайті" : $"Був(ла) {veteran.LastOnline.ToString("dd.MM.yyyy HH:mm")}")
+                                    </td>
+                                    <td>
+                                        <a asp-controller="Chat" asp-action="Conversation" asp-route-userId="@veteran.Id" class="btn btn-primary btn-sm">
+                                            <i class="fas fa-comment me-1"></i> Написати
+                                        </a>
+                                    </td>
+                                </tr>
+                            }
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/microsoft-signalr/6.0.6/signalr.min.js"></script>
+    <script>
+        $(function() {
+            const connection = new signalR.HubConnectionBuilder()
+                .withUrl("/chatHub")
+                .withAutomaticReconnect()
+                .build();
+
+            connection.on("UserStatusChanged", function (userId, isOnline, lastSeen) {
+                const statusElement = $(`#status-${userId}`);
+                const lastSeenElement = $(`#last-seen-${userId}`);
+
+                if (statusElement.length) {
+                    if (isOnline) {
+                        statusElement.removeClass("bg-secondary").addClass("bg-success");
+                        statusElement.text("Онлайн");
+                        lastSeenElement.text("Зараз на сайті");
+                    } else {
+                        statusElement.removeClass("bg-success").addClass("bg-secondary");
+                        statusElement.text("Офлайн");
+
+                        // Форматуємо дату останнього перебування онлайн
+                        const lastSeenDate = new Date(lastSeen);
+                        const formattedDate = `${lastSeenDate.getDate().toString().padStart(2, '0')}.${(lastSeenDate.getMonth() + 1).toString().padStart(2, '0')}.${lastSeenDate.getFullYear()} ${lastSeenDate.getHours().toString().padStart(2, '0')}:${lastSeenDate.getMinutes().toString().padStart(2, '0')}`;
+
+                        lastSeenElement.text(`Був(ла) ${formattedDate}`);
+                    }
+                }
+            });
+
+            // Обробка помилок підключення
+            connection.onclose(async (error) => {
+                console.log("Connection closed due to error: " + error);
+                // Спробуємо переконектитись через 5 секунд
+                await new Promise(resolve => setTimeout(resolve, 5000));
+                await startConnection();
+            });
+
+            async function startConnection() {
+                try {
+                    await connection.start();
+                    console.log("SignalR підключено.");
+                } catch (err) {
+                    console.error("SignalR Connection Error:", err);
+                    setTimeout(startConnection, 5000);
+                }
+            }
+
+            startConnection();
+        });
+    </script>
+}

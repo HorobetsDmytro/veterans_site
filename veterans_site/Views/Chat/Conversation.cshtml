@@ -1,0 +1,567 @@
+@model IEnumerable<ChatMessage>
+@{
+    ViewData["Title"] = $"Чат з {ViewBag.ReceiverName}";
+    var currentUserId = ViewBag.CurrentUserId;
+    var receiverId = ViewBag.ReceiverId;
+    var isReceiverOnline = ViewBag.ReceiverIsOnline;
+    var receiverLastOnline = ViewBag.ReceiverLastOnline;
+}
+
+<div class="container mt-4">
+    <div class="row">
+        <div class="col-md-12">
+            <div class="card shadow">
+                <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
+                    <div class="d-flex align-items-center">
+                        @if (!string.IsNullOrEmpty(ViewBag.ReceiverAvatar))
+                        {
+                            <img src="@Url.Content(ViewBag.ReceiverAvatar)" class="rounded-circle me-2" width="40" height="40" alt="@ViewBag.ReceiverName">
+                        }
+                        else
+                        {
+                            <div class="user-avatar me-2" style="width: 40px; height: 40px; background-color: #2e51a2; border-radius: 50%; display: flex; align-items: center; justify-content: center; color: white;">
+                                <span>@(ViewBag.ReceiverName.Substring(0, 1))</span>
+                            </div>
+                        }
+                        <div>
+                            <h5 class="mb-0">@ViewBag.ReceiverName</h5>
+                            <div class="small user-status">
+                                <span id="status-indicator" class="badge @(isReceiverOnline ? "bg-success" : "bg-secondary")">
+                                    @(isReceiverOnline ? "Онлайн" : "Офлайн")
+                                </span>
+                                <span id="last-seen">
+                                    @(isReceiverOnline ? "Зараз на сайті" : $"Був(ла) {receiverLastOnline:dd.MM.yyyy HH:mm}")
+                                </span>
+                            </div>
+                        </div>
+                        <span id="typing-indicator" class="ms-2 small d-none">набирає повідомлення...</span>
+                    </div>
+                    <a asp-controller="Chat" asp-action="Index" class="btn btn-light btn-sm">
+                        <i class="fas fa-arrow-left me-1"></i> Назад до списку
+                    </a>
+                </div>
+                <div class="card-body">
+                    <div id="chat-messages" class="chat-messages overflow-auto mb-3" style="height: 400px;">
+                        @foreach (var message in Model)
+                        {
+                            bool isCurrentUserMessage = message.SenderId == currentUserId;
+                            <div class="message @(isCurrentUserMessage ? "sender-message text-end" : "receiver-message")" data-message-id="@message.Id">
+                                <div class="message-bubble @(isCurrentUserMessage ? "sender" : "receiver") p-3 mb-2 d-inline-block rounded" style="max-width: 75%; background-color: @(isCurrentUserMessage ? "#dcf8c6" : "#f1f0f0"); color: #333;">
+                                    @if (isCurrentUserMessage)
+                                    {
+                                        <div class="message-actions dropdown">
+                                            <button class="btn btn-sm btn-link text-muted dropdown-toggle p-0" type="button" data-bs-toggle="dropdown">
+                                                <i class="fas fa-ellipsis-v"></i>
+                                            </button>
+                                            <ul class="dropdown-menu dropdown-menu-end">
+                                                <li><button class="dropdown-item copy-message"><i class="fas fa-copy me-2"></i>Копіювати</button></li>
+                                                <li><button class="dropdown-item edit-message"><i class="fas fa-edit me-2"></i>Редагувати</button></li>
+                                                <li><button class="dropdown-item delete-message"><i class="fas fa-trash me-2"></i>Видалити</button></li>
+                                            </ul>
+                                        </div>
+                                    }
+                                    <div class="message-content">
+                                        @if (message.IsDeleted)
+                                        {
+                                            <div class="message-text text-muted fst-italic">Це повідомлення було видалено</div>
+                                        }
+                                        else
+                                        {
+                                            <div class="message-text">@message.Content</div>
+
+                                            @if (message.HasFile)
+                                            {
+                                                <div class="message-file mt-2">
+                                                    @if (message.FileType == "image")
+                                                    {
+                                                        <div class="image-preview">
+                                                            <a href="@message.FilePath" target="_blank">
+                                                                <img src="@message.FilePath" class="img-fluid rounded" style="max-height: 200px;" alt="@message.FileName">
+                                                            </a>
+                                                        </div>
+                                                    }
+                                                    else
+                                                    {
+                                                        <div class="file-attachment p-2 border rounded">
+                                                            <a href="@message.FilePath" target="_blank" class="d-flex align-items-center text-decoration-none">
+                                                                <div class="file-icon me-2">
+                                                                    @if (message.FileType == "pdf")
+                                                                    {
+                                                                        <i class="fas fa-file-pdf text-danger fa-2x"></i>
+                                                                    }
+                                                                    else if (message.FileType == "doc")
+                                                                    {
+                                                                        <i class="fas fa-file-word text-primary fa-2x"></i>
+                                                                    }
+                                                                    else if (message.FileType == "excel")
+                                                                    {
+                                                                        <i class="fas fa-file-excel text-success fa-2x"></i>
+                                                                    }
+                                                                    else
+                                                                    {
+                                                                        <i class="fas fa-file text-secondary fa-2x"></i>
+                                                                    }
+                                                                </div>
+                                                                <div class="file-info">
+                                                                    <div class="file-name">@message.FileName</div>
+                                                                </div>
+                                                            </a>
+                                                        </div>
+                                                    }
+                                                </div>
+                                            }
+                                        }
+                                    </div>
+                                    <div class="message-time text-muted small">
+                                        @message.SentAt.ToString("HH:mm")
+                                        @if (message.IsEdited)
+                                        {
+                                            <span class="edited-marker ms-1">(ред.)</span>
+                                        }
+                                        @if (isCurrentUserMessage)
+                                        {
+                                            <i class="fas @(message.IsRead ? "fa-check-double" : "fa-check") ms-1" data-message-id="@message.Id"></i>
+                                        }
+                                    </div>
+                                </div>
+                            </div>
+                        }
+                    </div>
+                    <div class="message-input border-top pt-3">
+                        <div class="input-group mb-2">
+                            <input type="text" id="message-text" class="form-control" placeholder="Введіть повідомлення..." autocomplete="off">
+                            <button id="attach-file" class="btn btn-outline-secondary" type="button">
+                                <i class="fas fa-paperclip"></i>
+                            </button>
+                            <button id="send-message" class="btn btn-primary">
+                                <i class="fas fa-paper-plane"></i>
+                            </button>
+                        </div>
+                        <div id="file-preview" class="d-none p-2 border rounded mb-2 bg-light">
+                            <div class="d-flex justify-content-between align-items-center">
+                                <div class="d-flex align-items-center">
+                                    <div id="file-icon" class="me-2"></div>
+                                    <div>
+                                        <div id="file-name"></div>
+                                        <div id="file-size" class="text-muted small"></div>
+                                    </div>
+                                </div>
+                                <button id="remove-file" class="btn btn-sm btn-link text-danger">
+                                    <i class="fas fa-times"></i>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="modal fade" id="editMessageModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Редагувати повідомлення</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <input type="hidden" id="edit-message-id">
+                <div class="mb-3">
+                    <textarea id="edit-message-text" class="form-control" rows="3"></textarea>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Скасувати</button>
+                <button type="button" id="save-edited-message" class="btn btn-primary">Зберегти</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<input type="file" id="file-input" style="display: none;">
+
+@section Scripts {
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/microsoft-signalr/6.0.6/signalr.min.js"></script>
+    <script>
+        $(function() {
+            const receiverId = '@receiverId';
+            const currentUserId = '@currentUserId';
+            const chatMessages = document.getElementById('chat-messages');
+            let fileToSend = null;
+            let editingMessageId = null;
+            const editMessageModal = new bootstrap.Modal(document.getElementById('editMessageModal'));
+
+            chatMessages.scrollTop = chatMessages.scrollHeight;
+
+            const connection = new signalR.HubConnectionBuilder()
+                .withUrl("/chatHub")
+                .withAutomaticReconnect()
+                .build();
+
+            async function startConnection() {
+                try {
+                    await connection.start();
+                    console.log("SignalR Connected.");
+                } catch (err) {
+                    console.log(err);
+                    setTimeout(startConnection, 5000);
+                }
+            }
+
+            connection.onclose(async (error) => {
+                console.log("Connection closed due to error: " + error);
+                await new Promise(resolve => setTimeout(resolve, 5000));
+                await startConnection();
+            });
+
+            connection.on("ReceiveMessage", function(messageId, senderId, senderName, senderAvatar, message, sentAt, fileUrl, fileName, fileType) {
+                if (senderId === receiverId) {
+                    appendMessage(message, false, new Date(sentAt), messageId, fileUrl, fileName, fileType);
+
+                    connection.invoke("MarkMessageAsRead", messageId).catch(function(err) {
+                        console.error(err);
+                    });
+
+                    playMessageSound();
+                }
+            });
+
+            connection.on("MessageSent", function(messageId, receiverId, message, sentAt, fileUrl, fileName, fileType) {
+                appendMessage(message, true, new Date(sentAt), messageId, fileUrl, fileName, fileType);
+            });
+
+            connection.on("MessageRead", function(messageId) {
+                $(`i[data-message-id="${messageId}"]`).removeClass('fa-check').addClass('fa-check-double');
+            });
+
+            connection.on("MessageEdited", function(messageId, newContent) {
+                const messageElement = $(`.message[data-message-id="${messageId}"]`);
+                if (messageElement.length) {
+                    messageElement.find('.message-text').text(newContent);
+
+                    if (!messageElement.find('.edited-marker').length) {
+                        messageElement.find('.message-time').append('<span class="edited-marker ms-1">(ред.)</span>');
+                    }
+                }
+            });
+
+            connection.on("MessageDeleted", function(messageId) {
+                const messageElement = $(`.message[data-message-id="${messageId}"]`);
+                if (messageElement.length) {
+                    messageElement.find('.message-text').text('Це повідомлення було видалено').addClass('text-muted fst-italic');
+                    messageElement.find('.message-file').remove();
+                    messageElement.find('.message-actions').remove();
+                }
+            });
+
+            connection.on("UserStatusChanged", function(userId, isOnline, lastSeen) {
+                if (userId === receiverId) {
+                    const statusIndicator = $('#status-indicator');
+                    const lastSeenText = $('#last-seen');
+                    
+                    if (isOnline) {
+                        statusIndicator.removeClass('bg-secondary').addClass('bg-success').text('Онлайн');
+                        lastSeenText.text('Зараз на сайті');
+                    } else {
+                        statusIndicator.removeClass('bg-success').addClass('bg-secondary').text('Офлайн');
+                        const lastSeenDate = new Date(lastSeen);
+                        lastSeenText.text(`Був(ла) ${formatLastSeen(lastSeenDate)}`);
+                    }
+                }
+            });
+
+            function formatLastSeen(date) {
+                return `${date.getDate().toString().padStart(2, '0')}.${(date.getMonth() + 1).toString().padStart(2, '0')}.${date.getFullYear()} ${date.getHours().toString().padStart(2, '0')}:${date.getMinutes().toString().padStart(2, '0')}`;
+            }
+
+            function appendMessage(message, isSender, sentAt, messageId, fileUrl, fileName, fileType) {
+                const messageDiv = document.createElement('div');
+                messageDiv.className = `message ${isSender ? 'sender-message text-end' : 'receiver-message'}`;
+                messageDiv.setAttribute('data-message-id', messageId);
+
+                const bubbleClass = isSender ? 'sender' : 'receiver';
+                const bubbleColor = isSender ? '#dcf8c6' : '#f1f0f0';
+
+                let actionsHtml = '';
+                if (isSender) {
+                    actionsHtml = `
+                        <div class="message-actions dropdown">
+                            <button class="btn btn-sm btn-link text-muted dropdown-toggle p-0" type="button" data-bs-toggle="dropdown">
+                                <i class="fas fa-ellipsis-v"></i>
+                            </button>
+                            <ul class="dropdown-menu dropdown-menu-end">
+                                <li><button class="dropdown-item copy-message"><i class="fas fa-copy me-2"></i>Копіювати</button></li>
+                                <li><button class="dropdown-item edit-message"><i class="fas fa-edit me-2"></i>Редагувати</button></li>
+                                <li><button class="dropdown-item delete-message"><i class="fas fa-trash me-2"></i>Видалити</button></li>
+                            </ul>
+                        </div>
+                    `;
+                }
+
+                let fileHtml = '';
+                if (fileUrl) {
+                    if (fileType === 'image') {
+                        fileHtml = `
+                            <div class="message-file mt-2">
+                                <div class="image-preview">
+                                    <a href="${fileUrl}" target="_blank">
+                                        <img src="${fileUrl}" class="img-fluid rounded" style="max-height: 200px;" alt="${fileName}">
+                                    </a>
+                                </div>
+                            </div>
+                        `;
+                    } else {
+                        let iconClass = 'fa-file';
+                        let iconColor = 'text-secondary';
+                        
+                        if (fileType === 'pdf') {
+                            iconClass = 'fa-file-pdf';
+                            iconColor = 'text-danger';
+                        } else if (fileType === 'doc') {
+                            iconClass = 'fa-file-word';
+                            iconColor = 'text-primary';
+                        } else if (fileType === 'excel') {
+                            iconClass = 'fa-file-excel';
+                            iconColor = 'text-success';
+                        }
+
+                        fileHtml = `
+                            <div class="message-file mt-2">
+                                <div class="file-attachment p-2 border rounded">
+                                    <a href="${fileUrl}" target="_blank" class="d-flex align-items-center text-decoration-none">
+                                        <div class="file-icon me-2">
+                                            <i class="fas ${iconClass} ${iconColor} fa-2x"></i>
+                                        </div>
+                                        <div class="file-info">
+                                            <div class="file-name">${fileName}</div>
+                                        </div>
+                                    </a>
+                                </div>
+                            </div>
+                        `;
+                    }
+                }
+
+                const formattedTime = `${sentAt.getHours().toString().padStart(2, '0')}:${sentAt.getMinutes().toString().padStart(2, '0')}`;
+                
+                messageDiv.innerHTML = `
+                    <div class="message-bubble ${bubbleClass} p-3 mb-2 d-inline-block rounded" style="max-width: 75%; background-color: ${bubbleColor}; color: #333;">
+                        ${actionsHtml}
+                        <div class="message-content">
+                            <div class="message-text">${message}</div>
+                            ${fileHtml}
+                        </div>
+                        <div class="message-time text-muted small">
+                            ${formattedTime}
+                            ${isSender ? `<i class="fas fa-check ms-1" data-message-id="${messageId}"></i>` : ''}
+                        </div>
+                    </div>
+                `;
+
+                chatMessages.appendChild(messageDiv);
+                chatMessages.scrollTop = chatMessages.scrollHeight;
+
+                if (isSender) {
+                    const copyButton = messageDiv.querySelector('.copy-message');
+                    const editButton = messageDiv.querySelector('.edit-message');
+                    const deleteButton = messageDiv.querySelector('.delete-message');
+
+                    copyButton.addEventListener('click', function() {
+                        copyMessageText(message);
+                    });
+
+                    editButton.addEventListener('click', function() {
+                        openEditModal(messageId, message);
+                    });
+
+                    deleteButton.addEventListener('click', function() {
+                        deleteMessage(messageId);
+                    });
+                }
+            }
+
+            function copyMessageText(text) {
+                navigator.clipboard.writeText(text)
+                    .then(() => {
+                        showToast('Повідомлення скопійовано в буфер обміну');
+                    })
+                    .catch(err => {
+                        console.error('Помилка при копіюванні тексту: ', err);
+                    });
+            }
+
+            function openEditModal(messageId, messageText) {
+                document.getElementById('edit-message-id').value = messageId;
+                document.getElementById('edit-message-text').value = messageText;
+                editMessageModal.show();
+            }
+
+            function deleteMessage(messageId) {
+                if (confirm('Ви впевнені, що хочете видалити це повідомлення?')) {
+                    connection.invoke("DeleteMessage", messageId).catch(function(err) {
+                        console.error(err);
+                    });
+                }
+            }
+
+            function showToast(message) {
+                const toastDiv = document.createElement('div');
+                toastDiv.className = 'position-fixed bottom-0 end-0 p-3';
+                toastDiv.style.zIndex = 5;
+                toastDiv.innerHTML = `
+                    <div class="toast show" role="alert" aria-live="assertive" aria-atomic="true">
+                        <div class="toast-header">
+                            <strong class="me-auto">Повідомлення</strong>
+                            <button type="button" class="btn-close" data-bs-dismiss="toast" aria-label="Close"></button>
+                        </div>
+                        <div class="toast-body">
+                            ${message}
+                        </div>
+                    </div>
+                `;
+                document.body.appendChild(toastDiv);
+                
+                setTimeout(() => {
+                    document.body.removeChild(toastDiv);
+                }, 3000);
+            }
+
+            $('#send-message').click(function() {
+                sendMessage();
+            });
+
+            $('#message-text').keydown(function(e) {
+                if (e.keyCode === 13) {
+                    e.preventDefault();
+                    sendMessage();
+                }
+            });
+
+            function sendMessage() {
+                const messageText = $('#message-text').val().trim();
+                if (messageText === '' && !fileToSend) return;
+
+                if (fileToSend) {
+                    connection.invoke("SendPrivateMessage", receiverId, messageText,
+                        fileToSend.fileUrl,
+                        fileToSend.fileName,
+                        fileToSend.fileType
+                    ).catch(function(err) {
+                        console.error(err);
+                    });
+                } else {
+                    connection.invoke("SendPrivateMessage", receiverId, messageText,
+                        null, null, null
+                    ).catch(function(err) {
+                        console.error(err);
+                    });
+                }
+
+                $('#message-text').val('');
+                clearFilePreview();
+            }
+
+            $('#attach-file').click(function() {
+                $('#file-input').click();
+            });
+
+            $('#file-input').change(function(e) {
+                const file = e.target.files[0];
+                if (!file) return;
+
+                if (file.size > 10 * 1024 * 1024) {
+                    alert('Файл занадто великий. Максимальний розмір 10MB.');
+                    return;
+                }
+
+                const formData = new FormData();
+                formData.append('file', file);
+
+                $.ajax({
+                    url: '/Chat/UploadFile',
+                    type: 'POST',
+                    data: formData,
+                    processData: false,
+                    contentType: false,
+                    success: function(response) {
+                        fileToSend = {
+                            fileUrl: response.fileUrl,
+                            fileName: response.fileName,
+                            fileType: response.fileType
+                        };
+                        showFilePreview(response);
+                    },
+                    error: function(xhr) {
+                        if (xhr.responseJSON && xhr.responseJSON.error) {
+                            alert(xhr.responseJSON.error);
+                        } else {
+                            alert('Помилка при завантаженні файлу');
+                        }
+                    }
+                });
+            });
+
+            function showFilePreview(fileData) {
+                const filePreview = $('#file-preview');
+                const fileIcon = $('#file-icon');
+                
+                if (fileData.fileType === 'image') {
+                    fileIcon.html(`<img src="${fileData.fileUrl}" height="30" width="30" class="rounded" />`);
+                } else if (fileData.fileType === 'pdf') {
+                    fileIcon.html('<i class="fas fa-file-pdf text-danger fa-2x"></i>');
+                } else if (fileData.fileType === 'doc') {
+                    fileIcon.html('<i class="fas fa-file-word text-primary fa-2x"></i>');
+                } else if (fileData.fileType === 'excel') {
+                    fileIcon.html('<i class="fas fa-file-excel text-success fa-2x"></i>');
+                } else {
+                    fileIcon.html('<i class="fas fa-file text-secondary fa-2x"></i>');
+                }
+                
+                $('#file-name').text(fileData.fileName);
+                filePreview.removeClass('d-none');
+            }
+
+            $('#remove-file').click(function() {
+                clearFilePreview();
+            });
+
+            function clearFilePreview() {
+                $('#file-preview').addClass('d-none');
+                $('#file-input').val('');
+                fileToSend = null;
+            }
+
+            $('#save-edited-message').click(function() {
+                const messageId = $('#edit-message-id').val();
+                const newText = $('#edit-message-text').val().trim();
+                
+                if (newText === '') return;
+                
+                connection.invoke("EditMessage", parseInt(messageId), newText).catch(function(err) {
+                    console.error(err);
+                });
+                
+                editMessageModal.hide();
+            });
+
+            $(document).on('click', '.copy-message', function() {
+                const message = $(this).closest('.message-bubble').find('.message-text').text();
+                copyMessageText(message);
+            });
+
+            $(document).on('click', '.edit-message', function() {
+                const messageId = $(this).closest('.message').data('message-id');
+                const messageText = $(this).closest('.message-bubble').find('.message-text').text();
+                openEditModal(messageId, messageText);
+            });
+
+            $(document).on('click', '.delete-message', function() {
+                const messageId = $(this).closest('.message').data('message-id');
+                deleteMessage(messageId);
+            });
+
+            startConnection();
+        });
+    </script>
+}
