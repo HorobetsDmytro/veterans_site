@@ -1,4 +1,3 @@
-using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
 
 namespace veterans_site.Models;
@@ -32,6 +31,8 @@ public class ChatMessage
     public string? FilePath { get; set; }
     
     public string? FileType { get; set; }
+    
+    public string? FileSize { get; set; }
     
     public bool HasFile => !string.IsNullOrEmpty(FilePath);
 }

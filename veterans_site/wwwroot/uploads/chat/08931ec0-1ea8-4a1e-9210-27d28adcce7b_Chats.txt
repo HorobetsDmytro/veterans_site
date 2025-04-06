@@ -1,3 +1,440 @@
+using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Identity;
+using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
+using System.Threading.Tasks;
+using veterans_site.Data;
+using veterans_site.Models;
+using System.IO;
+using Microsoft.AspNetCore.Hosting;
+
+namespace veterans_site.Controllers
+{
+    [Authorize(Roles = "Veteran")]
+    public class ChatController : Controller
+    {
+        private readonly VeteranSupportDbContext _context;
+        private readonly UserManager<ApplicationUser> _userManager;
+        private readonly IWebHostEnvironment _webHostEnvironment;
+        
+        public ChatController(VeteranSupportDbContext context, UserManager<ApplicationUser> userManager, IWebHostEnvironment webHostEnvironment)
+        {
+            _context = context;
+            _userManager = userManager;
+            _webHostEnvironment = webHostEnvironment;
+        }
+        
+        public async Task<IActionResult> Index()
+        {
+            var currentUserId = _userManager.GetUserId(User);
+            
+            var veterans = await _userManager.GetUsersInRoleAsync("Veteran");
+            
+            var filteredVeterans = veterans.Where(v => v.Id != currentUserId).ToList();
+            
+            return View(filteredVeterans);
+        }
+        
+        public async Task<IActionResult> Conversation(string userId)
+        {
+            var currentUserId = _userManager.GetUserId(User);
+            
+            if (string.IsNullOrEmpty(userId))
+                return NotFound();
+                
+            var user = await _userManager.FindByIdAsync(userId);
+            if (user == null)
+                return NotFound();
+                
+            var messages = await _context.ChatMessages
+                .Where(m => 
+                    (m.SenderId == currentUserId && m.ReceiverId == userId) ||
+                    (m.SenderId == userId && m.ReceiverId == currentUserId))
+                .OrderBy(m => m.SentAt)
+                .ToListAsync();
+                
+            var unreadMessages = messages
+                .Where(m => m.ReceiverId == currentUserId && !m.IsRead)
+                .ToList();
+                
+            if (unreadMessages.Any())
+            {
+                foreach (var message in unreadMessages)
+                {
+                    message.IsRead = true;
+                }
+                
+                await _context.SaveChangesAsync();
+            }
+            
+            ViewBag.CurrentUserId = currentUserId;
+            ViewBag.ReceiverId = userId;
+            ViewBag.ReceiverName = $"{user.FirstName} {user.LastName}";
+            ViewBag.ReceiverAvatar = user.AvatarPath;
+            ViewBag.ReceiverIsOnline = user.IsOnline;
+            ViewBag.ReceiverLastOnline = user.LastOnline;
+            
+            return View(messages);
+        }
+        
+        [HttpGet]
+        public async Task<IActionResult> GetUnreadMessagesCount()
+        {
+            var currentUserId = _userManager.GetUserId(User);
+            
+            var count = await _context.ChatMessages
+                .CountAsync(m => m.ReceiverId == currentUserId && !m.IsRead);
+                
+            return Json(new { count });
+        }
+        
+        [HttpGet]
+        public async Task<IActionResult> GetUnreadCount()
+        {
+            var currentUserId = _userManager.GetUserId(User);
+            var count = await _context.ChatMessages
+                .CountAsync(m => m.ReceiverId == currentUserId && !m.IsRead);
+        
+            return Json(new { count });
+        }
+        
+        [HttpPost]
+        public async Task<IActionResult> UploadFile()
+        {
+            var currentUserId = _userManager.GetUserId(User);
+            var file = Request.Form.Files.FirstOrDefault();
+            
+            if (file == null)
+                return BadRequest(new { error = "Файл не знайдено" });
+                
+            if (file.Length > 10 * 1024 * 1024)
+                return BadRequest(new { error = "Файл занадто великий. Максимальний розмір 10MB." });
+                
+            var allowedTypes = new[] { ".jpg", ".jpeg", ".png", ".gif", ".pdf", ".doc", ".docx", ".xls", ".xlsx", ".txt" };
+            var fileExtension = Path.GetExtension(file.FileName).ToLowerInvariant();
+            
+            if (!allowedTypes.Contains(fileExtension))
+                return BadRequest(new { error = "Непідтримуваний формат файлу" });
+                
+            var uploadsFolder = Path.Combine(_webHostEnvironment.WebRootPath, "uploads", "chat");
+            if (!Directory.Exists(uploadsFolder))
+                Directory.CreateDirectory(uploadsFolder);
+                
+            var uniqueFileName = $"{Guid.NewGuid()}_{Path.GetFileName(file.FileName)}";
+            var filePath = Path.Combine(uploadsFolder, uniqueFileName);
+            
+            using (var stream = new FileStream(filePath, FileMode.Create))
+            {
+                await file.CopyToAsync(stream);
+            }
+            
+            var fileUrl = $"/uploads/chat/{uniqueFileName}";
+            var fileType = GetFileType(fileExtension);
+            
+            return Ok(new { 
+                fileUrl = fileUrl, 
+                fileName = file.FileName,
+                fileType = fileType,
+            });
+        }
+        
+        private string GetFileType(string extension)
+        {
+            switch (extension)
+            {
+                case ".jpg":
+                case ".jpeg":
+                case ".png":
+                case ".gif":
+                    return "image";
+                case ".pdf":
+                    return "pdf";
+                case ".doc":
+                case ".docx":
+                    return "doc";
+                case ".xls":
+                case ".xlsx":
+                    return "excel";
+                default:
+                    return "file";
+            }
+        }
+    }
+}
+
+
+
+
+
+using Microsoft.AspNetCore.SignalR;
+using Microsoft.EntityFrameworkCore;
+using System;
+using System.Collections.Concurrent;
+using System.Threading.Tasks;
+using veterans_site.Data;
+using veterans_site.Models;
+using System.Security.Claims;
+
+namespace veterans_site.Hubs
+{
+    public class ChatHub : Hub
+    {
+        private static readonly ConcurrentDictionary<string, UserConnection> _connections = 
+            new ConcurrentDictionary<string, UserConnection>();
+            
+        private readonly VeteranSupportDbContext _context;
+        
+        public ChatHub(VeteranSupportDbContext context)
+        {
+            _context = context;
+        }
+        
+        public override async Task OnConnectedAsync()
+        {
+            var userId = Context.User?.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+            
+            if (!string.IsNullOrEmpty(userId))
+            {
+                var connection = new UserConnection
+                {
+                    UserId = userId,
+                    ConnectionId = Context.ConnectionId,
+                    IsOnline = true,
+                    LastSeen = DateTime.Now
+                };
+                
+                _connections.AddOrUpdate(userId, connection, (key, oldValue) => connection);
+                
+                var user = await _context.Users.FindAsync(userId);
+                if (user != null)
+                {
+                    user.IsOnline = true;
+                    user.LastOnline = DateTime.Now;
+                    await _context.SaveChangesAsync();
+                }
+                
+                await Clients.All.SendAsync("UserStatusChanged", userId, true, DateTime.Now);
+            }
+            
+            await base.OnConnectedAsync();
+        }
+        
+        public override async Task OnDisconnectedAsync(Exception exception)
+        {
+            var userId = Context.User?.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+            
+            if (!string.IsNullOrEmpty(userId) && _connections.TryRemove(userId, out var connection))
+            {
+                var user = await _context.Users.FindAsync(userId);
+                if (user != null)
+                {
+                    user.IsOnline = false;
+                    user.LastOnline = DateTime.Now;
+                    await _context.SaveChangesAsync();
+                }
+                
+                await Clients.All.SendAsync("UserStatusChanged", userId, false, DateTime.Now);
+            }
+            
+            await base.OnDisconnectedAsync(exception);
+        }
+        
+        public async Task SendPrivateMessage(string receiverId, string message, string fileUrl = null, string fileName = null, string fileType = null)
+        {
+            var senderId = Context.User?.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+    
+            if (string.IsNullOrEmpty(senderId) || string.IsNullOrEmpty(receiverId))
+                return;
+    
+            message = message ?? string.Empty;
+        
+            var chatMessage = new ChatMessage
+            {
+                SenderId = senderId,
+                ReceiverId = receiverId,
+                Content = message ?? string.Empty,
+                SentAt = DateTime.Now,
+                FilePath = fileUrl,
+                FileName = fileName,
+                FileType = fileType,
+            };
+            
+            chatMessage.FilePath = fileUrl;
+            chatMessage.FileName = fileName;
+            chatMessage.FileType = fileType;
+    
+            _context.ChatMessages.Add(chatMessage);
+            try 
+            {
+                await _context.SaveChangesAsync();
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Error saving message: {ex.Message}");
+                if (ex.InnerException != null)
+                    Console.WriteLine($"Inner exception: {ex.InnerException.Message}");
+            
+                throw;
+            }
+            
+            var user = await _context.Users.FindAsync(senderId);
+            if (user != null)
+            {
+                user.LastOnline = DateTime.Now;
+                await _context.SaveChangesAsync();
+            }
+            
+            var sender = await _context.Users
+                .Where(u => u.Id == senderId)
+                .Select(u => new {
+                    u.Id,
+                    u.FirstName,
+                    u.LastName,
+                    u.AvatarPath
+                })
+                .FirstOrDefaultAsync();
+            
+            if (_connections.TryGetValue(receiverId, out var receiverConnection))
+            {
+                await Clients.Client(receiverConnection.ConnectionId).SendAsync("ReceiveMessage", 
+                    chatMessage.Id,
+                    sender.Id,
+                    $"{sender.FirstName} {sender.LastName}",
+                    sender.AvatarPath,
+                    message,
+                    chatMessage.SentAt,
+                    fileUrl,
+                    fileName,
+                    fileType
+                    );
+            }
+            
+            await Clients.Caller.SendAsync("MessageSent", 
+                chatMessage.Id,
+                receiverId,
+                message,
+                chatMessage.SentAt,
+                fileUrl,
+                fileName,
+                fileType
+                );
+        }
+        
+        public async Task MarkMessageAsRead(int messageId)
+        {
+            var message = await _context.ChatMessages.FindAsync(messageId);
+            if (message != null)
+            {
+                message.IsRead = true;
+                await _context.SaveChangesAsync();
+                
+                if (_connections.TryGetValue(message.SenderId, out var senderConnection))
+                {
+                    await Clients.Client(senderConnection.ConnectionId).SendAsync("MessageRead", messageId);
+                }
+            }
+        }
+        
+        public async Task EditMessage(int messageId, string newContent)
+        {
+            var senderId = Context.User?.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+            
+            if (string.IsNullOrEmpty(senderId))
+                return;
+                
+            var message = await _context.ChatMessages
+                .FirstOrDefaultAsync(m => m.Id == messageId && m.SenderId == senderId);
+                
+            if (message == null)
+                return;
+                
+            message.Content = newContent;
+            message.IsEdited = true;
+            message.EditedAt = DateTime.Now;
+            
+            await _context.SaveChangesAsync();
+            
+            if (_connections.TryGetValue(message.ReceiverId, out var receiverConnection))
+            {
+                await Clients.Client(receiverConnection.ConnectionId).SendAsync("MessageEdited", messageId, newContent);
+            }
+            
+            await Clients.Caller.SendAsync("MessageEdited", messageId, newContent);
+        }
+        
+        public async Task DeleteMessage(int messageId)
+        {
+            var senderId = Context.User?.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+            
+            if (string.IsNullOrEmpty(senderId))
+                return;
+                
+            var message = await _context.ChatMessages
+                .FirstOrDefaultAsync(m => m.Id == messageId && m.SenderId == senderId);
+                
+            if (message == null)
+                return;
+                
+            message.IsDeleted = true;
+            message.Content = "Це повідомлення було видалено";
+            
+            await _context.SaveChangesAsync();
+            
+            if (_connections.TryGetValue(message.ReceiverId, out var receiverConnection))
+            {
+                await Clients.Client(receiverConnection.ConnectionId).SendAsync("MessageDeleted", messageId);
+            }
+            
+            await Clients.Caller.SendAsync("MessageDeleted", messageId);
+        }
+    }
+}
+
+
+
+
+
+using System.ComponentModel.DataAnnotations;
+using System.ComponentModel.DataAnnotations.Schema;
+
+namespace veterans_site.Models;
+
+public class ChatMessage
+{
+    public int Id { get; set; }
+        
+    public string SenderId { get; set; }
+    [ForeignKey("SenderId")]
+    public ApplicationUser Sender { get; set; }
+        
+    public string ReceiverId { get; set; }
+    [ForeignKey("ReceiverId")]
+    public ApplicationUser Receiver { get; set; }
+        
+    public string Content { get; set; }
+        
+    public DateTime SentAt { get; set; } = DateTime.Now;
+        
+    public bool IsRead { get; set; } = false;
+    
+    public bool IsEdited { get; set; } = false;
+    
+    public DateTime? EditedAt { get; set; }
+    
+    public bool IsDeleted { get; set; } = false;
+    
+    public string? FileName { get; set; }
+    
+    public string? FilePath { get; set; }
+    
+    public string? FileType { get; set; }
+    
+    public bool HasFile => !string.IsNullOrEmpty(FilePath);
+}
+
+
+
+
 @model IEnumerable<ChatMessage>
 @{
     ViewData["Title"] = $"Чат з {ViewBag.ReceiverName}";
@@ -78,10 +515,6 @@
                                                             <a href="@message.FilePath" target="_blank">
                                                                 <img src="@message.FilePath" class="img-fluid rounded" style="max-height: 200px;" alt="@message.FileName">
                                                             </a>
-                                                            @if (!string.IsNullOrEmpty(message.FileSize))
-                                                            {
-                                                                <div class="file-size small text-muted">@message.FileSize</div>
-                                                            }
                                                         </div>
                                                     }
                                                     else
@@ -107,11 +540,7 @@
                                                                     }
                                                                 </div>
                                                                 <div class="file-info">
-                                                                    <div class="file-name">@message.FileName</div> 
-                                                                    @if (!string.IsNullOrEmpty(message.FileSize))
-                                                                    {
-                                                                        <div class="file-size small text-muted">@message.FileSize</div>
-                                                                    }
+                                                                    <div class="file-name">@message.FileName</div>
                                                                 </div>
                                                             </a>
                                                         </div>
@@ -194,8 +623,10 @@
     <script>
         $(function() {
             const receiverId = '@receiverId';
+            const currentUserId = '@currentUserId';
             const chatMessages = document.getElementById('chat-messages');
             let fileToSend = null;
+            let editingMessageId = null;
             const editMessageModal = new bootstrap.Modal(document.getElementById('editMessageModal'));
 
             chatMessages.scrollTop = chatMessages.scrollHeight;
@@ -221,9 +652,9 @@
                 await startConnection();
             });
 
-            connection.on("ReceiveMessage", function(messageId, senderId, senderName, senderAvatar, message, sentAt, fileUrl, fileName, fileType, fileSize) {
+            connection.on("ReceiveMessage", function(messageId, senderId, senderName, senderAvatar, message, sentAt, fileUrl, fileName, fileType) {
                 if (senderId === receiverId) {
-                    appendMessage(message, false, new Date(sentAt), messageId, fileUrl, fileName, fileType, fileSize);
+                    appendMessage(message, false, new Date(sentAt), messageId, fileUrl, fileName, fileType);
 
                     connection.invoke("MarkMessageAsRead", messageId).catch(function(err) {
                         console.error(err);
@@ -233,15 +664,12 @@
                 }
             });
 
-            connection.on("MessageSent", function(messageId, receiverId, message, sentAt, fileUrl, fileName, fileType, fileSize) {
-                appendMessage(message, true, new Date(sentAt), messageId, fileUrl, fileName, fileType, fileSize);
+            connection.on("MessageSent", function(messageId, receiverId, message, sentAt, fileUrl, fileName, fileType) {
+                appendMessage(message, true, new Date(sentAt), messageId, fileUrl, fileName, fileType);
             });
 
             connection.on("MessageRead", function(messageId) {
-                const messageIcon = $(`.fas[data-message-id="${messageId}"]`);
-                if (messageIcon.length) {
-                    messageIcon.removeClass('fa-check').addClass('fa-check-double');
-                }
+                $(`i[data-message-id="${messageId}"]`).removeClass('fa-check').addClass('fa-check-double');
             });
 
             connection.on("MessageEdited", function(messageId, newContent) {
@@ -280,45 +708,11 @@
                 }
             });
 
-            const messagesContainer = document.getElementById('chat-messages');
-            const observer = new IntersectionObserver((entries) => {
-                entries.forEach(entry => {
-                    if (entry.isIntersecting) {
-                        const messageElement = entry.target;
-                        const messageId = messageElement.getAttribute('data-message-id');
-                        const isSender = messageElement.classList.contains('sender-message');
-
-                        if (!isSender) {
-                            connection.invoke("MarkMessageAsRead", messageId).catch(function(err) {
-                                console.error(err);
-                            });
-                        }
-
-                        observer.unobserve(messageElement);
-                    }
-                });
-            }, { threshold: 0.5 });
-
-            function observeNewMessages() {
-                document.querySelectorAll('.message:not(.sender-message)').forEach(message => {
-                    observer.observe(message);
-                });
-            }
-            
-            observeNewMessages();
-            
             function formatLastSeen(date) {
                 return `${date.getDate().toString().padStart(2, '0')}.${(date.getMonth() + 1).toString().padStart(2, '0')}.${date.getFullYear()} ${date.getHours().toString().padStart(2, '0')}:${date.getMinutes().toString().padStart(2, '0')}`;
             }
 
-            function formatFileSize(bytes) {
-                if (bytes === 0) return '0 Байт';
-                const sizes = ['Байт', 'KB', 'MB', 'GB', 'TB'];
-                const i = Math.floor(Math.log(bytes) / Math.log(1024));
-                return parseFloat((bytes / Math.pow(1024, i)).toFixed(2)) + ' ' + sizes[i];
-            }
-
-            function appendMessage(message, isSender, sentAt, messageId, fileUrl, fileName, fileType, fileSize) {
+            function appendMessage(message, isSender, sentAt, messageId, fileUrl, fileName, fileType) {
                 const messageDiv = document.createElement('div');
                 messageDiv.className = `message ${isSender ? 'sender-message text-end' : 'receiver-message'}`;
                 messageDiv.setAttribute('data-message-id', messageId);
@@ -346,19 +740,18 @@
                 if (fileUrl) {
                     if (fileType === 'image') {
                         fileHtml = `
-                <div class="message-file mt-2">
-                    <div class="image-preview">
-                        <a href="${fileUrl}" target="_blank">
-                            <img src="${fileUrl}" class="img-fluid rounded" style="max-height: 200px;" alt="${fileName}">
-                        </a>
-                        <div class="file-size small text-muted">${fileSize || ''}</div>
-                    </div>
-                </div>
-            `;
+                            <div class="message-file mt-2">
+                                <div class="image-preview">
+                                    <a href="${fileUrl}" target="_blank">
+                                        <img src="${fileUrl}" class="img-fluid rounded" style="max-height: 200px;" alt="${fileName}">
+                                    </a>
+                                </div>
+                            </div>
+                        `;
                     } else {
                         let iconClass = 'fa-file';
                         let iconColor = 'text-secondary';
-
+                        
                         if (fileType === 'pdf') {
                             iconClass = 'fa-file-pdf';
                             iconColor = 'text-danger';
@@ -371,20 +764,19 @@
                         }
 
                         fileHtml = `
-                <div class="message-file mt-2">
-                    <div class="file-attachment p-2 border rounded">
-                        <a href="${fileUrl}" target="_blank" class="d-flex align-items-center text-decoration-none">
-                            <div class="file-icon me-2">
-                                <i class="fas ${iconClass} ${iconColor} fa-2x"></i>
+                            <div class="message-file mt-2">
+                                <div class="file-attachment p-2 border rounded">
+                                    <a href="${fileUrl}" target="_blank" class="d-flex align-items-center text-decoration-none">
+                                        <div class="file-icon me-2">
+                                            <i class="fas ${iconClass} ${iconColor} fa-2x"></i>
+                                        </div>
+                                        <div class="file-info">
+                                            <div class="file-name">${fileName}</div>
+                                        </div>
+                                    </a>
+                                </div>
                             </div>
-                            <div class="file-info">
-                                <div class="file-name">${fileName}</div>
-                                <div class="file-size small text-muted">${fileSize || ''}</div>
-                            </div>
-                        </a>
-                    </div>
-                </div>
-            `;
+                        `;
                     }
                 }
 
@@ -491,14 +883,13 @@
                     connection.invoke("SendPrivateMessage", receiverId, messageText,
                         fileToSend.fileUrl,
                         fileToSend.fileName,
-                        fileToSend.fileType,
-                        fileToSend.fileSize
+                        fileToSend.fileType
                     ).catch(function(err) {
                         console.error(err);
                     });
                 } else {
                     connection.invoke("SendPrivateMessage", receiverId, messageText,
-                        null, null, null, null
+                        null, null, null
                     ).catch(function(err) {
                         console.error(err);
                     });
@@ -534,8 +925,7 @@
                         fileToSend = {
                             fileUrl: response.fileUrl,
                             fileName: response.fileName,
-                            fileType: response.fileType,
-                            fileSize: response.fileSize
+                            fileType: response.fileType
                         };
                         showFilePreview(response);
                     },
@@ -552,7 +942,7 @@
             function showFilePreview(fileData) {
                 const filePreview = $('#file-preview');
                 const fileIcon = $('#file-icon');
-
+                
                 if (fileData.fileType === 'image') {
                     fileIcon.html(`<img src="${fileData.fileUrl}" height="30" width="30" class="rounded" />`);
                 } else if (fileData.fileType === 'pdf') {
@@ -564,9 +954,8 @@
                 } else {
                     fileIcon.html('<i class="fas fa-file text-secondary fa-2x"></i>');
                 }
-
+                
                 $('#file-name').text(fileData.fileName);
-                $('#file-size').text(fileData.fileSize);
                 filePreview.removeClass('d-none');
             }
 

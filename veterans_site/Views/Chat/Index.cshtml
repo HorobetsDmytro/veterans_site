@@ -1,3 +1,4 @@
+@using Microsoft.AspNetCore.Mvc.TagHelpers
 @model IEnumerable<ApplicationUser>
 @{
     ViewData["Title"] = "Чат для спілкування";
@@ -7,7 +8,7 @@
     <div class="row">
         <div class="col-md-12 mb-4">
             <div class="card shadow">
-                <div class="card-header bg-primary text-white">
+                <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
                     <h5 class="mb-0"><i class="fas fa-users me-2"></i>Ветерани</h5>
                 </div>
                 <div class="card-body">
@@ -18,13 +19,14 @@
                                 <th>Користувач</th>
                                 <th>Статус</th>
                                 <th>Остання активність</th>
+                                <th>Непрочитані</th>
                                 <th>Дії</th>
                             </tr>
                             </thead>
                             <tbody>
                             @foreach (var veteran in Model)
                             {
-                                <tr>
+                                <tr data-user-id="@veteran.Id">
                                     <td>
                                         <div class="d-flex align-items-center">
                                             @if (!string.IsNullOrEmpty(veteran.AvatarPath))
@@ -51,6 +53,9 @@
                                         @(veteran.IsOnline ? "Зараз на сайті" : $"Був(ла) {veteran.LastOnline.ToString("dd.MM.yyyy HH:mm")}")
                                     </td>
                                     <td>
+                                        <span id="unread-count-@veteran.Id" class="badge bg-danger rounded-pill" style="display: none;"></span>
+                                    </td>
+                                    <td>
                                         <a asp-controller="Chat" asp-action="Conversation" asp-route-userId="@veteran.Id" class="btn btn-primary btn-sm">
                                             <i class="fas fa-comment me-1"></i> Написати
                                         </a>
@@ -75,6 +80,43 @@
                 .withAutomaticReconnect()
                 .build();
 
+            const currentUserId = '@ViewBag.CurrentUserId' || $('body').data('current-user-id');
+
+            const unreadCounts = {};
+
+            function updateUnreadCountsDisplay() {
+                let totalUnread = 0;
+
+                for (const userId in unreadCounts) {
+                    const count = unreadCounts[userId];
+                    const badge = $(`#unread-count-${userId}`);
+
+                    if (count > 0) {
+                        badge.text(count).show();
+                        totalUnread += count;
+                    } else {
+                        badge.hide();
+                    }
+                }
+
+                const totalBadge = $('#total-unread-count');
+                if (totalUnread > 0) {
+                    totalBadge.text(totalUnread).show();
+                } else {
+                    totalBadge.hide();
+                }
+            }
+
+            function fetchInitialUnreadCounts() {
+                $.get("/Chat/GetUnreadMessagesByUser", function(data) {
+                    data.forEach(function(item) {
+                        unreadCounts[item.senderId] = item.unreadCount;
+                    });
+
+                    updateUnreadCountsDisplay();
+                });
+            }
+
             connection.on("UserStatusChanged", function (userId, isOnline, lastSeen) {
                 const statusElement = $(`#status-${userId}`);
                 const lastSeenElement = $(`#last-seen-${userId}`);
@@ -96,23 +138,56 @@
                 }
             });
 
-            connection.onclose(async (error) => {
-                console.log("Connection closed due to error: " + error);
-                await new Promise(resolve => setTimeout(resolve, 5000));
-                await startConnection();
+            connection.on("UpdateUnreadMessageCount", function(receiverId) {
+                if (currentUserId === receiverId) {
+                    fetchInitialUnreadCounts();
+                }
+            });
+
+            connection.on("ReceiveMessage", function(messageId, senderId, senderName, senderAvatar, message, sentAt) {
+                if (unreadCounts[senderId] === undefined) {
+                    unreadCounts[senderId] = 0;
+                }
+                unreadCounts[senderId]++;
+                updateUnreadCountsDisplay();
+            });
+
+            connection.on("MessageRead", function(messageId, senderId, receiverId) {
+                if (currentUserId === receiverId) {
+                    if (unreadCounts[senderId] !== undefined) {
+                        unreadCounts[senderId] = Math.max(0, unreadCounts[senderId] - 1);
+                        updateUnreadCountsDisplay();
+                    }
+                }
+                else if (currentUserId === senderId) {
+                }
+            });
+
+            connection.on("UpdateAllUnreadCounts", function() {
+                fetchInitialUnreadCounts();
+            });
+
+            connection.on("MessageDeleted", function(messageId) {
+                fetchInitialUnreadCounts();
+            });
+
+            connection.on("MessageEdited", function(messageId, newContent) {
+                fetchInitialUnreadCounts();
             });
 
             async function startConnection() {
                 try {
                     await connection.start();
                     console.log("SignalR підключено.");
+                    fetchInitialUnreadCounts();
                 } catch (err) {
                     console.error("SignalR Connection Error:", err);
-                    setTimeout(startConnection, 5000);
+                    setTimeout(startConnection, 3000);
                 }
             }
 
             startConnection();
         });
+    
     </script>
 }

@@ -3,6 +3,7 @@ using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using veterans_site.Data;
 
@@ -11,9 +12,11 @@ using veterans_site.Data;
 namespace veterans_site.Migrations
 {
     [DbContext(typeof(VeteranSupportDbContext))]
-    partial class VeteranSupportDBContextModelSnapshot : ModelSnapshot
+    [Migration("20250404101057_UpdateFileSizeFieldInChatMessageModel")]
+    partial class UpdateFileSizeFieldInChatMessageModel
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -652,6 +655,12 @@ namespace veterans_site.Migrations
 
             modelBuilder.Entity("veterans_site.Models.UserConnection", b =>
                 {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
                     b.Property<string>("ConnectionId")
                         .IsRequired()
                         .HasColumnType("nvarchar(max)");
@@ -665,6 +674,8 @@ namespace veterans_site.Migrations
                     b.Property<string>("UserId")
                         .IsRequired()
                         .HasColumnType("nvarchar(max)");
+
+                    b.HasKey("Id");
 
                     b.ToTable("UsersConnections");
                 });

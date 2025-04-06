@@ -92,8 +92,8 @@ public class VeteranSupportDbContext : IdentityDbContext<ApplicationUser>
             .WithMany(u => u.ReceivedMessages)
             .HasForeignKey(cm => cm.ReceiverId)
             .OnDelete(DeleteBehavior.Restrict);
-        
+
         builder.Entity<UserConnection>()
-            .HasKey(uc => uc.Id);
+            .HasNoKey();
     }
 }

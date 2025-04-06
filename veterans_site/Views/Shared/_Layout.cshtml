@@ -180,7 +180,7 @@
         }
     </style>
 </head>
-<body>
+<body data-current-user-id="@UserManager.GetUserId(User)">
 <div class="flag-colors"></div>
 <header>
     <nav class="navbar navbar-expand-lg navbar-light bg-white border-bottom box-shadow mb-3">
@@ -196,7 +196,9 @@
                 <ul class="navbar-nav">
                     <li class="nav-item">
                         <a class="nav-link @(ViewContext.RouteData.Values["controller"]?.ToString() == "Home" &&
-                                             ViewContext.RouteData.Values["action"]?.ToString() == "Index" ? "active" : "")"
+                                             ViewContext.RouteData.Values["action"]?.ToString() == "Index"
+                                               ? "active"
+                                               : "")"
                            asp-area="" asp-controller="Home" asp-action="Index">
                             <i class="fas fa-home me-1"></i> Головна
                         </a>
@@ -261,25 +263,9 @@
                                 </ul>
                             </li>
                         }
-                        
+
                         @if (SignInManager.IsSignedIn(User) && User.IsInRole("Veteran"))
                         {
-                            <script>
-                                $(function() {
-                                    function checkUnreadMessages() {
-                                        $.get("/Chat/GetUnreadCount", function(data) {
-                                            if (data.count > 0) {
-                                                $("#chat-notification").text(data.count).show();
-                                            } else {
-                                                $("#chat-notification").hide();
-                                            }
-                                        });
-                                    }
-                                    
-                                    checkUnreadMessages();
-                                    setInterval(checkUnreadMessages, 30000);
-                                });
-                                </script>
                             <li class="nav-item">
                                 <a class="nav-link @(ViewContext.RouteData.Values["controller"]?.ToString() == "Chat" ? "active" : "")"
                                    asp-controller="Chat" asp-action="Index">
@@ -330,8 +316,8 @@
                         <form asp-area="Identity" asp-page="/Account/Logout"
                               asp-route-returnUrl="@Url.Action("Index", "Home", new { area = "" })" method="post">
                             <button type="submit" class="btn btn-outline-primary">
-                                    <i class="fas fa-sign-out-alt me-1"></i> Вийти
-                                </button>
+                                <i class="fas fa-sign-out-alt me-1"></i> Вийти
+                            </button>
                         </form>
                     }
                     else
@@ -374,7 +360,7 @@
                 <a href="/Events" class="footer-link">Заходи</a>
                 <a href="/Consultations" class="footer-link">Консультації</a>
             </div>
-            <div class="col-12 col-lg-4 mb-4 mb-lg-0 text-center"> <!-- Замінили col-lg-3 на col-lg-4 -->
+            <div class="col-12 col-lg-4 mb-4 mb-lg-0 text-center">
                 <h6 class="footer-heading">Контакти</h6>
                 <p class="mb-2"><i class="fas fa-map-marker-alt me-2"></i> м. Хмельницький, вул. Зарічанська, 10</p>
                 <p class="mb-2"><i class="fas fa-phone me-2"></i> +380 97 123 4567</p>
@@ -396,5 +382,91 @@
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 @await RenderSectionAsync("Scripts", required: false)
+
+<div id="unread-messages-toast" class="position-fixed bottom-0 end-0 p-3" style="z-index: 1050; display: none;">
+</div>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/microsoft-signalr/6.0.6/signalr.min.js"></script>
+<script>
+    $(document).ready(function() {
+        @if (SignInManager.IsSignedIn(User))
+        {
+            <text>
+                const connection = new signalR.HubConnectionBuilder()
+                    .withUrl("/chatHub")
+                    .withAutomaticReconnect()
+                    .build();
+
+                function updateUnreadMessageCount() {
+                    $.getJSON("/Chat/GetUnreadCount", function(data) {
+                        const chatNotification = $("#chat-notification");
+                        if (data.count > 0) {
+                            chatNotification.text(data.count);
+                            chatNotification.show();
+                        } else {
+                            chatNotification.hide();
+                        }
+                    });
+                }
+
+                setInterval(updateUnreadMessageCount, 30000);
+                updateUnreadMessageCount();
+
+                connection.on("ReceiveMessage", function(messageId, senderId, senderName, senderAvatar, content, sentAt, fileUrl, fileName, fileType, fileSize) {
+                    updateUnreadMessageCount();
+
+                    const toastContainer = $('#unread-messages-toast');
+                    const toast = $(`
+                    <div class="toast show mb-2" role="alert" aria-live="assertive" aria-atomic="true">
+                        <div class="toast-header">
+                            <strong class="me-auto">Нове повідомлення</strong>
+                            <button type="button" class="btn-close" data-bs-dismiss="toast" aria-label="Close"></button>
+                        </div>
+                        <div class="toast-body">
+                            <div class="d-flex align-items-center">
+                                ${senderAvatar ?
+                        `<img src="${senderAvatar}" class="rounded-circle me-2" width="32" height="32" alt="${senderName}">` :
+                        `<div class="user-avatar me-2" style="width: 32px; height: 32px; background-color: #2e51a2; border-radius: 50%; display: flex; align-items: center; justify-content: center; color: white;">
+                                    <span>${senderName.substring(0, 1)}</span>
+                                </div>`
+                    }
+                                <div>
+                                    <strong>${senderName}</strong> надіслав вам повідомлення
+                                </div>
+                            </div>
+                            <div class="mt-2">
+                                <a href="/Chat/Conversation?userId=${senderId}" class="btn btn-primary btn-sm">Відповісти</a>
+                            </div>
+                        </div>
+                    </div>
+                `);
+
+                    toastContainer.append(toast);
+                    toastContainer.css('display', 'block');
+
+                    setTimeout(() => {
+                        toast.toast('hide');
+                    }, 2000);
+                });
+
+                async function startConnection() {
+                    try {
+                        await connection.start();
+                        console.log("SignalR підключено.");
+                    } catch (err) {
+                        console.error("SignalR Connection Error:", err);
+                        setTimeout(startConnection, 3000);
+                    }
+                }
+
+                connection.onclose(async function() {
+                    await startConnection();
+                });
+
+                startConnection();
+            </text>
+        }
+    });
+</script>
+
 </body>
 </html>

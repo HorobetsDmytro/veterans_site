@@ -1,8 +1,6 @@
 using Microsoft.AspNetCore.SignalR;
 using Microsoft.EntityFrameworkCore;
-using System;
 using System.Collections.Concurrent;
-using System.Threading.Tasks;
 using veterans_site.Data;
 using veterans_site.Models;
 using System.Security.Claims;
@@ -24,7 +22,7 @@ namespace veterans_site.Hubs
         public override async Task OnConnectedAsync()
         {
             var userId = Context.User?.FindFirst(ClaimTypes.NameIdentifier)?.Value;
-            
+
             if (!string.IsNullOrEmpty(userId))
             {
                 var connection = new UserConnection
@@ -34,52 +32,67 @@ namespace veterans_site.Hubs
                     IsOnline = true,
                     LastSeen = DateTime.Now
                 };
-                
-                _connections.AddOrUpdate(userId, connection, (key, oldValue) => connection);
-                
-                var user = await _context.Users.FindAsync(userId);
-                if (user != null)
+
+                var existingConnection = _connections.Values
+                    .FirstOrDefault(c => c.UserId == userId && c.ConnectionId != Context.ConnectionId);
+
+                _connections.AddOrUpdate(Context.ConnectionId, connection, (key, oldValue) => connection);
+
+                if (existingConnection == null)
                 {
-                    user.IsOnline = true;
-                    user.LastOnline = DateTime.Now;
-                    await _context.SaveChangesAsync();
-                }
+                    var user = await _context.Users.FindAsync(userId);
+                    if (user != null)
+                    {
+                        user.IsOnline = true;
+                        user.LastOnline = DateTime.Now;
+                        await _context.SaveChangesAsync();
                 
-                await Clients.All.SendAsync("UserStatusChanged", userId, true, DateTime.Now);
+                        await Clients.All.SendAsync("UserStatusChanged", userId, true, DateTime.Now);
+                    }
+                }
             }
-            
+
             await base.OnConnectedAsync();
         }
         
         public override async Task OnDisconnectedAsync(Exception exception)
         {
             var userId = Context.User?.FindFirst(ClaimTypes.NameIdentifier)?.Value;
-            
-            if (!string.IsNullOrEmpty(userId) && _connections.TryRemove(userId, out var connection))
+    
+            if (!string.IsNullOrEmpty(userId))
             {
-                var user = await _context.Users.FindAsync(userId);
-                if (user != null)
+                _connections.TryRemove(Context.ConnectionId, out _);
+        
+                var hasOtherConnections = _connections.Values
+                    .Any(c => c.UserId == userId);
+        
+                if (!hasOtherConnections)
                 {
-                    user.IsOnline = false;
-                    user.LastOnline = DateTime.Now;
-                    await _context.SaveChangesAsync();
-                }
+                    var user = await _context.Users.FindAsync(userId);
+                    if (user != null)
+                    {
+                        user.IsOnline = false;
+                        user.LastOnline = DateTime.Now;
+                        await _context.SaveChangesAsync();
                 
-                await Clients.All.SendAsync("UserStatusChanged", userId, false, DateTime.Now);
+                        await Clients.All.SendAsync("UserStatusChanged", userId, false, DateTime.Now);
+                    }
+                }
             }
-            
+    
             await base.OnDisconnectedAsync(exception);
         }
         
-        public async Task SendPrivateMessage(string receiverId, string message, string fileUrl = null, string fileName = null, string fileType = null)
+        public async Task SendPrivateMessage(string receiverId, string message, string fileUrl = null, 
+            string fileName = null, string fileType = null, string fileSize = null)
         {
             var senderId = Context.User?.FindFirst(ClaimTypes.NameIdentifier)?.Value;
-    
+
             if (string.IsNullOrEmpty(senderId) || string.IsNullOrEmpty(receiverId))
                 return;
-    
+
             message = message ?? string.Empty;
-        
+
             var chatMessage = new ChatMessage
             {
                 SenderId = senderId,
@@ -89,25 +102,11 @@ namespace veterans_site.Hubs
                 FilePath = fileUrl,
                 FileName = fileName,
                 FileType = fileType,
+                FileSize = fileSize
             };
             
-            chatMessage.FilePath = fileUrl;
-            chatMessage.FileName = fileName;
-            chatMessage.FileType = fileType;
-    
             _context.ChatMessages.Add(chatMessage);
-            try 
-            {
-                await _context.SaveChangesAsync();
-            }
-            catch (Exception ex)
-            {
-                Console.WriteLine($"Error saving message: {ex.Message}");
-                if (ex.InnerException != null)
-                    Console.WriteLine($"Inner exception: {ex.InnerException.Message}");
-            
-                throw;
-            }
+            await _context.SaveChangesAsync();
             
             var user = await _context.Users.FindAsync(senderId);
             if (user != null)
@@ -126,19 +125,25 @@ namespace veterans_site.Hubs
                 })
                 .FirstOrDefaultAsync();
             
-            if (_connections.TryGetValue(receiverId, out var receiverConnection))
+            var receiverConnections = _connections.Values.Where(c => c.UserId == receiverId).Select(c => c.ConnectionId).ToList();
+            
+            if (receiverConnections.Any())
             {
-                await Clients.Client(receiverConnection.ConnectionId).SendAsync("ReceiveMessage", 
-                    chatMessage.Id,
-                    sender.Id,
-                    $"{sender.FirstName} {sender.LastName}",
-                    sender.AvatarPath,
-                    message,
-                    chatMessage.SentAt,
-                    fileUrl,
-                    fileName,
-                    fileType
+                foreach(var connectionId in receiverConnections)
+                {
+                    await Clients.Client(connectionId).SendAsync("ReceiveMessage", 
+                        chatMessage.Id,
+                        sender.Id,
+                        $"{sender.FirstName} {sender.LastName}",
+                        sender.AvatarPath,
+                        message,
+                        chatMessage.SentAt,
+                        fileUrl,
+                        fileName,
+                        fileType,
+                        fileSize
                     );
+                }
             }
             
             await Clients.Caller.SendAsync("MessageSent", 
@@ -148,21 +153,29 @@ namespace veterans_site.Hubs
                 chatMessage.SentAt,
                 fileUrl,
                 fileName,
-                fileType
-                );
+                fileType,
+                fileSize
+            );
+            
+            await Clients.All.SendAsync("UpdateUnreadMessageCount", receiverId);
         }
         
         public async Task MarkMessageAsRead(int messageId)
         {
             var message = await _context.ChatMessages.FindAsync(messageId);
-            if (message != null)
+            if (message != null && !message.IsRead)
             {
                 message.IsRead = true;
                 await _context.SaveChangesAsync();
-                
-                if (_connections.TryGetValue(message.SenderId, out var senderConnection))
+
+                var senderConnections = _connections.Values
+                    .Where(c => c.UserId == message.SenderId)
+                    .Select(c => c.ConnectionId)
+                    .ToList();
+            
+                foreach (var connectionId in senderConnections)
                 {
-                    await Clients.Client(senderConnection.ConnectionId).SendAsync("MessageRead", messageId);
+                    await Clients.Client(connectionId).SendAsync("MessageRead", messageId);
                 }
             }
         }
@@ -170,54 +183,108 @@ namespace veterans_site.Hubs
         public async Task EditMessage(int messageId, string newContent)
         {
             var senderId = Context.User?.FindFirst(ClaimTypes.NameIdentifier)?.Value;
-            
+    
             if (string.IsNullOrEmpty(senderId))
                 return;
-                
+        
             var message = await _context.ChatMessages
                 .FirstOrDefaultAsync(m => m.Id == messageId && m.SenderId == senderId);
-                
+        
             if (message == null)
                 return;
-                
+        
             message.Content = newContent;
             message.IsEdited = true;
             message.EditedAt = DateTime.Now;
-            
+    
             await _context.SaveChangesAsync();
-            
-            if (_connections.TryGetValue(message.ReceiverId, out var receiverConnection))
+    
+            var receiverConnections = _connections.Values
+                .Where(c => c.UserId == message.ReceiverId)
+                .Select(c => c.ConnectionId)
+                .ToList();
+    
+            foreach (var connectionId in receiverConnections)
             {
-                await Clients.Client(receiverConnection.ConnectionId).SendAsync("MessageEdited", messageId, newContent);
+                await Clients.Client(connectionId).SendAsync("MessageEdited", messageId, newContent);
             }
-            
+    
             await Clients.Caller.SendAsync("MessageEdited", messageId, newContent);
         }
-        
+
         public async Task DeleteMessage(int messageId)
         {
             var senderId = Context.User?.FindFirst(ClaimTypes.NameIdentifier)?.Value;
-            
+    
             if (string.IsNullOrEmpty(senderId))
                 return;
-                
+        
             var message = await _context.ChatMessages
                 .FirstOrDefaultAsync(m => m.Id == messageId && m.SenderId == senderId);
-                
+        
             if (message == null)
                 return;
-                
+        
             message.IsDeleted = true;
             message.Content = "Це повідомлення було видалено";
-            
+    
             await _context.SaveChangesAsync();
-            
-            if (_connections.TryGetValue(message.ReceiverId, out var receiverConnection))
+    
+            var receiverConnections = _connections.Values
+                .Where(c => c.UserId == message.ReceiverId)
+                .Select(c => c.ConnectionId)
+                .ToList();
+    
+            foreach (var connectionId in receiverConnections)
             {
-                await Clients.Client(receiverConnection.ConnectionId).SendAsync("MessageDeleted", messageId);
+                await Clients.Client(connectionId).SendAsync("MessageDeleted", messageId);
             }
-            
+    
             await Clients.Caller.SendAsync("MessageDeleted", messageId);
+        }
+        
+        public async Task UpdateAllUsersStatus()
+        {
+            var onlineUsers = _connections.Keys.ToList();
+            var allUsers = await _context.Users.ToListAsync();
+
+            var statusUpdates = allUsers.Select(user => new
+            {
+                UserId = user.Id,
+                IsOnline = onlineUsers.Contains(user.Id),
+                LastSeen = user.LastOnline
+            }).ToList();
+
+            await Clients.Caller.SendAsync("ReceiveAllUsersStatus", statusUpdates);
+        }
+        
+        public async Task NotifyUnreadMessagesCount(string userId)
+        {
+            var count = await _context.ChatMessages
+                .CountAsync(m => m.ReceiverId == userId && !m.IsRead);
+        
+            if (_connections.TryGetValue(userId, out var connection))
+            {
+                await Clients.Client(connection.ConnectionId).SendAsync("UpdateUnreadCount", count);
+            }
+        }
+        
+        public async Task UpdateAllUnreadCounts()
+        {
+            var userId = Context.User?.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+            if (string.IsNullOrEmpty(userId))
+                return;
+        
+            var unreadMessagesByUser = await _context.ChatMessages
+                .Where(m => m.ReceiverId == userId && !m.IsRead)
+                .GroupBy(m => m.SenderId)
+                .Select(g => new {
+                    SenderId = g.Key,
+                    UnreadCount = g.Count()
+                })
+                .ToListAsync();
+        
+            await Clients.Caller.SendAsync("UpdateAllUnreadCounts", unreadMessagesByUser);
         }
     }
 }
