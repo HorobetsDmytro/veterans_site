@@ -26,7 +26,7 @@ namespace veterans_site.Areas.Specialist.Controllers
             UserManager<ApplicationUser> userManager,
             ILogger<ConsultationController> logger,
             VeteranSupportDbContext context,
-            IEmailService emailService) 
+            IEmailService emailService)
         {
             _consultationRepository = consultationRepository;
             _userManager = userManager;
@@ -36,13 +36,13 @@ namespace veterans_site.Areas.Specialist.Controllers
         }
 
         public async Task<IActionResult> Index(
-    ConsultationType? type = null,
-    ConsultationFormat? format = null,
-    ConsultationStatus? status = null,
-    double? minPrice = null,
-    double? maxPrice = null,
-    string sortOrder = null,
-    int page = 1)
+            ConsultationType? type = null,
+            ConsultationFormat? format = null,
+            ConsultationStatus? status = null,
+            double? minPrice = null,
+            double? maxPrice = null,
+            string sortOrder = null,
+            int page = 1)
         {
             try
             {
@@ -105,7 +105,7 @@ namespace veterans_site.Areas.Specialist.Controllers
                 SpecialistName = $"{currentUser.FirstName} {currentUser.LastName}",
                 Status = ConsultationStatus.Planned,
                 DateTime = DateTime.Now.AddSeconds(-DateTime.Now.Second)
-                                  .AddMilliseconds(-DateTime.Now.Millisecond),
+                    .AddMilliseconds(-DateTime.Now.Millisecond),
                 Duration = 10
             };
             return View(consultation);
@@ -118,8 +118,8 @@ namespace veterans_site.Areas.Specialist.Controllers
             try
             {
                 _logger.LogInformation($"Отримано дані: Format={consultation.Format}, " +
-                    $"DateTime={consultation.DateTime}, EndDateTime={consultation.EndDateTime}, " +
-                    $"Duration={consultation.Duration}");
+                                       $"DateTime={consultation.DateTime}, EndDateTime={consultation.EndDateTime}, " +
+                                       $"Duration={consultation.Duration}");
 
                 if (consultation.Mode == ConsultationMode.Offline && string.IsNullOrWhiteSpace(consultation.Location))
                 {
@@ -170,7 +170,8 @@ namespace veterans_site.Areas.Specialist.Controllers
                 {
                     if (!consultation.MaxParticipants.HasValue || consultation.MaxParticipants < 2)
                     {
-                        ModelState.AddModelError("MaxParticipants", "Для групової консультації потрібно вказати кількість учасників (мінімум 2)");
+                        ModelState.AddModelError("MaxParticipants",
+                            "Для групової консультації потрібно вказати кількість учасників (мінімум 2)");
                         return View(consultation);
                     }
 
@@ -494,7 +495,8 @@ namespace veterans_site.Areas.Specialist.Controllers
                     await transaction.CommitAsync();
 
                     TempData["Success"] = "Консультацію успішно видалено";
-                    _logger.LogInformation($"Consultation {id} was successfully deleted by specialist {specialistName}");
+                    _logger.LogInformation(
+                        $"Consultation {id} was successfully deleted by specialist {specialistName}");
                 }
                 catch (Exception ex)
                 {
@@ -511,6 +513,7 @@ namespace veterans_site.Areas.Specialist.Controllers
                 {
                     _logger.LogError($"Inner exception: {ex.InnerException.Message}");
                 }
+
                 TempData["Error"] = "Виникла помилка при видаленні консультації";
                 return RedirectToAction(nameof(Index));
             }
@@ -526,7 +529,8 @@ namespace veterans_site.Areas.Specialist.Controllers
                     .Include(r => r.User)
                     .Include(r => r.Consultation)
                     .Include(r => r.Slot)
-                    .FirstOrDefaultAsync(r => r.Token == token && !r.IsApproved.HasValue && r.ExpiryTime > DateTime.UtcNow);
+                    .FirstOrDefaultAsync(r =>
+                        r.Token == token && !r.IsApproved.HasValue && r.ExpiryTime > DateTime.UtcNow);
 
                 if (request == null)
                 {
@@ -582,7 +586,7 @@ namespace veterans_site.Areas.Specialist.Controllers
                     {
                         var booking = await _context.ConsultationBookings
                             .FirstOrDefaultAsync(b => b.ConsultationId == request.ConsultationId &&
-                                                    b.UserId == request.UserId);
+                                                      b.UserId == request.UserId);
                         if (booking != null)
                         {
                             _context.ConsultationBookings.Remove(booking);
@@ -673,7 +677,7 @@ namespace veterans_site.Areas.Specialist.Controllers
                 return Json(new { success = false, message = "Виникла помилка при скасуванні реєстрації" });
             }
         }
-        
+
         [HttpPost]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> Cancel(int id)
@@ -706,9 +710,276 @@ namespace veterans_site.Areas.Specialist.Controllers
             }
         }
 
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> Uncancel(int id)
+        {
+            try
+            {
+                var consultation = await _consultationRepository.GetByIdAsync(id);
+                if (consultation == null)
+                {
+                    return NotFound();
+                }
+
+                if (consultation.Status != ConsultationStatus.Cancelled)
+                {
+                    TempData["Error"] = "Можна активувати тільки скасовані консультації";
+                    return RedirectToAction(nameof(Index));
+                }
+
+                if (consultation.DateTime < DateTime.Now)
+                {
+                    TempData["Error"] = "Не можна активувати консультацію з минулою датою";
+                    return RedirectToAction(nameof(Index));
+                }
+
+                consultation.Status = ConsultationStatus.Planned;
+                await _consultationRepository.UpdateAsync(consultation);
+
+                TempData["Success"] = "Консультацію успішно активовано знову";
+                return RedirectToAction(nameof(Index));
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError($"Error uncancelling consultation: {ex.Message}");
+                TempData["Error"] = "Виникла помилка при активації консультації";
+                return RedirectToAction(nameof(Index));
+            }
+        }
+
         public class CancelBookingViewModel
         {
             public int Id { get; set; }
+        }
+        
+        [HttpGet]
+        public async Task<IActionResult> Statistics(string period = "all")
+        {
+            try
+            {
+                var currentUser = await _userManager.GetUserAsync(User);
+                var specialistName = $"{currentUser.FirstName} {currentUser.LastName}";
+                
+                var statistics = new SpecialistStatisticsViewModel();
+                
+                DateTime? startDate = null;
+                string periodLabel = "Весь час";
+                
+                switch (period)
+                {
+                    case "month":
+                        startDate = DateTime.Now.AddMonths(-1);
+                        periodLabel = "Останній місяць";
+                        break;
+                    case "quarter":
+                        startDate = DateTime.Now.AddMonths(-3);
+                        periodLabel = "Останній квартал";
+                        break;
+                    case "halfyear":
+                        startDate = DateTime.Now.AddMonths(-6);
+                        periodLabel = "Останні 6 місяців";
+                        break;
+                    case "year":
+                        startDate = DateTime.Now.AddYears(-1);
+                        periodLabel = "Останній рік";
+                        break;
+                }
+                
+                var consultationsQuery = _context.Consultations
+                    .Where(c => c.SpecialistName == specialistName);
+                    
+                if (startDate.HasValue)
+                {
+                    consultationsQuery = consultationsQuery.Where(c => c.DateTime >= startDate.Value);
+                }
+                
+                var consultations = await consultationsQuery.ToListAsync();
+                
+                statistics.TotalConsultations = consultations.Count;
+                statistics.UpcomingConsultations = consultations
+                    .Count(c => c.Status == ConsultationStatus.Planned && c.DateTime > DateTime.Now);
+                statistics.CompletedConsultations = consultations
+                    .Count(c => c.Status == ConsultationStatus.Completed);
+                statistics.CancelledConsultations = consultations
+                    .Count(c => c.Status == ConsultationStatus.Cancelled);
+                statistics.PeriodLabel = periodLabel;
+                
+                if (startDate.HasValue)
+                {
+                    var previousStartDate = startDate.Value.AddDays(-(DateTime.Now - startDate.Value).TotalDays);
+                    var previousConsultations = await _context.Consultations
+                        .Where(c => c.SpecialistName == specialistName &&
+                                c.DateTime >= previousStartDate &&
+                                c.DateTime < startDate.Value)
+                        .ToListAsync();
+                        
+                    statistics.PreviousPeriodConsultations = previousConsultations.Count;
+                    statistics.PreviousPeriodCompleted = previousConsultations.Count(c => c.Status == ConsultationStatus.Completed);
+                }
+                
+                statistics.ConsultationsByType = consultations
+                    .GroupBy(c => c.Type)
+                    .ToDictionary(g => g.Key, g => g.Count());
+                
+                statistics.ConsultationsByFormat = consultations
+                    .GroupBy(c => c.Format)
+                    .ToDictionary(g => g.Key, g => g.Count());
+                
+                var monthlyTrend = new Dictionary<string, MonthlyStats>();
+                var startDate1 = DateTime.Now.AddMonths(-12);
+                var endDate = DateTime.Now;
+
+                for (var date = startDate1; date <= endDate; date = date.AddMonths(1))
+                {
+                    var key = $"{date.Year}-{date.Month:D2}";
+                    monthlyTrend[key] = new MonthlyStats { Total = 0, Completed = 0, Cancelled = 0 };
+                }   
+
+                var twelveMonthsAgo = DateTime.Now.AddMonths(-12);
+                var monthlyData = await _context.Consultations
+                    .Where(c => c.SpecialistName == specialistName && c.DateTime >= twelveMonthsAgo)
+                    .ToListAsync();
+
+                var dataByMonth = monthlyData
+                    .GroupBy(c => new { Year = c.DateTime.Year, Month = c.DateTime.Month })
+                    .ToDictionary(
+                        g => $"{g.Key.Year}-{g.Key.Month:D2}",
+                        g => new MonthlyStats {
+                            Total = g.Count(),
+                            Completed = g.Count(c => c.Status == ConsultationStatus.Completed),
+                            Cancelled = g.Count(c => c.Status == ConsultationStatus.Cancelled)
+                        }
+                    );
+
+                foreach (var item in dataByMonth)
+                {
+                    if (monthlyTrend.ContainsKey(item.Key))
+                    {
+                        monthlyTrend[item.Key] = item.Value;
+                    }
+                }
+
+                statistics.MonthlyTrend = monthlyTrend;
+                
+                var groupConsultations = consultations
+                    .Where(c => c.Format == ConsultationFormat.Group && c.MaxParticipants.HasValue && c.MaxParticipants > 0);
+                
+                if (groupConsultations.Any())
+                {
+                    statistics.AverageGroupAttendance = groupConsultations
+                        .Average(c => (double)c.BookedParticipants / c.MaxParticipants.Value * 100);
+                        
+                    statistics.AttendanceByType = groupConsultations
+                        .GroupBy(c => c.Type)
+                        .ToDictionary(
+                            g => g.Key,
+                            g => g.Average(c => (double)c.BookedParticipants / c.MaxParticipants.Value * 100)
+                        );
+                }
+
+                if (consultations.Any(c => c.Price > 0))
+                {
+                    var monthlyEarningsData = await _context.Consultations
+                        .Where(c => c.SpecialistName == specialistName && c.DateTime >= twelveMonthsAgo)
+                        .Include(c => c.Slots)
+                        .ToListAsync();
+
+                    var monthlyEarningsWithClients = monthlyEarningsData
+                        .GroupBy(c => new { c.DateTime.Year, c.DateTime.Month })
+                        .OrderBy(g => g.Key.Year)
+                        .ThenBy(g => g.Key.Month)
+                        .Select(g => new {
+                            Month = $"{g.Key.Year}-{g.Key.Month:D2}",
+                            Earnings = g.Sum(c => c.Format == ConsultationFormat.Individual ? 
+                                c.Slots.Count(s => s.IsBooked) * c.Price : 
+                                c.BookedParticipants * c.Price),
+                            Clients = g.Sum(c => c.Format == ConsultationFormat.Individual ? 
+                                c.Slots.Count(s => s.IsBooked) : 
+                                c.BookedParticipants)
+                        })
+                        .ToList();
+
+                    statistics.MonthlyEarnings = monthlyEarningsWithClients
+                        .ToDictionary(m => m.Month, m => m.Earnings);
+    
+                    statistics.TotalEarnings = monthlyEarningsWithClients.Sum(m => m.Earnings);
+
+                    Console.WriteLine(statistics.TotalEarnings);
+        
+                    var totalIndividualBookedSlots = consultations
+                        .Where(c => c.Format == ConsultationFormat.Individual && c.Status == ConsultationStatus.Completed && c.Price > 0)
+                        .Sum(c => c.Slots.Count(s => s.IsBooked));
+                    
+                    Console.WriteLine(totalIndividualBookedSlots);
+
+                    var totalGroupParticipants = consultations
+                        .Where(c => c.Format == ConsultationFormat.Group && c.Status == ConsultationStatus.Completed && c.Price > 0)
+                        .Sum(c => c.BookedParticipants);
+
+                    Console.WriteLine(totalGroupParticipants);
+
+                    var totalClients = totalIndividualBookedSlots + totalGroupParticipants;
+
+                    statistics.AverageEarningsPerConsultation = totalClients > 0 ? 
+                        statistics.TotalEarnings / totalClients : 0;
+                }
+                
+                var ninetyDaysAgo = DateTime.Now.AddDays(-90);
+                var dailyConsultationsData = await _context.Consultations
+                    .Where(c => c.SpecialistName == specialistName && c.DateTime >= ninetyDaysAgo)
+                    .ToListAsync();
+                    
+                statistics.DailyConsultationCounts = dailyConsultationsData
+                    .GroupBy(c => c.DateTime.Date.ToString("yyyy-MM-dd"))
+                    .ToDictionary(g => g.Key, g => g.Count());
+                
+                var veteranBookings = await _context.ConsultationBookings
+                    .Include(b => b.User)
+                    .Include(b => b.Consultation)
+                    .Where(b => b.Consultation.SpecialistName == specialistName)
+                    .ToListAsync();
+                    
+                if (veteranBookings.Any())
+                {
+                    statistics.UniqueVeteransServed = veteranBookings
+                        .Select(b => b.UserId)
+                        .Distinct()
+                        .Count();
+                        
+                    var veteranVisitCounts = veteranBookings
+                        .GroupBy(b => b.UserId)
+                        .Select(g => g.Count())
+                        .ToList();
+                        
+                    if (veteranVisitCounts.Any())
+                    {
+                        statistics.RepeatVisitRate = (double)(veteranVisitCounts.Count(c => c > 1)) / veteranVisitCounts.Count * 100;
+                    }
+                }
+                
+                var individualSlots = await _context.ConsultationSlots
+                    .Include(s => s.Consultation)
+                    .Where(s => s.Consultation.SpecialistName == specialistName && s.IsBooked)
+                    .ToListAsync();
+                    
+                if (individualSlots.Any())
+                {
+                    statistics.PopularTimeSlots = individualSlots
+                        .GroupBy(s => s.DateTime.Hour)
+                        .OrderByDescending(g => g.Count())
+                        .Take(5)
+                        .ToDictionary(g => g.Key, g => g.Count());
+                }
+                
+                return View(statistics);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError($"Error loading statistics: {ex.Message}");
+                TempData["Error"] = "Виникла помилка при завантаженні статистики";
+                return RedirectToAction(nameof(Index));
+            }
         }
     }
 }

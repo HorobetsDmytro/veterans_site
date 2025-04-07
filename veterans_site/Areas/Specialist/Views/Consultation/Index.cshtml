@@ -250,6 +250,17 @@
                                             </form>
                                         }
 
+                                        @if (item.Status == ConsultationStatus.Cancelled)
+                                        {
+                                            <form asp-action="Uncancel" asp-route-id="@item.Id" method="post" class="d-inline">
+                                                @Html.AntiForgeryToken()
+                                                <button type="submit" class="btn btn-outline-info btn-sm"
+                                                        onclick="return confirm('Ви впевнені, що хочете активувати цю консультацію знову?')">
+                                                    <i class="fas fa-undo me-2"></i>Активувати знову
+                                                </button>
+                                            </form>
+                                        }
+
                                         <a asp-action="Delete" asp-route-id="@item.Id" class="btn btn-outline-danger btn-sm">Видалити</a>
                                     </div>
                                 </div>

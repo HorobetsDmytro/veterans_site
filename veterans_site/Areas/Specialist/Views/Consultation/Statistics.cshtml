@@ -1,0 +1,768 @@
+@using veterans_site.Extensions
+@model veterans_site.ViewModels.SpecialistStatisticsViewModel
+@{
+    ViewData["Title"] = "Моя статистика";
+}
+
+<style>
+    .stat-card {
+        border-radius: 1rem;
+        box-shadow: 0 0 20px rgba(0,0,0,0.05);
+        transition: all 0.3s ease;
+        margin-bottom: 1.5rem;
+        border: none;
+    }
+
+    .stat-card:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 10px 20px rgba(0,0,0,0.1);
+    }
+
+    .stat-icon {
+        font-size: 2.5rem;
+        margin-bottom: 1rem;
+    }
+
+    .stat-value {
+        font-size: 1.8rem;
+        font-weight: 600;
+        margin-bottom: 0.5rem;
+    }
+
+    .stat-label {
+        color: #64748b;
+        font-size: 0.9rem;
+    }
+
+    .stat-trend {
+        font-size: 0.8rem;
+        padding: 0.25rem 0.5rem;
+        border-radius: 1rem;
+        display: inline-block;
+    }
+
+    .trend-up {
+        background-color: rgba(25, 135, 84, 0.1);
+        color: #198754;
+    }
+
+    .trend-down {
+        background-color: rgba(220, 53, 69, 0.1);
+        color: #dc3545;
+    }
+
+    .chart-container {
+        position: relative;
+        height: 300px;
+        margin-bottom: 2rem;
+    }
+
+    .badge-type {
+        padding: 0.5rem 1rem;
+        border-radius: 2rem;
+        font-weight: 500;
+        margin-right: 0.5rem;
+        margin-bottom: 0.5rem;
+        display: inline-block;
+    }
+
+    .badge-medical {
+        background-color: rgba(220, 53, 69, 0.1);
+        color: #dc3545;
+    }
+
+    .badge-psychological {
+        background-color: rgba(13, 110, 253, 0.1);
+        color: #0d6efd;
+    }
+
+    .badge-legal {
+        background-color: rgba(255, 193, 7, 0.1);
+        color: #ffc107;
+    }
+
+    .badge-format {
+        padding: 0.5rem 1rem;
+        border-radius: 2rem;
+        font-weight: 500;
+        margin-right: 0.5rem;
+        margin-bottom: 0.5rem;
+        display: inline-block;
+    }
+
+    .badge-individual {
+        background-color: rgba(25, 135, 84, 0.1);
+        color: #198754;
+    }
+
+    .badge-group {
+        background-color: rgba(102, 16, 242, 0.1);
+        color: #6610f2;
+    }
+
+    .cal-heatmap {
+        padding: 1rem;
+    }
+
+    .cal-heatmap-cell {
+        width: 12px;
+        height: 12px;
+        margin: 2px;
+        background-color: #ebedf0;
+        border-radius: 2px;
+        display: inline-block;
+    }
+
+    .time-slot {
+        padding: 0.5rem 1rem;
+        border-radius: 0.5rem;
+        margin-bottom: 0.5rem;
+        background-color: rgba(13, 110, 253, 0.1);
+        color: #0d6efd;
+    }
+
+    .time-slot .badge {
+        float: right;
+    }
+</style>
+
+<div class="container py-4">
+    <div class="row mb-4 align-items-center">
+        <div class="col-md-6">
+            <h2 class="mb-0"><i class="fas fa-chart-pie me-2"></i>Моя статистика</h2>
+            <p class="text-muted">@Model.PeriodLabel</p>
+        </div>
+        <div class="col-md-6 text-end">
+            <div class="btn-group">
+                <a href="@Url.Action("Statistics", new { period = "month" })" class="btn btn-outline-primary">Місяць</a>
+                <a href="@Url.Action("Statistics", new { period = "quarter" })" class="btn btn-outline-primary">Квартал</a>
+                <a href="@Url.Action("Statistics", new { period = "halfyear" })" class="btn btn-outline-primary">Півроку</a>
+                <a href="@Url.Action("Statistics", new { period = "year" })" class="btn btn-outline-primary">Рік</a>
+                <a href="@Url.Action("Statistics", new { period = "all" })" class="btn btn-outline-primary">Весь час</a>
+            </div>
+        </div>
+    </div>
+
+    <div class="row">
+        <div class="col-md-3">
+            <div class="stat-card card bg-primary bg-opacity-10">
+                <div class="card-body text-center">
+                    <div class="stat-icon text-primary">
+                        <i class="fas fa-calendar-check"></i>
+                    </div>
+                    <div class="stat-value">@Model.TotalConsultations</div>
+                    <div class="stat-label">Всього консультацій</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-3">
+            <div class="stat-card card bg-success bg-opacity-10">
+                <div class="card-body text-center">
+                    <div class="stat-icon text-success">
+                        <i class="fas fa-clock"></i>
+                    </div>
+                    <div class="stat-value">@Model.UpcomingConsultations</div>
+                    <div class="stat-label">Заплановано</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-3">
+            <div class="stat-card card bg-info bg-opacity-10">
+                <div class="card-body text-center">
+                    <div class="stat-icon text-info">
+                        <i class="fas fa-check-circle"></i>
+                    </div>
+                    <div class="stat-value">@Model.CompletedConsultations</div>
+                    <div class="stat-label">Завершено</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-3">
+            <div class="stat-card card bg-danger bg-opacity-10">
+                <div class="card-body text-center">
+                    <div class="stat-icon text-danger">
+                        <i class="fas fa-times-circle"></i>
+                    </div>
+                    <div class="stat-value">@Model.CancelledConsultations</div>
+                    <div class="stat-label">Скасовано</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row mt-4">
+        <div class="col-md-6">
+            <div class="card stat-card">
+                <div class="card-body">
+                    <h5 class="card-title">Розподіл консультацій за типами</h5>
+                    <div class="chart-container">
+                        <canvas id="typesChart"></canvas>
+                    </div>
+                    <div class="mt-3">
+                        @foreach (var item in Model.ConsultationsByType)
+                        {
+                            <span class="badge-type @($"badge-{item.Key.ToString().ToLower()}")">
+                                @item.Key.GetDisplayName(): @item.Value
+                            </span>
+                        }
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-6">
+            <div class="card stat-card">
+                <div class="card-body">
+                    <h5 class="card-title">Розподіл консультацій за форматами</h5>
+                    <div class="chart-container">
+                        <canvas id="formatsChart"></canvas>
+                    </div>
+                    <div class="mt-3">
+                        @foreach (var item in Model.ConsultationsByFormat)
+                        {
+                            <span class="badge-format @($"badge-{item.Key.ToString().ToLower()}")">
+                                @item.Key.GetDisplayName(): @item.Value
+                            </span>
+                        }
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row">
+        <div class="col-md-6">
+            <div class="card stat-card">
+                <div class="card-body">
+                    <h5 class="card-title">Динаміка консультацій за останній рік</h5>
+                    <div class="chart-container">
+                        <canvas id="trendChart"></canvas>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-6">
+            <div class="card stat-card">
+                <div class="card-body">
+                    <h5 class="card-title">Заповненість за типами групових консультацій</h5>
+                    <div class="chart-container">
+                        <canvas id="attendanceTypeChart"></canvas>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row">
+        <div class="col-md-7">
+            <div class="card stat-card">
+                <div class="card-body">
+                    <h5 class="card-title">Календар консультацій</h5>
+                    <p class="text-muted small">Активність за останні 90 днів</p>
+                    <div id="calendar-heatmap" class="cal-heatmap mt-3"></div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-5">
+            <div class="card stat-card">
+                <div class="card-body">
+                    <h5 class="card-title">Статистика по ветеранам</h5>
+                    <div class="d-flex justify-content-between align-items-center my-4">
+                        <div class="text-center">
+                            <div class="stat-value">@Model.UniqueVeteransServed</div>
+                            <div class="stat-label">Унікальних ветеранів</div>
+                        </div>
+                        <div class="text-center">
+                            <div class="stat-value">@Model.RepeatVisitRate.ToString("0.0")%</div>
+                            <div class="stat-label">Повторні візити</div>
+                        </div>
+                    </div>
+
+                    <h5 class="mt-4">Найпопулярніший час</h5>
+                    @if (Model.PopularTimeSlots.Any())
+                    {
+                        @foreach (var slot in Model.PopularTimeSlots)
+                        {
+                            <div class="time-slot">
+                                @(slot.Key):00 - @(slot.Key + 1):00
+                                <span class="badge bg-primary">@slot.Value консультацій</span>
+                            </div>
+                        }
+                    }
+                    else
+                    {
+                        <p class="text-muted">Немає даних про популярний час</p>
+                    }
+                </div>
+            </div>
+        </div>
+    </div>
+
+    @if (Model.TotalEarnings > 0)
+    {
+        <div class="row mt-4">
+            <div class="col-md-12">
+                <div class="card stat-card">
+                    <div class="card-body">
+                        <h5 class="card-title">Доходи від консультацій</h5>
+                        <p class="text-muted small">Підраховується на основі оплачених слотів та місць</p>
+                        <div class="row">
+                            <div class="col-md-8">
+                                <div class="chart-container">
+                                    <canvas id="earningsChart"></canvas>
+                                </div>
+                            </div>
+                            <div class="col-md-4">
+                                <div class="d-flex align-items-center h-100">
+                                    <div class="w-100">
+                                        <div class="mb-4 text-center">
+                                            <div class="stat-value text-success">@Model.AverageEarningsPerConsultation.ToString("C")</div>
+                                            <div class="stat-label">Середній дохід за консультацію</div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    }
+</div>
+
+@section Scripts {
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const typeLabels = [];
+            const typeData = [];
+            const typeColors = {
+                'Medical': 'rgba(220, 53, 69, 0.7)',
+                'Psychological': 'rgba(13, 110, 253, 0.7)',
+                'Legal': 'rgba(255, 193, 7, 0.7)'
+            };
+            const typeBackgrounds = [];
+            
+            @foreach (var item in Model.ConsultationsByType)
+            {
+                <text>
+                typeLabels.push('@Html.Raw(item.Key.GetDisplayName())');
+                typeData.push(@item.Value);
+                typeBackgrounds.push(typeColors['@item.Key']);
+                </text>
+            }
+            
+            const typesCtx = document.getElementById('typesChart').getContext('2d');
+            new Chart(typesCtx, {
+                type: 'doughnut',
+                data: {
+                    labels: typeLabels,
+                    datasets: [{
+                        data: typeData,
+                        backgroundColor: typeBackgrounds,
+                        borderWidth: 1
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            position: 'bottom'
+                        },
+                        tooltip: {
+                            callbacks: {
+                                label: function(context) {
+                                    const label = context.label || '';
+                                    const value = context.raw || 0;
+                                    const total = context.dataset.data.reduce((acc, val) => acc + val, 0);
+                                    const percentage = Math.round((value / total) * 100);
+                                    return `${label}: ${value} (${percentage}%)`;
+                                }
+                            }
+                        }
+                    }
+                }
+            });
+            
+            const formatLabels = [];
+            const formatData = [];
+            const formatColors = [
+                'rgba(25, 135, 84, 0.7)',
+                'rgba(102, 16, 242, 0.7)',
+                'rgba(13, 202, 240, 0.7)'
+            ];
+            
+            @foreach (var item in Model.ConsultationsByFormat)
+            {
+                <text>
+                formatLabels.push('@Html.Raw(item.Key.GetDisplayName())');
+                formatData.push(@item.Value);
+                </text>
+            }
+            
+            const formatsCtx = document.getElementById('formatsChart').getContext('2d');
+            new Chart(formatsCtx, {
+                type: 'pie',
+                data: {
+                    labels: formatLabels,
+                    datasets: [{
+                        data: formatData,
+                        backgroundColor: formatColors,
+                        borderWidth: 1
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            position: 'bottom'
+                        }
+                    }
+                }
+            });
+
+            const monthlyTrendData = @Html.Raw(Json.Serialize(Model.MonthlyTrend));
+
+            const monthDataArray = [];
+            for (const monthKey in monthlyTrendData) {
+                if (monthlyTrendData.hasOwnProperty(monthKey)) {
+                    const [year, month] = monthKey.split('-').map(Number);
+                    monthDataArray.push({
+                        key: monthKey,
+                        year: year,
+                        month: month,
+                        data: monthlyTrendData[monthKey]
+                    });
+                }
+            }
+
+            monthDataArray.sort((a, b) => {
+                if (a.year !== b.year) return a.year - b.year;
+                return a.month - b.month;
+            });
+
+            const last12Months = monthDataArray.slice(-12);
+
+            const monthLabels = [];
+            const completedData = [];
+            const cancelledData = [];
+            const totalData = [];
+
+            last12Months.forEach(item => {
+                const date = new Date(item.year, item.month - 1, 1);
+                const monthName = date.toLocaleDateString('uk-UA', { month: 'short' });
+
+                monthLabels.push(monthName);
+                
+                const monthData = item.data || {};
+
+                const total = monthData.Total !== undefined ? monthData.Total :
+                    (monthData.total !== undefined ? monthData.total : 0);
+
+                const completed = monthData.Completed !== undefined ? monthData.Completed :
+                    (monthData.completed !== undefined ? monthData.completed : 0);
+
+                const cancelled = monthData.Cancelled !== undefined ? monthData.Cancelled :
+                    (monthData.cancelled !== undefined ? monthData.cancelled : 0);
+                
+                totalData.push(total);
+                completedData.push(completed);
+                cancelledData.push(cancelled);
+            });
+
+            const hasValidData = totalData.some(value => value > 0) ||
+                completedData.some(value => value > 0) ||
+                cancelledData.some(value => value > 0);
+
+            const trendCtx = document.getElementById('trendChart').getContext('2d');
+            new Chart(trendCtx, {
+                type: 'line',
+                data: {
+                    labels: monthLabels,
+                    datasets: [
+                        {
+                            label: 'Всього консультацій',
+                            data: totalData,
+                            borderColor: 'rgba(13, 110, 253, 1)',
+                            backgroundColor: 'rgba(13, 110, 253, 0.1)',
+                            borderWidth: 2,
+                            fill: true,
+                            tension: 0.3
+                        },
+                        {
+                            label: 'Завершено',
+                            data: completedData,
+                            borderColor: 'rgba(25, 135, 84, 1)',
+                            backgroundColor: 'transparent',
+                            borderWidth: 2,
+                            tension: 0.3
+                        },
+                        {
+                            label: 'Скасовано',
+                            data: cancelledData,
+                            borderColor: 'rgba(220, 53, 69, 1)',
+                            backgroundColor: 'transparent',
+                            borderWidth: 2,
+                            tension: 0.3
+                        }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            position: 'bottom'
+                        },
+                        tooltip: {
+                            mode: 'index',
+                            intersect: false
+                        }
+                    },
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            ticks: {
+                                precision: 0
+                            }
+                        }
+                    }
+                }
+            });
+
+            if (!hasValidData) {
+                const chartContainer = document.getElementById('trendChart').parentNode;
+                const noDataMessage = document.createElement('div');
+                noDataMessage.className = 'text-center text-muted my-3';
+                noDataMessage.textContent = 'Немає даних для відображення за обраний період';
+                chartContainer.insertBefore(noDataMessage, chartContainer.firstChild);
+            }
+            
+            const typeAttendanceLabels = [];
+            const typeAttendanceData = [];
+            const attendanceByTypeData = @Html.Raw(Json.Serialize(Model.AttendanceByType));
+            
+            @foreach (var item in Model.AttendanceByType)
+            {
+                <text>
+                typeAttendanceLabels.push('@Html.Raw(item.Key.GetDisplayName())');
+                typeAttendanceData.push(@item.Value);
+                </text>
+            }
+            
+            const attendanceTypeCtx = document.getElementById('attendanceTypeChart').getContext('2d');
+            new Chart(attendanceTypeCtx, {
+                type: 'bar',
+                data: {
+                    labels: typeAttendanceLabels,
+                    datasets: [{
+                        label: 'Заповненість (%)',
+                        data: typeAttendanceData,
+                        backgroundColor: [
+                            'rgba(220, 53, 69, 0.7)',
+                            'rgba(13, 110, 253, 0.7)',
+                            'rgba(255, 193, 7, 0.7)'
+                        ],
+                        borderWidth: 1
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            display: false
+                        }
+                    },
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            max: 100,
+                            title: {
+                                display: true,
+                                text: 'Відсоток заповненості'
+                            }
+                        }
+                    }
+                }
+            });
+            
+            const calendarData = @Html.Raw(Json.Serialize(Model.DailyConsultationCounts));
+            
+            renderCalendarHeatmap(calendarData);
+
+            @if (Model.TotalEarnings > 0)
+            {
+                <text>
+                    const earningsLabels = [];
+                    const earningsData = [];
+                    const monthlyEarningsData = @Html.Raw(Json.Serialize(Model.MonthlyEarnings));
+
+                    last12Months.forEach(item => {
+                        const monthKey = item.key;
+                        const monthName = new Date(item.year, item.month - 1, 1).toLocaleDateString('uk-UA', { month: 'short' });
+
+                        earningsLabels.push(monthName);
+                        earningsData.push(monthlyEarningsData[monthKey] || 0);
+                    });
+
+                    console.log("Earnings Labels:", earningsLabels);
+                    console.log("Earnings Data:", earningsData);
+
+                    const earningsCtx = document.getElementById('earningsChart').getContext('2d');
+                    new Chart(earningsCtx, {
+                        type: 'bar',
+                        data: {
+                            labels: earningsLabels,
+                            datasets: [{
+                                label: 'Дохід',
+                                data: earningsData,
+                                backgroundColor: 'rgba(25, 135, 84, 0.7)',
+                                borderColor: 'rgba(25, 135, 84, 1)',
+                                borderWidth: 1
+                            }]
+                        },
+                        options: {
+                            responsive: true,
+                            maintainAspectRatio: false,
+                            plugins: {
+                                legend: {
+                                    display: false
+                                }
+                            },
+                            scales: {
+                                y: {
+                                    beginAtZero: true,
+                                    ticks: {
+                                        callback: function(value) {
+                                            return value.toLocaleString('uk-UA', { style: 'currency', currency: 'UAH' });
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    });
+                </text>
+            }
+        });
+
+        function renderCalendarHeatmap(data) {
+            const calendarContainer = document.getElementById('calendar-heatmap');
+            calendarContainer.innerHTML = '';
+            
+            const today = new Date();
+            const days = [];
+            
+            for (let i = 90; i >= 0; i--) {
+                const date = new Date(today);
+                date.setDate(today.getDate() - i);
+                const dateString = date.toISOString().split('T')[0];
+                days.push({
+                    date: dateString,
+                    count: data[dateString] || 0
+                });
+            }
+            
+            const maxCount = Math.max(...days.map(d => d.count), 1);
+            
+            const weeks = [];
+            let currentWeek = [];
+            
+            const firstDate = new Date(days[0].date);
+            const firstDay = firstDate.getDay();
+            
+            for (let i = 0; i < (firstDay === 0 ? 6 : firstDay - 1); i++) {
+                currentWeek.push(null);
+            }
+            
+            days.forEach(day => {
+                const date = new Date(day.date);
+                const dayOfWeek = date.getDay();
+                
+                if (dayOfWeek === 0 && currentWeek.length > 0) {
+                    weeks.push(currentWeek);
+                    currentWeek = [];
+                }
+                
+                let intensity = 0;
+                if (day.count > 0) {
+                    intensity = Math.min(Math.ceil((day.count / maxCount) * 4), 4);
+                }
+                
+                currentWeek.push({
+                    date: day.date,
+                    count: day.count,
+                    intensity: intensity
+                });
+                
+                if (dayOfWeek === 6) {
+                    weeks.push(currentWeek);
+                    currentWeek = [];
+                }
+            });
+            
+            if (currentWeek.length > 0) {
+                weeks.push(currentWeek);
+            }
+            
+            const calendarHtml = document.createElement('div');
+            calendarHtml.className = 'd-flex';
+            
+            const dayNames = document.createElement('div');
+            dayNames.className = 'd-flex flex-column mt-2 me-2';
+            
+            ['Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб', 'Нд'].forEach(day => {
+                const dayNameDiv = document.createElement('div');
+                dayNameDiv.className = 'cal-heatmap-cell-label text-center mb-2';
+                dayNameDiv.style.height = '12px';
+                dayNameDiv.innerText = day;
+                dayNames.appendChild(dayNameDiv);
+            });
+            
+            calendarHtml.appendChild(dayNames);
+            
+            weeks.forEach(week => {
+                const weekDiv = document.createElement('div');
+                weekDiv.className = 'd-flex flex-column me-1';
+                
+                week.forEach(day => {
+                    const dayDiv = document.createElement('div');
+                    dayDiv.className = 'cal-heatmap-cell mb-2';
+                    
+                    if (day) {
+                        const colors = [
+                            '#ebedf0',
+                            '#c6e48b',
+                            '#7bc96f',
+                            '#239a3b',
+                            '#196127'
+                        ];
+                        
+                        dayDiv.style.backgroundColor = colors[day.intensity];
+                        dayDiv.title = `${day.date}: ${day.count} консультацій`;
+                        dayDiv.setAttribute('data-bs-toggle', 'tooltip');
+                        dayDiv.setAttribute('data-bs-placement', 'top');
+                    }
+                    
+                    weekDiv.appendChild(dayDiv);
+                });
+                
+                calendarHtml.appendChild(weekDiv);
+            });
+            
+            calendarContainer.appendChild(calendarHtml);
+            
+            const tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
+            tooltipTriggerList.map(function (tooltipTriggerEl) {
+                return new bootstrap.Tooltip(tooltipTriggerEl);
+            });
+        }
+    </script>
+}
