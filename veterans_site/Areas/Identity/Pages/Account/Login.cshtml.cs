@@ -60,7 +60,6 @@ namespace veterans_site.Areas.Identity.Pages.Account
 
             returnUrl ??= Url.Content("~/");
 
-            // Clear the existing external cookie to ensure a clean login process
             await HttpContext.SignOutAsync(IdentityConstants.ExternalScheme);
 
             ExternalLogins = (await _signInManager.GetExternalAuthenticationSchemesAsync()).ToList();
@@ -76,7 +75,6 @@ namespace veterans_site.Areas.Identity.Pages.Account
 
             if (ModelState.IsValid)
             {
-                // Увійти в систему без підтвердження
                 var result = await _signInManager.PasswordSignInAsync(Input.Email, Input.Password, Input.RememberMe, lockoutOnFailure: false);
                 if (result.Succeeded)
                 {
@@ -90,7 +88,6 @@ namespace veterans_site.Areas.Identity.Pages.Account
                 }
             }
 
-            // Якщо щось пішло не так, повторно відобразити форму
             return Page();
         }
     }

@@ -1,5 +1,6 @@
 using Microsoft.AspNetCore.Http.Connections;
 using Microsoft.AspNetCore.Identity;
+using Microsoft.AspNetCore.Identity.UI.Services;
 using Microsoft.EntityFrameworkCore;
 using veterans_site.Areas.Specialist.Controllers;
 using veterans_site.Data;
@@ -68,6 +69,7 @@ builder.Services.AddDataProtection();
 builder.Services.Configure<EmailSettings>(
     builder.Configuration.GetSection("EmailSettings"));
 builder.Services.AddScoped<IEmailService, EmailService>();
+builder.Services.AddTransient<IEmailSender, EmailSender>();
 
 builder.Services.AddControllersWithViews();
 

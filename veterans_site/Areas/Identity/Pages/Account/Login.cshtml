@@ -31,16 +31,16 @@
         margin-bottom: 2rem;
     }
 
-        .auth-header h1 {
-            font-size: 2rem;
-            font-weight: 700;
-            color: #2d3748;
-            margin-bottom: 1rem;
-        }
+    .auth-header h1 {
+        font-size: 2rem;
+        font-weight: 700;
+        color: #2d3748;
+        margin-bottom: 1rem;
+    }
 
-        .auth-header p {
-            color: #718096;
-        }
+    .auth-header p {
+        color: #718096;
+    }
 
     .form-floating {
         margin-bottom: 1.5rem;
@@ -52,10 +52,10 @@
         border: 1px solid #e2e8f0;
     }
 
-        .form-control:focus {
-            border-color: #3182ce;
-            box-shadow: 0 0 0 3px rgba(49,130,206,0.1);
-        }
+    .form-control:focus {
+        border-color: #3182ce;
+        box-shadow: 0 0 0 3px rgba(49,130,206,0.1);
+    }
 
     .btn-primary {
         padding: 0.75rem 1.5rem;
@@ -64,28 +64,62 @@
         transition: all 0.3s ease;
     }
 
-        .btn-primary:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 5px 15px rgba(49,130,206,0.2);
-        }
+    .btn-primary:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 5px 15px rgba(49,130,206,0.2);
+    }
 
     .auth-footer {
         text-align: center;
         margin-top: 2rem;
     }
 
-        .auth-footer a {
-            color: #3182ce;
-            text-decoration: none;
-            transition: color 0.3s ease;    
-        }
+    .auth-footer a {
+        color: #3182ce;
+        text-decoration: none;
+        transition: color 0.3s ease;    
+    }
 
-            .auth-footer a:hover {
-                color: #2c5282;
-            }
+    .auth-footer a:hover {
+        color: #2c5282;
+    }
+
+    .form-floating > label {
+        transition: all 0.2s ease;
+        pointer-events: none;
+        position: absolute;
+        top: 0;
+        left: 0;
+        height: 100%;
+        padding: 1rem 0.75rem;
+        transform-origin: 0 0;
+    }
+
+    .form-floating > .form-control:focus ~ label,
+    .form-floating > .form-control:not(:placeholder-shown) ~ label {
+        transform: scale(0.85) translateY(-0.5rem) translateX(0.15rem);
+        opacity: 0.65;
+    }
+
+    .password-container {
+        position: relative;
+    }
+
+    .input-group {
+        position: relative;
+        display: flex;
+        flex-wrap: wrap;
+        align-items: stretch;
+        width: 100%;
+    }
+
+    .toggle-password {
+        border-top-right-radius: 0.5rem !important;
+        border-bottom-right-radius: 0.5rem !important;
+        z-index: 0;
+    }
 </style>
 
-@* <h1 class="text-center">@ViewData["Title"]</h1> *@
 <div class="auth-container">
     <div class="auth-card">
         <div class="auth-header">
@@ -102,9 +136,14 @@
                 <span asp-validation-for="Input.Email" class="text-danger"></span>
             </div>
 
-            <div class="form-floating">
-                <input asp-for="Input.Password" class="form-control" autocomplete="new-password" placeholder="Пароль" />
-                <label asp-for="Input.Password">Пароль</label>
+            <div class="form-floating mb-3">
+                <div class="input-group">
+                    <input asp-for="Input.Password" class="form-control" autocomplete="current-password" placeholder=" " id="passwordInput" />
+                    <button class="btn btn-outline-secondary toggle-password" type="button">
+                        <i class="fas fa-eye"></i>
+                    </button>
+                </div>
+                <label asp-for="Input.Password" for="passwordInput">Пароль</label>
                 <span asp-validation-for="Input.Password" class="text-danger"></span>
             </div>
 
@@ -123,6 +162,9 @@
                 <div>
                     Немає акаунту? <a asp-page="./Register">Зареєструватися</a>
                 </div>
+                <div class="mt-2">
+                    <a asp-page="./ForgotPassword">Забули пароль?</a>
+                </div>
             </div>
         </form>
     </div>
@@ -130,4 +172,42 @@
 
 @section Scripts {
     <partial name="_ValidationScriptsPartial" />
+    <script>
+        document.addEventListener("DOMContentLoaded", function() {
+            const passwordInput = document.getElementById('passwordInput');
+            const passwordLabel = document.querySelector('label[for="passwordInput"]');
+            const toggleButtons = document.querySelectorAll('.toggle-password');
+
+            function handlePasswordInput() {
+                if (passwordInput.value.trim() !== '') {
+                    passwordLabel.style.display = 'none';
+                } else {
+                    passwordLabel.style.display = 'block';
+                }
+            }
+
+            handlePasswordInput();
+            
+            passwordInput.addEventListener('input', handlePasswordInput);
+            passwordInput.addEventListener('blur', handlePasswordInput);
+            passwordInput.addEventListener('focus', function() {
+                passwordLabel.style.display = 'block';
+            });
+
+            toggleButtons.forEach(button => {
+                button.addEventListener('click', function() {
+                    const input = this.closest('.input-group').querySelector('input');
+                    const icon = this.querySelector('i');
+
+                    if (input.type === 'password') {
+                        input.type = 'text';
+                        icon.classList.replace('fa-eye', 'fa-eye-slash');
+                    } else {
+                        input.type = 'password';
+                        icon.classList.replace('fa-eye-slash', 'fa-eye');
+                    }
+                });
+            });
+        });
+    </script>
 }

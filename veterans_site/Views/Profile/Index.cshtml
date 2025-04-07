@@ -230,6 +230,7 @@
 
         <div class="row g-4">
             <div class="col-md-4">
+                <!-- У блоці з інформацією про користувача -->
                 <div class="profile-card card">
                     <div class="card-body p-4">
                         <div class="profile-header">
@@ -255,12 +256,22 @@
                             <i class="@(Model.User.IsActive ? "fas fa-check-circle" : "fas fa-exclamation-circle")"></i>
                             @if (Model.User.IsActive)
                             {
-                                <span>Акаунт активний</span>
+                                <span>Аккаунт активний</span>
                             }
                             else
                             {
-                                <span>Акаунт неактивний</span>
+                                <span>Аккаунт неактивний</span>
                             }
+                        </div>
+
+                        <!-- Додаємо кнопки для керування обліковим записом -->
+                        <div class="d-flex flex-column gap-2">
+                            <a asp-action="EditAccount" class="btn btn-outline-primary">
+                                <i class="fas fa-user-edit me-2"></i>Редагувати профіль
+                            </a>
+                            <a asp-action="ChangePassword" class="btn btn-outline-secondary">
+                                <i class="fas fa-key me-2"></i>Змінити пароль
+                            </a>
                         </div>
                     </div>
                 </div>
@@ -655,6 +666,11 @@
 
 @section Scripts {
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script>
+        document.getElementById('avatarInput').addEventListener('change', function() {
+            document.getElementById('avatarForm').submit();
+        });
+    </script>
     <script>
         document.addEventListener('DOMContentLoaded', function () {
             const avatarInput = document.getElementById('avatarInput');

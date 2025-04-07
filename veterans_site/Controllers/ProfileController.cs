@@ -20,6 +20,7 @@ namespace veterans_site.Controllers
         private readonly INewsRepository _newsRepository;
         private readonly ILogger<ProfileController> _logger;
         private readonly IWebHostEnvironment _webHostEnvironment;
+        private SignInManager<ApplicationUser> _signInManager;
 
         public ProfileController(
             UserManager<ApplicationUser> userManager,
@@ -27,7 +28,8 @@ namespace veterans_site.Controllers
             IEventRepository eventRepository,
             ILogger<ProfileController> logger, 
             IWebHostEnvironment webHostEnvironment, 
-            INewsRepository newsRepository)
+            INewsRepository newsRepository,
+            SignInManager<ApplicationUser> signInManager)
         {
             _userManager = userManager;
             _consultationRepository = consultationRepository;
@@ -35,6 +37,7 @@ namespace veterans_site.Controllers
             _logger = logger;
             _webHostEnvironment = webHostEnvironment;
             _newsRepository = newsRepository;
+            _signInManager = signInManager;
         }
 
         public async Task<IActionResult> Index()
@@ -274,5 +277,117 @@ namespace veterans_site.Controllers
 
             return RedirectToAction("Index");
         }
+        
+        [HttpGet]
+public async Task<IActionResult> EditAccount()
+{
+    var user = await _userManager.GetUserAsync(User);
+    if (user == null)
+    {
+        return NotFound();
+    }
+
+    var model = new EditAccountViewModel
+    {
+        FirstName = user.FirstName,
+        LastName = user.LastName,
+        Email = user.Email
+    };
+
+    return View(model);
+}
+
+[HttpPost]
+[ValidateAntiForgeryToken]
+public async Task<IActionResult> EditAccount(EditAccountViewModel model)
+{
+    if (!ModelState.IsValid)
+    {
+        return View(model);
+    }
+
+    var user = await _userManager.GetUserAsync(User);
+    if (user == null)
+    {
+        return NotFound();
+    }
+
+    user.FirstName = model.FirstName;
+    user.LastName = model.LastName;
+
+    // Оновлюємо email, якщо він змінився
+    if (user.Email != model.Email)
+    {
+        var setEmailResult = await _userManager.SetEmailAsync(user, model.Email);
+        if (!setEmailResult.Succeeded)
+        {
+            foreach (var error in setEmailResult.Errors)
+            {
+                ModelState.AddModelError(string.Empty, error.Description);
+            }
+            return View(model);
+        }
+        await _userManager.SetUserNameAsync(user, model.Email);
+    }
+
+    var result = await _userManager.UpdateAsync(user);
+    if (result.Succeeded)
+    {
+        TempData["Success"] = "Ваші дані успішно оновлено";
+        return RedirectToAction(nameof(Index));
+    }
+
+    foreach (var error in result.Errors)
+    {
+        ModelState.AddModelError(string.Empty, error.Description);
+    }
+
+    return View(model);
+}
+
+[HttpGet]
+public async Task<IActionResult> ChangePassword()
+{
+    var user = await _userManager.GetUserAsync(User);
+    if (user == null)
+    {
+        return NotFound();
+    }
+
+    var model = new ChangePasswordViewModel();
+    return View(model);
+}
+
+[HttpPost]
+[ValidateAntiForgeryToken]
+public async Task<IActionResult> ChangePassword(ChangePasswordViewModel model)
+{
+    if (!ModelState.IsValid)
+    {
+        return View(model);
+    }
+
+    var user = await _userManager.GetUserAsync(User);
+    if (user == null)
+    {
+        return NotFound();
+    }
+
+    var changePasswordResult = await _userManager.ChangePasswordAsync(user, 
+        model.CurrentPassword, model.NewPassword);
+
+    if (!changePasswordResult.Succeeded)
+    {
+        foreach (var error in changePasswordResult.Errors)
+        {
+            ModelState.AddModelError(string.Empty, error.Description);
+        }
+        return View(model);
+    }
+
+    await _signInManager.RefreshSignInAsync(user);
+    TempData["Success"] = "Ваш пароль успішно змінено";
+    return RedirectToAction(nameof(Index));
+}
     }
 }

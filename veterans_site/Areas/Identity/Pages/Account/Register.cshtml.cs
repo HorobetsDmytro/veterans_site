@@ -116,7 +116,6 @@ namespace veterans_site.Areas.Identity.Pages.Account
                             $"{user.FirstName} {user.LastName}"
                         );
 
-                        //TempData["Success"] = "Реєстрація успішна. Перевірте вашу електронну пошту.";
                     }
                     catch (Exception ex)
                     {
