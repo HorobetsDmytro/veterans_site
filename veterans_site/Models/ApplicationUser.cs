@@ -17,9 +17,13 @@ namespace veterans_site.Models
 
         public DateTime RegistrationDate { get; set; } = DateTime.Now;
         public string? AvatarPath { get; set; }
-        
+    
         public bool IsOnline { get; set; } = false;
         public DateTime LastOnline { get; set; } = DateTime.Now;
+
+        public string? VeteranCertificateNumber { get; set; }
+        public string? SpecialistType { get; set; }
+        public string? VolunteerOrganization { get; set; }
 
         public virtual ICollection<ConsultationBooking> ConsultationBookings { get; set; }
         public virtual ICollection<EventParticipant> EventParticipants { get; set; }

@@ -174,6 +174,47 @@
                 <span asp-validation-for="Input.ConfirmPassword" class="text-danger"></span>
             </div>
 
+            <div class="form-floating mb-3">
+                <select asp-for="Input.SelectedRole" id="roleSelect" class="form-select" aria-label="Виберіть роль">
+                    <option value="" selected disabled>Виберіть роль</option>
+                    <option value="Veteran">Ветеран</option>
+                    <option value="Specialist">Спеціаліст</option>
+                    <option value="Volunteer">Волонтер</option>
+                </select>
+                <label asp-for="Input.SelectedRole">Виберіть вашу роль</label>
+                <span asp-validation-for="Input.SelectedRole" class="text-danger"></span>
+            </div>
+
+            <div id="veteranFields" class="role-specific-fields" style="display: none;">
+                <div class="form-floating mb-3">
+                    <input asp-for="Input.VeteranCertificateNumber" class="form-control" placeholder="ААА 123456" />
+                    <label asp-for="Input.VeteranCertificateNumber">Номер посвідчення ветерана</label>
+                    <span asp-validation-for="Input.VeteranCertificateNumber" class="text-danger"></span>
+                    <small class="form-text text-muted">Формат: ААА 123456</small>
+                </div>
+            </div>
+
+            <div id="specialistFields" class="role-specific-fields" style="display: none;">
+                <div class="form-floating mb-3">
+                    <select asp-for="Input.SpecialistType" class="form-select">
+                        <option value="" selected disabled>Виберіть спеціалізацію</option>
+                        <option value="Medical">Медична</option>
+                        <option value="Psychological">Психологічна</option>
+                        <option value="Legal">Юридична</option>
+                    </select>
+                    <label asp-for="Input.SpecialistType">Спеціалізація</label>
+                    <span asp-validation-for="Input.SpecialistType" class="text-danger"></span>
+                </div>
+            </div>
+
+            <div id="volunteerFields" class="role-specific-fields" style="display: none;">
+                <div class="form-floating mb-3">
+                    <input asp-for="Input.VolunteerOrganization" class="form-control" placeholder="Назва організації" />
+                    <label asp-for="Input.VolunteerOrganization">Волонтерська організація</label>
+                    <span asp-validation-for="Input.VolunteerOrganization" class="text-danger"></span>
+                </div>
+            </div>
+
             <button type="submit" class="btn btn-primary w-100">
                 <i class="fas fa-user-plus me-2"></i>Зареєструватися
             </button>
@@ -194,6 +235,11 @@
             const passwordLabel = document.querySelector('label[for="passwordInput"]');
             const confirmPasswordLabel = document.querySelector('label[for="confirmPasswordInput"]');
             const toggleButtons = document.querySelectorAll('.toggle-password');
+            const roleSelect = document.getElementById('roleSelect');
+            const veteranFields = document.getElementById('veteranFields');
+            const specialistFields = document.getElementById('specialistFields');
+            const volunteerFields = document.getElementById('volunteerFields');
+            const form = document.getElementById('registerForm');
 
             function handleLabelVisibility(input, label) {
                 if (input.value.trim() !== '') {
@@ -231,6 +277,151 @@
                         icon.classList.replace('fa-eye-slash', 'fa-eye');
                     }
                 });
+            });
+
+            roleSelect.addEventListener('change', function() {
+                veteranFields.style.display = 'none';
+                specialistFields.style.display = 'none';
+                volunteerFields.style.display = 'none';
+
+                switch (this.value) {
+                    case 'Veteran':
+                        veteranFields.style.display = 'block';
+                        break;
+                    case 'Specialist':
+                        specialistFields.style.display = 'block';
+                        break;
+                    case 'Volunteer':
+                        volunteerFields.style.display = 'block';
+                        break;
+                }
+            });
+
+            form.addEventListener('submit', function(e) {
+                let hasError = false;
+                const selectedRole = roleSelect.value;
+                
+                document.querySelectorAll('.role-specific-error').forEach(el => el.remove());
+                
+                if (!selectedRole) {
+                    e.preventDefault();
+                    const errorMsg = document.createElement('span');
+                    errorMsg.className = 'text-danger role-specific-error';
+                    errorMsg.textContent = 'Виберіть вашу роль';
+                    roleSelect.insertAdjacentElement('afterend', errorMsg);
+                    hasError = true;
+                } else {
+                    if (selectedRole === 'Veteran') {
+                        const veteranCertInput = document.querySelector('[name="Input.VeteranCertificateNumber"]');
+                        if (!veteranCertInput.value) {
+                            e.preventDefault();
+                            const errorMsg = document.createElement('span');
+                            errorMsg.className = 'text-danger role-specific-error';
+                            errorMsg.textContent = 'Номер посвідчення ветерана обов\'язковий';
+                            veteranCertInput.insertAdjacentElement('afterend', errorMsg);
+                            hasError = true;
+                        } else {
+                            const regex = /^[А-ЯІЇЄҐ]{3}\s\d{6}$/;
+                            if (!regex.test(veteranCertInput.value)) {
+                                e.preventDefault();
+                                const errorMsg = document.createElement('span');
+                                errorMsg.className = 'text-danger role-specific-error';
+                                veteranCertInput.insertAdjacentElement('afterend', errorMsg);
+                                hasError = true;
+                            }
+                        }
+                    } else if (selectedRole === 'Specialist') {
+                        const specialistTypeSelect = document.querySelector('[name="Input.SpecialistType"]');
+                        if (!specialistTypeSelect.value) {
+                            e.preventDefault();
+                            const errorMsg = document.createElement('span');
+                            errorMsg.className = 'text-danger role-specific-error';
+                            errorMsg.textContent = 'Виберіть спеціалізацію';
+                            specialistTypeSelect.insertAdjacentElement('afterend', errorMsg);
+                            hasError = true;
+                        }
+                    } else if (selectedRole === 'Volunteer') {
+                        const volunteerOrgInput = document.querySelector('[name="Input.VolunteerOrganization"]');
+                        if (!volunteerOrgInput.value) {
+                            e.preventDefault();
+                            const errorMsg = document.createElement('span');
+                            errorMsg.className = 'text-danger role-specific-error';
+                            errorMsg.textContent = 'Вкажіть назву волонтерської організації';
+                            volunteerOrgInput.insertAdjacentElement('afterend', errorMsg);
+                            hasError = true;
+                        }
+                    }
+                }
+                
+                if (hasError) {
+                    const firstError = document.querySelector('.role-specific-error');
+                    if (firstError) {
+                        firstError.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                    }
+                }
+
+                const veteranCertInput = document.querySelector('[name="Input.VeteranCertificateNumber"]');
+                const specialistTypeSelect = document.querySelector('[name="Input.SpecialistType"]');
+                const volunteerOrgInput = document.querySelector('[name="Input.VolunteerOrganization"]');
+
+                if (veteranCertInput) {
+                    veteranCertInput.addEventListener('input', function() {
+                        const errorElement = this.nextElementSibling?.nextElementSibling;
+                        if (errorElement && errorElement.classList.contains('role-specific-error')) {
+                            errorElement.remove();
+                        }
+                        const serverError = document.querySelector('[data-valmsg-for="Input.VeteranCertificateNumber"]');
+                        if (serverError) {
+                            serverError.textContent = '';
+                        }
+                    });
+                }
+
+                if (specialistTypeSelect) {
+                    specialistTypeSelect.addEventListener('change', function() {
+                        const errorElement = this.nextElementSibling?.nextElementSibling;
+                        if (errorElement && errorElement.classList.contains('role-specific-error')) {
+                            errorElement.remove();
+                        }
+                        const serverError = document.querySelector('[data-valmsg-for="Input.SpecialistType"]');
+                        if (serverError) {
+                            serverError.textContent = '';
+                        }
+                    });
+                }
+
+                if (volunteerOrgInput) {
+                    volunteerOrgInput.addEventListener('input', function() {
+                        const errorElement = this.nextElementSibling?.nextElementSibling;
+                        if (errorElement && errorElement.classList.contains('role-specific-error')) {
+                            errorElement.remove();
+                        }
+                        const serverError = document.querySelector('[data-valmsg-for="Input.VolunteerOrganization"]');
+                        if (serverError) {
+                            serverError.textContent = '';
+                        }
+                    });
+                }
+
+                if (veteranCertInput) {
+                    veteranCertInput.addEventListener('input', function() {
+                        const errorElement = document.querySelector('.text-danger:not(.role-specific-error)');
+                        if (errorElement && (
+                            errorElement.textContent.includes('Номер посвідчення ветерана обов\'язковий') ||
+                            errorElement.textContent.includes('Введіть номер у форматі')
+                        )) {
+                            errorElement.style.display = 'none';
+                        }
+
+                        const validationErrors = document.querySelectorAll('.role-specific-error');
+                        validationErrors.forEach(error => {
+                            if (error.textContent.includes('Номер посвідчення ветерана обов\'язковий') ||
+                                error.textContent.includes('Введіть номер у форматі')) {
+                                error.style.display = 'none';
+                            }
+                        });
+                    });
+                }
             });
         });
     </script>

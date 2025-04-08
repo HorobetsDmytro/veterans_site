@@ -1,0 +1,535 @@
+@page
+@model RegisterModel
+@{
+    ViewData["Title"] = "Зареєструватися";
+}
+
+<style>
+    .auth-container {
+        min-height: 80vh;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background: linear-gradient(rgba(255,255,255,.9), rgba(255,255,255,.9)), url('/images/hero-bg.jpg');
+        background-size: cover;
+        background-position: center;
+    }
+
+    .auth-card {
+        background: white;
+        border-radius: 1rem;
+        border: none;
+        box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+        padding: 2rem;
+        width: 100%;
+        max-width: 450px;
+    }
+
+    .auth-header {
+        text-align: center;
+        margin-bottom: 2rem;
+    }
+
+    .auth-header h1 {
+        font-size: 2rem;
+        font-weight: 700;
+        color: #2d3748;
+        margin-bottom: 1rem;
+    }
+
+    .auth-header p {
+        color: #718096;
+    }
+
+    .form-floating {
+        margin-bottom: 1.5rem;
+    }
+
+    .form-control {
+        border-radius: 0.5rem;
+        padding: 1rem 0.75rem;
+        border: 1px solid #e2e8f0;
+    }
+
+    .form-control:focus {
+        border-color: #3182ce;
+        box-shadow: 0 0 0 3px rgba(49,130,206,0.1);
+    }
+
+    .btn-primary {
+        padding: 0.75rem 1.5rem;
+        font-weight: 600;
+        border-radius: 0.5rem;
+        transition: all 0.3s ease;
+    }
+
+    .btn-primary:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 5px 15px rgba(49,130,206,0.2);
+    }
+
+    .auth-footer {
+        text-align: center;
+        margin-top: 2rem;
+    }
+
+    .auth-footer a {
+        color: #3182ce;
+        text-decoration: none;
+        transition: color 0.3s ease;
+    }
+
+    .auth-footer a:hover {
+        color: #2c5282;
+    }
+
+    .form-floating > label {
+        transition: all 0.2s ease;
+        pointer-events: none;
+        position: absolute;
+        top: 0;
+        left: 0;
+        height: 100%;
+        padding: 1rem 0.75rem;
+        transform-origin: 0 0;
+    }
+
+    .form-floating > .form-control:focus ~ label,
+    .form-floating > .form-control:not(:placeholder-shown) ~ label {
+        transform: scale(0.85) translateY(-0.5rem) translateX(0.15rem);
+        opacity: 0.65;
+    }
+
+    .password-container {
+        position: relative;
+    }
+
+    .input-group {
+        position: relative;
+        display: flex;
+        flex-wrap: wrap;
+        align-items: stretch;
+        width: 100%;
+    }
+
+    .toggle-password {
+        border-top-right-radius: 0.5rem !important;
+        border-bottom-right-radius: 0.5rem !important;
+        z-index: 0;
+    }
+
+    .form-floating > .input-group > .form-control {
+        border-top-right-radius: 0;
+        border-bottom-right-radius: 0;
+    }
+</style>
+
+<div class="auth-container">
+    <div class="auth-card">
+        <div class="auth-header">
+            <h1>Реєстрація</h1>
+            <p>Створіть новий акаунт для доступу до всіх можливостей</p>
+        </div>
+
+        <form id="registerForm" method="post">
+            <div asp-validation-summary="ModelOnly" class="text-danger" role="alert"></div>
+
+            <div class="form-floating">
+                <input asp-for="Input.FirstName" class="form-control" autocomplete="off" placeholder="Ім'я" />
+                <label asp-for="Input.FirstName">Ім'я</label>
+                <span asp-validation-for="Input.FirstName" class="text-danger"></span>
+            </div>
+
+            <div class="form-floating">
+                <input asp-for="Input.LastName" class="form-control" autocomplete="off" placeholder="Прізвище" />
+                <label asp-for="Input.LastName">Прізвище</label>
+                <span asp-validation-for="Input.LastName" class="text-danger"></span>
+            </div>
+
+            <div class="form-floating">
+                <input asp-for="Input.Email" class="form-control" autocomplete="new-password" placeholder="name@example.com" />
+                <label asp-for="Input.Email">Email</label>
+                <span asp-validation-for="Input.Email" class="text-danger"></span>
+            </div>
+
+            <div class="form-floating mb-3">
+                <div class="input-group">
+                    <input asp-for="Input.Password" class="form-control" autocomplete="current-password" placeholder=" " id="passwordInput" />
+                    <button class="btn btn-outline-secondary toggle-password" type="button">
+                        <i class="fas fa-eye"></i>
+                    </button>
+                </div>
+                <label asp-for="Input.Password" for="passwordInput">Пароль</label>
+                <span asp-validation-for="Input.Password" class="text-danger"></span>
+            </div>
+
+            <div class="form-floating mb-3">
+                <div class="input-group">
+                    <input asp-for="Input.ConfirmPassword" class="form-control" autocomplete="off" placeholder=" " id="confirmPasswordInput" />
+                    <button class="btn btn-outline-secondary toggle-password" type="button">
+                        <i class="fas fa-eye"></i>
+                    </button>
+                </div>
+                <label asp-for="Input.ConfirmPassword" for="confirmPasswordInput">Підтвердження пароля</label>
+                <span asp-validation-for="Input.ConfirmPassword" class="text-danger"></span>
+            </div>
+
+            <button type="submit" class="btn btn-primary w-100">
+                <i class="fas fa-user-plus me-2"></i>Зареєструватися
+            </button>
+
+            <div class="auth-footer">
+                Вже маєте акаунт? <a asp-page="./Login">Увійти</a>
+            </div>
+        </form>
+    </div>
+</div>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+    <script>
+        document.addEventListener("DOMContentLoaded", function() {
+            const passwordInput = document.getElementById('passwordInput');
+            const confirmPasswordInput = document.getElementById('confirmPasswordInput');
+            const passwordLabel = document.querySelector('label[for="passwordInput"]');
+            const confirmPasswordLabel = document.querySelector('label[for="confirmPasswordInput"]');
+            const toggleButtons = document.querySelectorAll('.toggle-password');
+
+            function handleLabelVisibility(input, label) {
+                if (input.value.trim() !== '') {
+                    label.style.display = 'none';
+                } else {
+                    label.style.display = 'block';
+                }
+            }
+
+            handleLabelVisibility(passwordInput, passwordLabel);
+            handleLabelVisibility(confirmPasswordInput, confirmPasswordLabel);
+
+            passwordInput.addEventListener('input', () => handleLabelVisibility(passwordInput, passwordLabel));
+            passwordInput.addEventListener('blur', () => handleLabelVisibility(passwordInput, passwordLabel));
+            passwordInput.addEventListener('focus', function() {
+                passwordLabel.style.display = 'block';
+            });
+
+            confirmPasswordInput.addEventListener('input', () => handleLabelVisibility(confirmPasswordInput, confirmPasswordLabel));
+            confirmPasswordInput.addEventListener('blur', () => handleLabelVisibility(confirmPasswordInput, confirmPasswordLabel));
+            confirmPasswordInput.addEventListener('focus', function() {
+                confirmPasswordLabel.style.display = 'block';
+            });
+
+            toggleButtons.forEach(button => {
+                button.addEventListener('click', function() {
+                    const input = this.closest('.input-group').querySelector('input');
+                    const icon = this.querySelector('i');
+
+                    if (input.type === 'password') {
+                        input.type = 'text';
+                        icon.classList.replace('fa-eye', 'fa-eye-slash');
+                    } else {
+                        input.type = 'password';
+                        icon.classList.replace('fa-eye-slash', 'fa-eye');
+                    }
+                });
+            });
+        });
+    </script>
+}
+
+
+
+// Licensed to the .NET Foundation under one or more agreements.
+// The .NET Foundation licenses this file to you under the MIT license.
+#nullable disable
+
+using System;
+using System.Collections.Generic;
+using System.ComponentModel.DataAnnotations;
+using System.Linq;
+using System.Text;
+using System.Threading;
+using System.Threading.Tasks;
+using Microsoft.AspNetCore.Authentication;
+using Microsoft.AspNetCore.Identity;
+using Microsoft.AspNetCore.Identity.UI.Services;
+using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Mvc.RazorPages;
+using Microsoft.Extensions.Logging;
+using veterans_site.Models;
+using veterans_site.Services;
+
+namespace veterans_site.Areas.Identity.Pages.Account
+{
+    public class RegisterModel : PageModel
+    {
+        private readonly SignInManager<ApplicationUser> _signInManager;
+        private readonly UserManager<ApplicationUser> _userManager;
+        private readonly IUserStore<ApplicationUser> _userStore;
+        private readonly IUserEmailStore<ApplicationUser> _emailStore;
+        private readonly ILogger<RegisterModel> _logger;
+        private readonly IEmailService _emailService;
+
+        public RegisterModel(
+            UserManager<ApplicationUser> userManager,
+            IUserStore<ApplicationUser> userStore,
+            SignInManager<ApplicationUser> signInManager,
+            ILogger<RegisterModel> logger,
+            IEmailService emailService)
+        {
+            _userManager = userManager;
+            _userStore = userStore;
+            _emailStore = GetEmailStore();
+            _signInManager = signInManager;
+            _logger = logger;
+            _emailService = emailService;
+        }
+
+        [BindProperty]
+        public InputModel Input { get; set; }
+
+        public string ReturnUrl { get; set; }
+
+        public IList<AuthenticationScheme> ExternalLogins { get; set; }
+
+        public class InputModel
+        {
+            [Required]
+            [StringLength(50)]
+            [Display(Name = "FirstName")]
+            public string FirstName { get; set; }
+
+            [Required]
+            [StringLength(50)]
+            [Display(Name = "LastName")]
+            public string LastName { get; set; }
+
+            [Required]
+            [EmailAddress]
+            [Display(Name = "Email")]
+            public string Email { get; set; }
+
+            [Required]
+            [StringLength(100, ErrorMessage = "The {0} must be at least {2} and at max {1} characters long.", MinimumLength = 6)]
+            [DataType(DataType.Password)]
+            [Display(Name = "Password")]
+            public string Password { get; set; }
+
+            [DataType(DataType.Password)]
+            [Display(Name = "Confirm password")]
+            [Compare("Password", ErrorMessage = "The password and confirmation password do not match.")]
+            public string ConfirmPassword { get; set; }
+        }
+
+        public async Task OnGetAsync(string returnUrl = null)
+        {
+            ReturnUrl = returnUrl;
+            ExternalLogins = (await _signInManager.GetExternalAuthenticationSchemesAsync()).ToList();
+        }
+
+        public virtual async Task<IActionResult> OnPostAsync(string returnUrl = null)
+        {
+            returnUrl ??= Url.Content("~/");
+            ExternalLogins = (await _signInManager.GetExternalAuthenticationSchemesAsync()).ToList();
+
+            if (ModelState.IsValid)
+            {
+                var user = new ApplicationUser
+                {
+                    UserName = Input.Email,
+                    Email = Input.Email,
+                    FirstName = Input.FirstName,
+                    LastName = Input.LastName
+                };
+
+                await _userStore.SetUserNameAsync(user, Input.Email, CancellationToken.None);
+                await _emailStore.SetEmailAsync(user, Input.Email, CancellationToken.None);
+                var result = await _userManager.CreateAsync(user, Input.Password);
+
+                if (result.Succeeded)
+                {
+                    await _userManager.AddToRoleAsync(user, "Veteran");
+
+                    try
+                    {
+                        await _emailService.SendRegistrationConfirmationAsync(
+                            user.Email,
+                            $"{user.FirstName} {user.LastName}"
+                        );
+
+                    }
+                    catch (Exception ex)
+                    {
+                        _logger.LogError($"Failed to send registration email: {ex.Message}");
+                    }
+
+                    await _signInManager.SignInAsync(user, isPersistent: false);
+                    return LocalRedirect(returnUrl);
+                }
+                foreach (var error in result.Errors)
+                {
+                    ModelState.AddModelError(string.Empty, error.Description);
+                }
+            }
+
+            return Page();
+        }
+
+        private ApplicationUser CreateUser()
+        {
+            try
+            {
+                return Activator.CreateInstance<ApplicationUser>();
+            }
+            catch
+            {
+                throw new InvalidOperationException($"Can't create an instance of '{nameof(ApplicationUser)}'. " +
+                    $"Ensure that '{nameof(ApplicationUser)}' is not an abstract class and has a parameterless constructor, or alternatively " +
+                    $"override the register page in /Areas/Identity/Pages/Account/Register.cshtml");
+            }
+        }
+
+        private IUserEmailStore<ApplicationUser> GetEmailStore()
+        {
+            if (!_userManager.SupportsUserEmail)
+            {
+                throw new NotSupportedException("The default UI requires a user store with email support.");
+            }
+            return (IUserEmailStore<ApplicationUser>)_userStore;
+        }
+    }
+}
+
+
+
+
+using Microsoft.AspNetCore.Identity;
+using veterans_site.Models;
+
+namespace veterans_site.Services
+{
+    public class RoleInitializer
+    {
+        public static async Task InitializeAsync(UserManager<ApplicationUser> userManager, RoleManager<IdentityRole> roleManager)
+        {
+            string[] roleNames = { "Admin", "Veteran", "Specialist" };
+            foreach (var roleName in roleNames)
+            {
+                if (!await roleManager.RoleExistsAsync(roleName))
+                {
+                    await roleManager.CreateAsync(new IdentityRole(roleName));
+                }
+            }
+
+            string adminEmail = "admin@gmail.com";
+            string adminPassword = "Gd_135790";
+
+            if (await userManager.FindByEmailAsync(adminEmail) == null)
+            {
+                ApplicationUser admin = new ApplicationUser
+                {
+                    UserName = adminEmail,
+                    Email = adminEmail,
+                    FirstName = "Admin",
+                    LastName = "User",
+                    EmailConfirmed = true,
+                    IsActive = true
+                };
+
+                IdentityResult result = await userManager.CreateAsync(admin, adminPassword);
+
+                if (result.Succeeded)
+                {
+                    await userManager.AddToRoleAsync(admin, "Admin");
+                }
+            }
+        }
+    }
+}
+
+
+
+
+
+
+using Microsoft.AspNetCore.Identity;
+using Microsoft.Extensions.Options;
+using System.Security.Claims;
+using veterans_site.Models;
+
+namespace veterans_site.Services
+{
+    public class CustomUserClaimsPrincipalFactory : UserClaimsPrincipalFactory<ApplicationUser, IdentityRole>
+    {
+        private readonly UserManager<ApplicationUser> _userManager;
+
+        public CustomUserClaimsPrincipalFactory(
+            UserManager<ApplicationUser> userManager,
+            RoleManager<IdentityRole> roleManager,
+            IOptions<IdentityOptions> optionsAccessor)
+            : base(userManager, roleManager, optionsAccessor)
+        {
+            _userManager = userManager;
+        }
+
+        public override async Task<ClaimsPrincipal> CreateAsync(ApplicationUser user)
+        {
+            var principal = await base.CreateAsync(user);
+
+            if (!await _userManager.IsInRoleAsync(user, "Admin") &&
+                !await _userManager.IsInRoleAsync(user, "Specialist") &&
+                !await _userManager.IsInRoleAsync(user, "Veteran"))
+            {
+                await _userManager.AddToRoleAsync(user, "Veteran");
+            }
+
+            return principal;
+        }
+    }
+}
+	
+
+
+using Microsoft.AspNetCore.Identity;
+using System.ComponentModel.DataAnnotations;
+
+namespace veterans_site.Models
+{
+    public class ApplicationUser : IdentityUser
+    {
+        [Required]
+        [StringLength(50)]
+        public string FirstName { get; set; }
+
+        [Required]
+        [StringLength(50)]
+        public string LastName { get; set; }
+
+        public bool IsActive { get; set; } = true;
+
+        public DateTime RegistrationDate { get; set; } = DateTime.Now;
+        public string? AvatarPath { get; set; }
+        
+        public bool IsOnline { get; set; } = false;
+        public DateTime LastOnline { get; set; } = DateTime.Now;
+
+        public virtual ICollection<ConsultationBooking> ConsultationBookings { get; set; }
+        public virtual ICollection<EventParticipant> EventParticipants { get; set; }
+        public virtual ICollection<ChatMessage> SentMessages { get; set; }
+        public virtual ICollection<ChatMessage> ReceivedMessages { get; set; }
+    }
+}
+
+
+
+namespace veterans_site.Models
+{
+    public class RoleChangeRequest
+    {
+        public int Id { get; set; }
+        public string UserId { get; set; }
+        public string NewRole { get; set; }
+        public string Token { get; set; }
+        public DateTime ExpiryTime { get; set; }
+        public bool IsConfirmed { get; set; }
+    }
+}

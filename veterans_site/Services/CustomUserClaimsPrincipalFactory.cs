@@ -22,9 +22,9 @@ namespace veterans_site.Services
         {
             var principal = await base.CreateAsync(user);
 
-            if (!await _userManager.IsInRoleAsync(user, "Admin") &&
-                !await _userManager.IsInRoleAsync(user, "Specialist") &&
-                !await _userManager.IsInRoleAsync(user, "Veteran"))
+            var roles = await _userManager.GetRolesAsync(user);
+    
+            if (roles.Count == 0)
             {
                 await _userManager.AddToRoleAsync(user, "Veteran");
             }

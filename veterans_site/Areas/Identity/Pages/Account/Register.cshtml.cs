@@ -7,6 +7,7 @@ using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
 using System.Linq;
 using System.Text;
+using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Authentication;
@@ -78,6 +79,21 @@ namespace veterans_site.Areas.Identity.Pages.Account
             [Display(Name = "Confirm password")]
             [Compare("Password", ErrorMessage = "The password and confirmation password do not match.")]
             public string ConfirmPassword { get; set; }
+
+            [Required(ErrorMessage = "Виберіть вашу роль")]
+            [Display(Name = "Role")]
+            public string SelectedRole { get; set; }
+
+            [Display(Name = "Номер посвідчення ветерана")]
+            [RegularExpression(@"^[А-ЯІЇЄҐ]{3}\s\d{6}$", ErrorMessage = "Введіть номер у форматі: ААА 123456")]
+            public string? VeteranCertificateNumber { get; set; }
+
+            [Display(Name = "Спеціалізація")]
+            public string? SpecialistType { get; set; }
+
+            [Display(Name = "Волонтерська організація")]
+            [StringLength(100)]
+            public string? VolunteerOrganization { get; set; }
         }
 
         public async Task OnGetAsync(string returnUrl = null)
@@ -91,6 +107,8 @@ namespace veterans_site.Areas.Identity.Pages.Account
             returnUrl ??= Url.Content("~/");
             ExternalLogins = (await _signInManager.GetExternalAuthenticationSchemesAsync()).ToList();
 
+            ValidateRoleSpecificFields();
+
             if (ModelState.IsValid)
             {
                 var user = new ApplicationUser
@@ -98,7 +116,10 @@ namespace veterans_site.Areas.Identity.Pages.Account
                     UserName = Input.Email,
                     Email = Input.Email,
                     FirstName = Input.FirstName,
-                    LastName = Input.LastName
+                    LastName = Input.LastName,
+                    VeteranCertificateNumber = Input.SelectedRole == "Veteran" ? Input.VeteranCertificateNumber : null,
+                    SpecialistType = Input.SelectedRole == "Specialist" ? Input.SpecialistType : null,
+                    VolunteerOrganization = Input.SelectedRole == "Volunteer" ? Input.VolunteerOrganization : null
                 };
 
                 await _userStore.SetUserNameAsync(user, Input.Email, CancellationToken.None);
@@ -107,7 +128,7 @@ namespace veterans_site.Areas.Identity.Pages.Account
 
                 if (result.Succeeded)
                 {
-                    await _userManager.AddToRoleAsync(user, "Veteran");
+                    await _userManager.AddToRoleAsync(user, Input.SelectedRole);
 
                     try
                     {
@@ -115,7 +136,6 @@ namespace veterans_site.Areas.Identity.Pages.Account
                             user.Email,
                             $"{user.FirstName} {user.LastName}"
                         );
-
                     }
                     catch (Exception ex)
                     {
@@ -132,6 +152,35 @@ namespace veterans_site.Areas.Identity.Pages.Account
             }
 
             return Page();
+        }
+
+        private void ValidateRoleSpecificFields()
+        {
+            if (Input.SelectedRole == "Veteran")
+            {
+                if (string.IsNullOrEmpty(Input.VeteranCertificateNumber))
+                {
+                    ModelState.AddModelError("Input.VeteranCertificateNumber", "Номер посвідчення ветерана обов'язковий для цієї ролі");
+                }
+                else if (!Regex.IsMatch(Input.VeteranCertificateNumber, @"^[А-ЯІЇЄҐ]{3}\s\d{6}$"))
+                {
+                    ModelState.AddModelError("Input.VeteranCertificateNumber", "Введіть номер у форматі: ААА 123456");
+                }
+            }
+            else if (Input.SelectedRole == "Specialist")
+            {
+                if (string.IsNullOrEmpty(Input.SpecialistType))
+                {
+                    ModelState.AddModelError("Input.SpecialistType", "Виберіть спеціалізацію");
+                }
+            }
+            else if (Input.SelectedRole == "Volunteer")
+            {
+                if (string.IsNullOrEmpty(Input.VolunteerOrganization))
+                {
+                    ModelState.AddModelError("Input.VolunteerOrganization", "Вкажіть назву волонтерської організації");
+                }
+            }
         }
 
         private ApplicationUser CreateUser()
