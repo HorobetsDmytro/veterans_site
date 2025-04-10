@@ -24,6 +24,9 @@ public class VeteranSupportDbContext : IdentityDbContext<ApplicationUser>
     public DbSet<EventComment> EventComments { get; set; }
     public DbSet<ChatMessage> ChatMessages { get; set; }
     public DbSet<UserConnection> UsersConnections { get; set; }
+    public DbSet<GeneralChatMessage> GeneralChatMessages { get; set; }
+    public DbSet<UserLastReadGeneralChat> UserLastReadGeneralChats { get; set; }
+    
 
     protected override void OnModelCreating(ModelBuilder builder)
     {

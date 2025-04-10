@@ -1,0 +1,1039 @@
+using Microsoft.AspNetCore.SignalR;
+using Microsoft.EntityFrameworkCore;
+using System.Collections.Concurrent;
+using veterans_site.Data;
+using veterans_site.Models;
+using System.Security.Claims;
+using Microsoft.AspNetCore.Identity;
+
+namespace veterans_site.Hubs
+{
+    public class ChatHub : Hub
+    {
+        private static readonly ConcurrentDictionary<string, UserConnection> _connections = 
+            new ConcurrentDictionary<string, UserConnection>();
+            
+        private readonly VeteranSupportDbContext _context;
+        
+        public ChatHub(VeteranSupportDbContext context)
+        {
+            _context = context;
+        }
+        
+        public override async Task OnConnectedAsync()
+        {
+            var userId = Context.User?.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+
+            if (!string.IsNullOrEmpty(userId))
+            {
+                var connection = new UserConnection
+                {
+                    UserId = userId,
+                    ConnectionId = Context.ConnectionId,
+                    IsOnline = true,
+                    LastSeen = DateTime.Now
+                };
+
+                var existingConnection = _connections.Values
+                    .FirstOrDefault(c => c.UserId == userId && c.ConnectionId != Context.ConnectionId);
+
+                _connections.AddOrUpdate(Context.ConnectionId, connection, (key, oldValue) => connection);
+
+                if (existingConnection == null)
+                {
+                    var user = await _context.Users.FindAsync(userId);
+                    if (user != null)
+                    {
+                        user.IsOnline = true;
+                        user.LastOnline = DateTime.Now;
+                        await _context.SaveChangesAsync();
+                
+                        await Clients.All.SendAsync("UserStatusChanged", userId, true, DateTime.Now);
+                    }
+                }
+            }
+
+            await base.OnConnectedAsync();
+        }
+        
+        public override async Task OnDisconnectedAsync(Exception exception)
+        {
+            var userId = Context.User?.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+    
+            if (!string.IsNullOrEmpty(userId))
+            {
+                _connections.TryRemove(Context.ConnectionId, out _);
+        
+                var hasOtherConnections = _connections.Values
+                    .Any(c => c.UserId == userId);
+        
+                if (!hasOtherConnections)
+                {
+                    var user = await _context.Users.FindAsync(userId);
+                    if (user != null)
+                    {
+                        user.IsOnline = false;
+                        user.LastOnline = DateTime.Now;
+                        await _context.SaveChangesAsync();
+                
+                        await Clients.All.SendAsync("UserStatusChanged", userId, false, DateTime.Now);
+                    }
+                }
+            }
+    
+            await base.OnDisconnectedAsync(exception);
+        }
+        
+            public async Task SendPrivateMessage(string receiverId, string message, string fileUrl = null, 
+    string fileName = null, string fileType = null, string fileSize = null)
+{
+    var senderId = Context.User?.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+
+    if (string.IsNullOrEmpty(senderId))
+        return;
+
+    message = message ?? string.Empty;
+
+    // Обробка повідомлень для загального чату
+    if (receiverId == "general-chat")
+    {
+        // Отримуємо інформацію про відправника та його роль один раз
+        var sender = await _context.Users
+            .Where(u => u.Id == senderId)
+            .Select(u => new {
+                u.Id,
+                u.FirstName,
+                u.LastName,
+                u.AvatarPath
+            })
+            .FirstOrDefaultAsync();
+            
+        if (sender == null) return;
+
+        // Отримуємо роль відправника
+        var userManager = Context.GetHttpContext().RequestServices
+            .GetRequiredService<UserManager<ApplicationUser>>();
+        var senderUser = await userManager.FindByIdAsync(senderId);
+        var senderRoles = await userManager.GetRolesAsync(senderUser);
+        var senderRole = senderRoles.FirstOrDefault();
+        string roleName = "Користувач";
+
+        switch (senderRole)
+        {
+            case "Admin":
+                roleName = "Адмін";
+                break;
+            case "Veteran":
+                roleName = "Ветеран";
+                break;
+            case "Specialist":
+                roleName = "Спеціаліст";
+                break;
+            case "Volunteer":
+                roleName = "Волонтер";
+                break;
+        }
+
+        // Створюємо повідомлення для загального чату
+        var generalChatMessage = new ChatMessage
+        {
+            SenderId = senderId,
+            ReceiverId = null, // Для загального чату ReceiverId = null
+            Content = message,
+            SentAt = DateTime.Now,
+            FilePath = fileUrl,
+            FileName = fileName,
+            FileType = fileType,
+            FileSize = fileSize,
+            IsGeneralChat = true 
+        };
+        
+        _context.ChatMessages.Add(generalChatMessage);
+        
+        try
+        {
+            await _context.SaveChangesAsync();
+            
+            // Відправляємо повідомлення всім підключеним клієнтам
+            await Clients.All.SendAsync("ReceiveMessage", new
+            {
+                MessageId = generalChatMessage.Id,
+                SenderId = sender.Id,
+                SenderName = $"{sender.FirstName} {sender.LastName}",
+                SenderAvatar = sender.AvatarPath,
+                Content = message,
+                SentAt = generalChatMessage.SentAt,
+                FileUrl = fileUrl,
+                FileName = fileName,
+                FileType = fileType,
+                FileSize = fileSize,
+                SenderInfo = new
+                {
+                    Role = roleName
+                }
+            });
+            
+            // ... інший код ...
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error sending general chat message: {ex.Message}");
+            throw;
+        }
+        
+        return;
+    }
+
+            // Перевіряємо, чи існує отримувач у системі
+            var receiverExists = await _context.Users.AnyAsync(u => u.Id == receiverId);
+            if (!receiverExists)
+            {
+                // Отримувач не знайдений
+                await Clients.Caller.SendAsync("ErrorMessage", "Recipient not found.");
+                return;
+            }
+
+            // Створюємо приватне повідомлення
+            var chatMessage = new ChatMessage
+            {
+                SenderId = senderId,
+                ReceiverId = receiverId,
+                Content = message,
+                SentAt = DateTime.Now,
+                FilePath = fileUrl,
+                FileName = fileName,
+                FileType = fileType,
+                FileSize = fileSize,
+                IsGeneralChat = false
+            };
+            
+            _context.ChatMessages.Add(chatMessage);
+            
+            try
+            {
+                await _context.SaveChangesAsync();
+                
+                // Оновлюємо час останнього онлайн для відправника
+                var user = await _context.Users.FindAsync(senderId);
+                if (user != null)
+                {
+                    user.LastOnline = DateTime.Now;
+                    await _context.SaveChangesAsync();
+                }
+                
+                // Отримуємо інформацію про відправника
+                var sender = await _context.Users
+                    .Where(u => u.Id == senderId)
+                    .Select(u => new {
+                        u.Id,
+                        u.FirstName,
+                        u.LastName,
+                        u.AvatarPath
+                    })
+                    .FirstOrDefaultAsync();
+                
+                // Знаходимо підключення отримувача
+                var receiverConnections = _connections.Values
+                    .Where(c => c.UserId == receiverId)
+                    .Select(c => c.ConnectionId)
+                    .ToList();
+                
+                // Відправляємо повідомлення всім підключенням отримувача
+                if (receiverConnections.Any())
+                {
+                    foreach(var connectionId in receiverConnections)
+                    {
+                        await Clients.Client(connectionId).SendAsync("ReceiveMessage", 
+                            chatMessage.Id,
+                            sender.Id,
+                            $"{sender.FirstName} {sender.LastName}",
+                            sender.AvatarPath,
+                            message,
+                            chatMessage.SentAt,
+                            fileUrl,
+                            fileName,
+                            fileType,
+                            fileSize
+                        );
+                    }
+                }
+                
+                // Повідомлення відправнику про успішну відправку
+                await Clients.Caller.SendAsync("MessageSent", 
+                    chatMessage.Id,
+                    receiverId,
+                    message,
+                    chatMessage.SentAt,
+                    fileUrl,
+                    fileName,
+                    fileType,
+                    fileSize
+                );
+                
+                // Оновлюємо кількість непрочитаних повідомлень для отримувача
+                await Clients.All.SendAsync("UpdateUnreadMessageCount", receiverId);
+            }
+            catch (Exception ex)
+            {
+                // Логування помилки
+                Console.WriteLine($"Error sending private message: {ex.Message}");
+                throw;
+            }
+        }
+        
+        public async Task MarkMessageAsRead(int messageId)
+        {
+            var message = await _context.ChatMessages.FindAsync(messageId);
+            if (message != null && !message.IsRead)
+            {
+                message.IsRead = true;
+                await _context.SaveChangesAsync();
+
+                var senderConnections = _connections.Values
+                    .Where(c => c.UserId == message.SenderId)
+                    .Select(c => c.ConnectionId)
+                    .ToList();
+            
+                foreach (var connectionId in senderConnections)
+                {
+                    await Clients.Client(connectionId).SendAsync("MessageRead", messageId);
+                }
+            }
+        }
+        
+        public async Task EditMessage(int messageId, string newContent)
+        {
+            var senderId = Context.User?.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+    
+            if (string.IsNullOrEmpty(senderId))
+                return;
+        
+            var message = await _context.ChatMessages
+                .FirstOrDefaultAsync(m => m.Id == messageId && m.SenderId == senderId);
+        
+            if (message == null)
+                return;
+        
+            message.Content = newContent;
+            message.IsEdited = true;
+            message.EditedAt = DateTime.Now;
+    
+            await _context.SaveChangesAsync();
+    
+            var receiverConnections = _connections.Values
+                .Where(c => c.UserId == message.ReceiverId)
+                .Select(c => c.ConnectionId)
+                .ToList();
+    
+            foreach (var connectionId in receiverConnections)
+            {
+                await Clients.Client(connectionId).SendAsync("MessageEdited", messageId, newContent);
+            }
+    
+            await Clients.Caller.SendAsync("MessageEdited", messageId, newContent);
+        }
+
+        public async Task DeleteMessage(int messageId)
+        {
+            var senderId = Context.User?.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+    
+            if (string.IsNullOrEmpty(senderId))
+                return;
+        
+            var message = await _context.ChatMessages
+                .FirstOrDefaultAsync(m => m.Id == messageId && m.SenderId == senderId);
+        
+            if (message == null)
+                return;
+        
+            message.IsDeleted = true;
+            message.Content = "Це повідомлення було видалено";
+    
+            await _context.SaveChangesAsync();
+    
+            var receiverConnections = _connections.Values
+                .Where(c => c.UserId == message.ReceiverId)
+                .Select(c => c.ConnectionId)
+                .ToList();
+    
+            foreach (var connectionId in receiverConnections)
+            {
+                await Clients.Client(connectionId).SendAsync("MessageDeleted", messageId);
+            }
+    
+            await Clients.Caller.SendAsync("MessageDeleted", messageId);
+        }
+        
+        public async Task UpdateAllUsersStatus()
+        {
+            var onlineUsers = _connections.Keys.ToList();
+            var allUsers = await _context.Users.ToListAsync();
+
+            var statusUpdates = allUsers.Select(user => new
+            {
+                UserId = user.Id,
+                IsOnline = onlineUsers.Contains(user.Id),
+                LastSeen = user.LastOnline
+            }).ToList();
+
+            await Clients.Caller.SendAsync("ReceiveAllUsersStatus", statusUpdates);
+        }
+        
+        public async Task NotifyUnreadMessagesCount(string userId)
+        {
+            var count = await _context.ChatMessages
+                .CountAsync(m => m.ReceiverId == userId && !m.IsRead);
+        
+            if (_connections.TryGetValue(userId, out var connection))
+            {
+                await Clients.Client(connection.ConnectionId).SendAsync("UpdateUnreadCount", count);
+            }
+        }
+        
+        public async Task UpdateAllUnreadCounts()
+        {
+            var userId = Context.User?.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+            if (string.IsNullOrEmpty(userId))
+                return;
+        
+            var unreadMessagesByUser = await _context.ChatMessages
+                .Where(m => m.ReceiverId == userId && !m.IsRead)
+                .GroupBy(m => m.SenderId)
+                .Select(g => new {
+                    SenderId = g.Key,
+                    UnreadCount = g.Count()
+                })
+                .ToListAsync();
+        
+            await Clients.Caller.SendAsync("UpdateAllUnreadCounts", unreadMessagesByUser);
+        }
+        
+        public async Task MarkGeneralChatMessagesAsRead()
+        {
+            var userId = Context.User?.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+            if (string.IsNullOrEmpty(userId))
+                return;
+
+            // Отримуємо ID останнього повідомлення в загальному чаті
+            var lastMessageId = await _context.ChatMessages
+                .Where(m => m.IsGeneralChat)
+                .OrderByDescending(m => m.Id)
+                .Select(m => m.Id)
+                .FirstOrDefaultAsync();
+
+            // Оновлюємо або створюємо запис про останнє прочитане повідомлення
+            var lastRead = await _context.UserLastReadGeneralChats
+                .FirstOrDefaultAsync(u => u.UserId == userId);
+
+            if (lastRead == null)
+            {
+                lastRead = new UserLastReadGeneralChat
+                {
+                    UserId = userId,
+                    LastReadMessageId = lastMessageId,
+                    LastReadAt = DateTime.Now
+                };
+                _context.UserLastReadGeneralChats.Add(lastRead);
+            }
+            else
+            {
+                lastRead.LastReadMessageId = lastMessageId;
+                lastRead.LastReadAt = DateTime.Now;
+            }
+
+            await _context.SaveChangesAsync();
+
+            // Сповіщаємо клієнта, що всі повідомлення загального чату прочитані
+            await Clients.Caller.SendAsync("GeneralChatMessageRead");
+        }
+    }
+}
+
+
+
+
+    @using Microsoft.AspNetCore.Identity
+@inject UserManager<veterans_site.Models.ApplicationUser> UserManager
+@model List<veterans_site.Models.ChatMessage>
+@{
+    ViewData["Title"] = "Загальний чат";
+    var currentUserId = ViewBag.CurrentUserId;
+    var currentUserRoles = ViewBag.CurrentUserRoles as List<string>;
+}
+
+<div class="container mt-4">
+    <div class="row">
+        <div class="col-md-12">
+            <div class="card shadow">
+                <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
+                    <div>
+                        <h5 class="mb-0"><i class="fas fa-users me-2"></i>Загальний чат</h5>
+                        <small>Спілкування для всіх користувачів системи</small>
+                    </div>
+                    <a asp-controller="Chat" asp-action="Index" class="btn btn-light btn-sm">
+                        <i class="fas fa-arrow-left me-1"></i> До списку чатів
+                    </a>
+                </div>
+                <div class="card-body">
+                    <div class="chat-container" style="height: 500px; overflow-y: auto; padding: 10px;">
+                        <div id="messagesList">
+                            @if (Model.Any())
+                            {
+                                foreach (var message in Model)
+                                {
+                                    bool isCurrentUser = message.SenderId == currentUserId;
+                                    string alignClass = isCurrentUser ? "text-end" : "text-start";
+                                    string bgClass = isCurrentUser ? "bg-primary text-white" : "bg-light";
+                                    string timeClass = isCurrentUser ? "text-white-50" : "text-muted";
+
+                                    <div class="message-container @alignClass mb-3" id="message-@message.Id">
+                                        <div class="d-flex @(isCurrentUser ? "justify-content-end" : "")">
+                                            @if (!isCurrentUser)
+                                            {
+                                                <div class="me-2">
+                                                    @if (!string.IsNullOrEmpty(message.Sender.AvatarPath))
+                                                    {
+                                                        <img src="@Url.Content(message.Sender.AvatarPath)" class="rounded-circle" width="40" height="40" alt="@message.Sender.FirstName">
+                                                    }
+                                                    else
+                                                    {
+                                                        <div class="user-avatar" style="width: 40px; height: 40px; background-color: #2e51a2; display: flex; align-items: center; justify-content: center; border-radius: 50%;">
+                                                            <span class="text-white">@message.Sender.FirstName[0]</span>
+                                                        </div>
+                                                    }
+                                                </div>
+                                            }
+                                            <div style="max-width: 75%;">
+                                                @if (!isCurrentUser)
+                                                {
+                                                    <div class="mb-1">
+                                                        <strong>@message.Sender.FirstName @message.Sender.LastName</strong>
+                                                        @{
+                                                            var userRoles = await UserManager.GetRolesAsync(message.Sender);
+                                                            var role = userRoles.FirstOrDefault();
+
+                                                            switch (role)
+                                                            {
+                                                                case "Admin":
+                                                                    role = "Адмін";
+                                                                    break;
+                                                                case "Veteran":
+                                                                    role = "Ветеран";
+                                                                    break;
+                                                                case "Specialist":
+                                                                    role = "Спеціаліст";
+                                                                    break;
+                                                                case "Volunteer":
+                                                                    role = "Волонтер";
+                                                                    break;
+                                                            }
+                                                        }
+                                                        <span class="badge bg-secondary">@role</span>
+                                                    </div>
+                                                }
+                                                <div class="message-content p-3 rounded @bgClass">
+                                                    @if (message.IsDeleted)
+                                                    {
+                                                        <i class="text-muted fst-italic">@message.Content</i>
+                                                    }
+                                                    else
+                                                    {
+                                                        <div class="message-text">@message.Content</div>
+                                                        @if (message.HasFile)
+                                                        {
+                                                            string fileIconClass = "fa-file";
+                                                            switch (message.FileType)
+                                                            {
+                                                                case "image":
+                                                                    <div class="mt-2">
+                                                                        <a href="@message.FilePath" target="_blank">
+                                                                            <img src="@message.FilePath" class="img-fluid rounded" style="max-height: 200px;" alt="@message.FileName" />
+                                                                        </a>
+                                                                    </div>
+                                                                    break;
+                                                                case "pdf":
+                                                                    fileIconClass = "fa-file-pdf";
+                                                                    break;
+                                                                case "doc":
+                                                                    fileIconClass = "fa-file-word";
+                                                                    break;
+                                                                case "excel":
+                                                                    fileIconClass = "fa-file-excel";
+                                                                    break;
+                                                            }
+                                                            
+                                                            @if (message.FileType != "image")
+                                                            {
+                                                                <div class="mt-2">
+                                                                    <a href="@message.FilePath" class="btn btn-sm @(isCurrentUser ? "btn-light" : "btn-primary")" target="_blank">
+                                                                        <i class="fas @fileIconClass me-1"></i> @message.FileName
+                                                                        <small>(@message.FileSize)</small>
+                                                                    </a>
+                                                                </div>
+                                                            }
+                                                        }
+                                                    }
+                                                    <div class="mt-1 small @timeClass">
+                                                        @message.SentAt.ToString("HH:mm dd.MM.yyyy")
+                                                        @if (message.IsEdited)
+                                                        {
+                                                            <span class="ms-1">(Редаговано)</span>
+                                                        }
+                                                    </div>
+                                                </div>
+                                                @if (isCurrentUser && !message.IsDeleted)
+                                                {
+                                                    <div class="mt-1 message-actions">
+                                                        <div class="btn-group">
+                                                            <button class="btn btn-sm btn-outline-secondary edit-message" data-id="@message.Id" data-content="@message.Content">
+                                                                <i class="fas fa-edit"></i>
+                                                            </button>
+                                                            <button class="btn btn-sm btn-outline-danger delete-message" data-id="@message.Id">
+                                                                <i class="fas fa-trash"></i>
+                                                            </button>
+                                                        </div>
+                                                    </div>
+                                                }
+                                            </div>
+                                        </div>
+                                    </div>
+                                }
+                            }
+                            else
+                            {
+                                <div class="text-center text-muted my-5">
+                                    <i class="fas fa-comments fa-3x mb-3"></i>
+                                    <p>Поки що немає повідомлень. Будьте першим, хто почне розмову!</p>
+                                </div>
+                            }
+                        </div>
+                    </div>
+                </div>
+                <div class="card-footer bg-white">
+                    <div class="input-group">
+                        <div id="file-preview" class="d-none w-100 mb-2">
+                            <div class="border rounded p-2 mb-2 d-flex justify-content-between align-items-center">
+                                <div id="file-info">
+                                    <i class="fas fa-file me-2"></i><span id="file-name"></span>
+                                    <small class="text-muted" id="file-size"></small>
+                                </div>
+                                <button type="button" id="remove-file" class="btn btn-sm btn-outline-danger">
+                                    <i class="fas fa-times"></i>
+                                </button>
+                            </div>
+                            <div id="image-preview" class="d-none mb-2">
+                                <img src="" class="img-fluid rounded" style="max-height: 150px;" />
+                            </div>
+                        </div>
+                        <input type="file" id="file-upload" class="d-none" />
+                        <button class="btn btn-outline-secondary" type="button" id="attach-file">
+                            <i class="fas fa-paperclip"></i>
+                        </button>
+                        <input type="text" id="messageInput" class="form-control" placeholder="Введіть повідомлення...">
+                        <button class="btn btn-primary" type="button" id="sendButton">
+                            <i class="fas fa-paper-plane"></i> Надіслати
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal для редагування повідомлення -->
+<div class="modal fade" id="editMessageModal" tabindex="-1" aria-labelledby="editMessageModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="editMessageModalLabel">Редагувати повідомлення</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <input type="hidden" id="editMessageId">
+                <div class="mb-3">
+                    <textarea class="form-control" id="editMessageContent" rows="3"></textarea>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Скасувати</button>
+                <button type="button" class="btn btn-primary" id="saveEditButton">Зберегти</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/microsoft-signalr/6.0.6/signalr.min.js"></script>
+    <script>
+        $(function() {
+            const connection = new signalR.HubConnectionBuilder()
+                .withUrl("/chatHub")
+                .withAutomaticReconnect()
+                .build();
+
+            const currentUserId = '@ViewBag.CurrentUserId';
+            let selectedFile = null;
+
+            // Прокрутити вниз до останнього повідомлення при завантаженні сторінки
+            function scrollToBottom() {
+                const chatContainer = $('.chat-container');
+                chatContainer.scrollTop(chatContainer[0].scrollHeight);
+            }
+
+            scrollToBottom();
+
+            // Обробка повідомлень
+            function formatTime(date) {
+                const d = new Date(date);
+                const hours = d.getHours().toString().padStart(2, '0');
+                const minutes = d.getMinutes().toString().padStart(2, '0');
+                const day = d.getDate().toString().padStart(2, '0');
+                const month = (d.getMonth() + 1).toString().padStart(2, '0');
+                const year = d.getFullYear();
+
+                return `${hours}:${minutes} ${day}.${month}.${year}`;
+            }
+
+            function getFileIconClass(fileType) {
+                switch (fileType) {
+                    case 'image': return 'fa-file-image';
+                    case 'pdf': return 'fa-file-pdf';
+                    case 'doc': return 'fa-file-word';
+                    case 'excel': return 'fa-file-excel';
+                    default: return 'fa-file';
+                }
+            }
+
+            function createMessageElement(data) {
+                if (!data.SenderInfo) {
+                    data.SenderInfo = {
+                        role: "Користувач",
+                    };
+                }
+                const isCurrentUser = data.SenderId === currentUserId;
+                const messageId = data.MessageId || 0;
+                const alignClass = isCurrentUser ? "text-end" : "text-start";
+                const bgClass = isCurrentUser ? "bg-primary text-white" : "bg-light";
+                const timeClass = isCurrentUser ? "text-white-50" : "text-muted";
+
+                let fileContent = '';
+                if (data.FileUrl) {
+                    if (data.FileType === 'image') {
+                        fileContent = `
+                <div class="mt-2">
+                    <a href="${data.FileUrl}" target="_blank">
+                        <img src="${data.FileUrl}" class="img-fluid rounded" style="max-height: 200px;" alt="${data.FileName}" />
+                    </a>
+                </div>
+            `;
+                    } else {
+                        const fileIconClass = getFileIconClass(data.FileType);
+                        fileContent = `
+                <div class="mt-2">
+                    <a href="${data.FileUrl}" class="btn btn-sm ${isCurrentUser ? "btn-light" : "btn-primary"}" target="_blank">
+                        <i class="fas ${fileIconClass} me-1"></i> ${data.FileName}
+                        <small>(${data.FileSize})</small>
+                    </a>
+                </div>
+            `;
+                    }
+                }
+
+                const userInfo = !isCurrentUser ? `
+                    <div class="mb-1">
+                        <strong>${data.SenderName}</strong>
+                        <span class="badge bg-secondary">
+                            ${data.SenderInfo.role || "Користувач"}
+                        </span>
+                    </div>
+                ` : '';
+
+                const actionButtons = isCurrentUser ? `
+            <div class="mt-1 message-actions">
+                <div class="btn-group">
+                    <button class="btn btn-sm btn-outline-secondary edit-message" data-id="${messageId}" data-content="${data.Content}">
+                        <i class="fas fa-edit"></i>
+                    </button>
+                    <button class="btn btn-sm btn-outline-danger delete-message" data-id="${messageId}">
+                        <i class="fas fa-trash"></i>
+                    </button>
+                </div>
+            </div>
+        ` : '';
+
+                const avatarElement = !isCurrentUser ? `
+            <div class="me-2">
+                ${data.SenderAvatar ?
+                    `<img src="${data.SenderAvatar}" class="rounded-circle" width="40" height="40" alt="${data.SenderName}">` :
+                    `<div class="user-avatar" style="width: 40px; height: 40px; background-color: #2e51a2; display: flex; align-items: center; justify-content: center; border-radius: 50%;">
+                        <span class="text-white">${data.SenderName ? data.SenderName[0] : '?'}</span>
+                     </div>`
+                }
+            </div>
+        ` : '';
+
+                return `
+            <div class="message-container ${alignClass} mb-3" id="message-${messageId}">
+                <div class="d-flex ${isCurrentUser ? "justify-content-end" : ""}">
+                    ${!isCurrentUser ? avatarElement : ''}
+                    <div style="max-width: 75%;">
+                        ${userInfo}
+                        <div class="message-content p-3 rounded ${bgClass}">
+                            <div class="message-text">${data.Content}</div>
+                            ${fileContent}
+                            <div class="mt-1 small ${timeClass}">
+                                ${formatTime(data.SentAt)}
+                            </div>
+                        </div>
+                        ${actionButtons}
+                    </div>
+                </div>
+            </div>
+        `;
+            }
+
+            // Надсилання повідомлення
+            $("#sendButton").click(function() {
+                sendMessage();
+            });
+
+            $("#messageInput").keypress(function(e) {
+                if (e.which === 13 && !e.shiftKey) {
+                    e.preventDefault();
+                    sendMessage();
+                }
+            });
+
+            function sendMessage() {
+                const message = $("#messageInput").val().trim();
+
+                if (selectedFile) {
+                    uploadFile(message);
+                } else if (message) {
+                    // Очищаємо поле вводу до виклику серверного методу
+                    $("#messageInput").val('');
+
+                    connection.invoke("SendPrivateMessage", "general-chat", message, null, null, null, null)
+                        .catch(function(err) {
+                            console.error(err.toString());
+                            alert("Помилка при надсиланні повідомлення");
+                            // Повертаємо текст у поле вводу, якщо виникла помилка
+                            $("#messageInput").val(message);
+                        });
+                }
+            }
+
+            // Завантаження файлів
+            $("#attach-file").click(function() {
+                $("#file-upload").click();
+            });
+
+            $("#file-upload").change(function(e) {
+                const file = e.target.files[0];
+                if (!file) return;
+
+                if (file.size > 10 * 1024 * 1024) {
+                    alert("Файл занадто великий. Максимальний розмір 10MB.");
+                    $(this).val('');
+                    return;
+                }
+
+                const allowedTypes = ['.jpg', '.jpeg', '.png', '.gif', '.pdf', '.doc', '.docx', '.xls', '.xlsx', '.txt'];
+                const extension = '.' + file.name.split('.').pop().toLowerCase();
+
+                if (!allowedTypes.includes(extension)) {
+                    alert("Непідтримуваний формат файлу");
+                    $(this).val('');
+                    return;
+                }
+
+                selectedFile = file;
+                $("#file-name").text(file.name);
+                $("#file-size").text(formatFileSize(file.size));
+                $("#file-preview").removeClass('d-none');
+
+                // Якщо це зображення, показати попередній перегляд
+                if (file.type.startsWith('image/')) {
+                    const reader = new FileReader();
+                    reader.onload = function(e) {
+                        $("#image-preview img").attr('src', e.target.result);
+                        $("#image-preview").removeClass('d-none');
+                    };
+                    reader.readAsDataURL(file);
+                } else {
+                    $("#image-preview").addClass('d-none');
+                }
+            });
+
+            $("#remove-file").click(function() {
+                selectedFile = null;
+                $("#file-upload").val('');
+                $("#file-preview").addClass('d-none');
+                $("#image-preview").addClass('d-none');
+            });
+
+            function formatFileSize(bytes) {
+                const sizes = ['B', 'KB', 'MB', 'GB'];
+                let order = 0;
+                let size = bytes;
+
+                while (size >= 1024 && order < sizes.length - 1) {
+                    order++;
+                    size = size / 1024;
+                }
+
+                return `${size.toFixed(2)} ${sizes[order]}`;
+            }
+
+            function uploadFile(message) {
+                if (!selectedFile) return;
+
+                const formData = new FormData();
+                formData.append('file', selectedFile);
+
+                // Очищаємо поле вводу перед відправкою
+                const messageText = message;
+                $("#messageInput").val('');
+
+                $.ajax({
+                    url: '/Chat/UploadFile',
+                    type: 'POST',
+                    data: formData,
+                    processData: false,
+                    contentType: false,
+                    success: function(response) {
+                        connection.invoke("SendPrivateMessage", "general-chat", messageText,
+                            response.fileUrl, response.fileName, response.fileType, response.fileSize)
+                            .catch(function(err) {
+                                console.error(err.toString());
+                                alert("Помилка при надсиланні повідомлення з файлом");
+                                // Повертаємо текст у поле вводу, якщо виникла помилка
+                                $("#messageInput").val(messageText);
+                            });
+
+                        // Скинути вибір файлу
+                        selectedFile = null;
+                        $("#file-upload").val('');
+                        $("#file-preview").addClass('d-none');
+                        $("#image-preview").addClass('d-none');
+                    },
+                    error: function(xhr) {
+                        console.error(xhr);
+                        alert(xhr.responseJSON?.error || "Помилка при завантаженні файлу");
+                        // Повертаємо текст у поле вводу, якщо виникла помилка
+                        $("#messageInput").val(messageText);
+                    }
+                });
+            }
+
+            // Редагування повідомлень
+            $(document).on('click', '.edit-message', function() {
+                const messageId = $(this).data('id');
+                const content = $(this).data('content');
+
+                $("#editMessageId").val(messageId);
+                $("#editMessageContent").val(content);
+
+                const editModal = new bootstrap.Modal(document.getElementById('editMessageModal'));
+                editModal.show();
+            });
+
+            $("#saveEditButton").click(function() {
+                const messageId = $("#editMessageId").val();
+                const newContent = $("#editMessageContent").val().trim();
+
+                if (newContent) {
+                    connection.invoke("EditMessage", parseInt(messageId), newContent)
+                        .catch(function(err) {
+                            console.error(err.toString());
+                            alert("Помилка при редагуванні повідомлення");
+                        });
+
+                    bootstrap.Modal.getInstance(document.getElementById('editMessageModal')).hide();
+                }
+            });
+
+            // Видалення повідомлень
+            $(document).on('click', '.delete-message', function() {
+                if (confirm("Ви впевнені, що хочете видалити це повідомлення?")) {
+                    const messageId = $(this).data('id');
+
+                    connection.invoke("DeleteMessage", parseInt(messageId))
+                        .catch(function(err) {
+                            console.error(err.toString());
+                            alert("Помилка при видаленні повідомлення");
+                        });
+                }
+            });
+
+            connection.on("ReceiveMessage", function(data) {
+                console.log("Отримано повідомлення:", data);
+
+                // Перевірка на наявність обов'язкових полів і нормалізація даних
+                if (!data || (!data.SenderId && data.senderId)) {
+                    // Якщо дані прийшли в іншому форматі, нормалізуємо їх
+                    data = {
+                        MessageId: data.messageId || data.Id,
+                        SenderId: data.senderId || data.SenderId,
+                        SenderName: data.senderName || data.SenderName,
+                        SenderAvatar: data.senderAvatar || data.SenderAvatar,
+                        Content: data.content || data.Content,
+                        SentAt: data.sentAt || data.SentAt,
+                        FileUrl: data.fileUrl || data.FileUrl,
+                        FileName: data.fileName || data.FileName,
+                        FileType: data.fileType || data.FileType,
+                        FileSize: data.fileSize || data.FileSize,
+                        SenderInfo: data.senderInfo || data.SenderInfo || {}
+                    };
+                }
+
+                // Забезпечуємо наявність властивості SenderInfo зі значеннями за замовчуванням
+                data.SenderInfo = data.SenderInfo || {};
+                if (!data.SenderInfo.role) {
+                    data.SenderInfo.role = "Користувач";
+                }
+
+                if (!data.SenderId) {
+                    console.error("Отримано повідомлення без ідентифікатора відправника", data);
+                    return;
+                }
+
+                // Решта коду...
+                const messageHtml = createMessageElement(data);
+                $("#messagesList").append(messageHtml);
+                scrollToBottom();
+            });
+
+            connection.on("MessageSent", function(messageId, receiverId, content, sentAt, fileUrl, fileName, fileType, fileSize) {
+                console.log("Підтвердження відправки повідомлення:", messageId, receiverId);
+                // У загальному чаті повідомлення вже додається через ReceiveMessage
+            });
+
+            connection.on("MessageEdited", function(messageId, newContent) {
+                $(`#message-${messageId} .message-text`).text(newContent);
+                if (!$(`#message-${messageId} .message-content small.edited-indicator`).length) {
+                    $(`#message-${messageId} .message-content`).append('<small class="d-block text-muted mt-1 edited-indicator">(Редаговано)</small>');
+                }
+            });
+
+            connection.on("MessageDeleted", function(messageId) {
+                $(`#message-${messageId} .message-text`).html('<i class="text-muted">Це повідомлення було видалено</i>');
+                $(`#message-${messageId} .message-actions`).remove();
+            });
+
+            // Підключення до SignalR
+            async function startConnection() {
+                try {
+                    await connection.start();
+                    console.log("SignalR підключено.");
+                } catch (err) {
+                    console.error("SignalR Connection Error:", err);
+                    setTimeout(startConnection, 3000);
+                }
+            }
+
+            // Почати підключення до SignalR хабу
+            startConnection();
+        });
+    </script>
+}

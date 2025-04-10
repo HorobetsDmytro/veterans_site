@@ -1,4 +1,6 @@
-﻿@using Microsoft.AspNetCore.Identity
+﻿@using System.Security.Claims
+@using Microsoft.AspNetCore.Identity
+@using Microsoft.AspNetCore.Mvc.TagHelpers
 @inject SignInManager<ApplicationUser> SignInManager
 @inject UserManager<ApplicationUser> UserManager
 
@@ -298,6 +300,14 @@
                                 <i class="fas fa-user me-1"></i> Мій профіль
                             </a>
                         </li>
+                        
+                        <li class="nav-item">
+                            <a class="nav-link @(ViewContext.RouteData.Values["controller"]?.ToString() == "Chat" ? "active" : "")"
+                               asp-controller="Chat" asp-action="Index">
+                                <i class="fas fa-comments me-1"></i> Чат для спілкування
+                                <span id="chat-notification" class="badge bg-danger rounded-pill" style="display: none;"></span>
+                            </a>
+                        </li>
 
                         @if (User.IsInRole("Admin"))
                         {
@@ -329,17 +339,6 @@
                                         </a>
                                     </li>
                                 </ul>
-                            </li>
-                        }
-
-                        @if (SignInManager.IsSignedIn(User) && User.IsInRole("Veteran"))
-                        {
-                            <li class="nav-item">
-                                <a class="nav-link @(ViewContext.RouteData.Values["controller"]?.ToString() == "Chat" ? "active" : "")"
-                                   asp-controller="Chat" asp-action="Index">
-                                    <i class="fas fa-comments me-1"></i> Чат для спілкування
-                                    <span id="chat-notification" class="badge bg-danger rounded-pill" style="display: none;"></span>
-                                </a>
                             </li>
                         }
 
@@ -458,97 +457,14 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/microsoft-signalr/6.0.6/signalr.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-@await RenderSectionAsync("Scripts", required: false)
-
-<div id="unread-messages-toast" class="position-fixed bottom-0 end-0 p-3" style="z-index: 1050; display: none;">
-</div>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/microsoft-signalr/6.0.6/signalr.min.js"></script>
-<script>
-    $(document).ready(function() {
-        @if (SignInManager.IsSignedIn(User))
-        {
-            <text>
-                const connection = new signalR.HubConnectionBuilder()
-                    .withUrl("/chatHub")
-                    .withAutomaticReconnect()
-                    .build();
-
-                function updateUnreadMessageCount() {
-                    $.getJSON("/Chat/GetUnreadCount", function(data) {
-                        const chatNotification = $("#chat-notification");
-                        if (data.count > 0) {
-                            chatNotification.text(data.count);
-                            chatNotification.show();
-                        } else {
-                            chatNotification.hide();
-                        }
-                    });
-                }
-
-                setInterval(updateUnreadMessageCount, 30000);
-                updateUnreadMessageCount();
-
-                connection.on("ReceiveMessage", function(messageId, senderId, senderName, senderAvatar, content, sentAt, fileUrl, fileName, fileType, fileSize) {
-                    updateUnreadMessageCount();
-
-                    const toastContainer = $('#unread-messages-toast');
-                    const toast = $(`
-                    <div class="toast show mb-2" role="alert" aria-live="assertive" aria-atomic="true">
-                        <div class="toast-header">
-                            <strong class="me-auto">Нове повідомлення</strong>
-                            <button type="button" class="btn-close" data-bs-dismiss="toast" aria-label="Close"></button>
-                        </div>
-                        <div class="toast-body">
-                            <div class="d-flex align-items-center">
-                                ${senderAvatar ?
-                        `<img src="${senderAvatar}" class="rounded-circle me-2" width="32" height="32" alt="${senderName}">` :
-                        `<div class="user-avatar me-2" style="width: 32px; height: 32px; background-color: #2e51a2; border-radius: 50%; display: flex; align-items: center; justify-content: center; color: white;">
-                                    <span>${senderName.substring(0, 1)}</span>
-                                </div>`
-                    }
-                                <div>
-                                    <strong>${senderName}</strong> надіслав вам повідомлення
-                                </div>
-                            </div>
-                            <div class="mt-2">
-                                <a href="/Chat/Conversation?userId=${senderId}" class="btn btn-primary btn-sm">Відповісти</a>
-                            </div>
-                        </div>
-                    </div>
-                `);
-
-                    toastContainer.append(toast);
-                    toastContainer.css('display', 'block');
-
-                    setTimeout(() => {
-                        toast.toast('hide');
-                    }, 2000);
-                });
-
-                async function startConnection() {
-                    try {
-                        await connection.start();
-                        console.log("SignalR підключено.");
-                    } catch (err) {
-                        console.error("SignalR Connection Error:", err);
-                        setTimeout(startConnection, 3000);
-                    }
-                }
-
-                connection.onclose(async function() {
-                    await startConnection();
-                });
-
-                startConnection();
-            </text>
-        }
-    });
-</script>
 <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/toastr.js/latest/toastr.min.js"></script>
 
+@await RenderSectionAsync("Scripts", required: false)
+
+<div id="unread-messages-toast" class="position-fixed bottom-0 end-0 p-3" style="z-index: 1050; display: none;"></div>
 <script>
-    $(document).ready(function() {
+    $(function() {
         toastr.options = {
             closeButton: true,
             progressBar: true,
@@ -572,58 +488,218 @@
         {
             <text>toastr.error('@TempData["Error"]');</text>
         }
-    });
 
-    $(document).on('shown.bs.toast', '.toast', function() {
-        const toast = $(this);
-        const progressBar = toast.find('.toast-progress-bar');
-        const duration = toast.hasClass('show') ? 3000 : 0;
+        function showCustomToast(type, title, message) {
+            const toastContainer = $('.toast-container');
+            const toastId = 'toast-' + Date.now();
 
-        progressBar.css('width', '100%');
-        progressBar.css('transition', `width ${duration}ms linear`);
-
-        setTimeout(function() {
-            progressBar.css('width', '0%');
-        }, 10);
-    });
-
-    function showCustomToast(type, title, message) {
-        const toastContainer = $('.toast-container');
-        const toastId = 'toast-' + Date.now();
-
-        const toast = $(`
-            <div id="${toastId}" class="toast show" role="alert" aria-live="assertive" aria-atomic="true">
-                <div class="toast-header bg-${type} text-white">
-                    <strong class="me-auto">${title}</strong>
-                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="toast" aria-label="Close"></button>
-                </div>
-                <div class="toast-body bg-${type} bg-opacity-90 text-white">
-                    ${message}
-                    <div class="toast-progress">
-                        <div class="toast-progress-bar"></div>
+            const toast = $(`
+                <div id="${toastId}" class="toast show" role="alert" aria-live="assertive" aria-atomic="true">
+                    <div class="toast-header bg-${type} text-white">
+                        <strong class="me-auto">${title}</strong>
+                        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="toast" aria-label="Close"></button>
+                    </div>
+                    <div class="toast-body bg-${type} bg-opacity-90 text-white">
+                        ${message}
+                        <div class="toast-progress">
+                            <div class="toast-progress-bar"></div>
+                        </div>
                     </div>
                 </div>
-            </div>
-        `);
+            `);
 
-        toastContainer.append(toast);
+            toastContainer.append(toast);
 
-        const progressBar = toast.find('.toast-progress-bar');
-        progressBar.css('width', '100%');
-        progressBar.css('transition', 'width 3s linear');
+            const progressBar = toast.find('.toast-progress-bar');
+            progressBar.css('width', '100%');
+            progressBar.css('transition', 'width 3s linear');
 
-        setTimeout(() => {
-            progressBar.css('width', '0%');
-        }, 10);
+            setTimeout(() => {
+                progressBar.css('width', '0%');
+            }, 10);
 
-        setTimeout(() => {
-            toast.toast('hide');
-        }, 3000);
+            setTimeout(() => {
+                toast.toast('hide');
+            }, 3000);
 
-        toast.on('hidden.bs.toast', function() {
-            toast.remove();
+            toast.on('hidden.bs.toast', function() {
+                toast.remove();
+            });
+        }
+
+        $(document).on('shown.bs.toast', '.toast', function() {
+            const toast = $(this);
+            const progressBar = toast.find('.toast-progress-bar');
+            const duration = toast.hasClass('show') ? 3000 : 0;
+
+            progressBar.css('width', '100%');
+            progressBar.css('transition', `width ${duration}ms linear`);
+
+            setTimeout(function() {
+                progressBar.css('width', '0%');
+            }, 10);
         });
-    }
+
+        @if (SignInManager.IsSignedIn(User))
+        {
+            <text>
+                let totalUnreadCount = 0;
+                const connection = new signalR.HubConnectionBuilder()
+                    .withUrl("/chatHub")
+                    .withAutomaticReconnect()
+                    .build();
+
+                function updateNotificationBadge() {
+                    const badge = $('#chat-notification');
+                    if (totalUnreadCount > 0) {
+                        badge.text(totalUnreadCount).show();
+                    } else {
+                        badge.hide();
+                    }
+                }
+
+                function fetchUnreadCounts() {
+                    $.get("/Chat/GetTotalUnreadMessagesCount", function(data) {
+                        totalUnreadCount = data.totalUnread;
+                        updateNotificationBadge();
+                    }).fail(function() {
+                        console.error("Failed to fetch unread messages count");
+                    });
+                }
+
+                connection.on("UpdateTotalUnreadCount", function() {
+                    fetchUnreadCounts();
+                });
+
+                connection.on("ReceiveMessage", function(messageId, senderId, senderName, senderAvatar, content, sentAt, fileUrl, fileName, fileType, fileSize) {
+                    fetchUnreadCounts();
+
+                    const currentUserId = '@User.FindFirstValue(ClaimTypes.NameIdentifier)';
+
+                    if (senderId !== currentUserId && senderId !== "general-chat") {
+                        const toastContainer = $('#unread-messages-toast');
+                        const toast = $(`
+                            <div class="toast show mb-2" role="alert" aria-live="assertive" aria-atomic="true" style="background-color: #f8f9fa; border-left: 4px solid #4e73df;">
+                                <div class="toast-header" style="background-color: #4e73df; color: white;">
+                                    <i class="fas fa-envelope me-2"></i>
+                                    <strong class="me-auto">Нове повідомлення</strong>
+                                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="toast" aria-label="Close"></button>
+                                </div>
+                                <div class="toast-body">
+                                    <div class="d-flex align-items-center">
+                                        ${senderAvatar ?
+                                            `<img src="${senderAvatar}" class="rounded-circle me-2" width="32" height="32" alt="${senderName}">` :
+                                            `<div class="user-avatar me-2" style="width: 32px; height: 32px; background-color: #2e51a2; border-radius: 50%; display: flex; align-items: center; justify-content: center; color: white;">
+                                                <span>${senderName.substring(0, 1)}</span>
+                                            </div>`
+                                        }
+                                        <div>
+                                            <strong style="color: #4e73df;">${senderName}</strong>
+                                            <div class="text-muted small mt-1">${content.length > 30 ? content.substring(0, 30) + '...' : content}</div>
+                                        </div>
+                                    </div>
+                                    <div class="mt-2 d-flex justify-content-end">
+                                        <a href="/Chat/Conversation?userId=${senderId}" class="btn btn-sm" style="background-color: #4e73df; color: white;">
+                                            <i class="fas fa-reply me-1"></i> Відповісти
+                                        </a>
+                                    </div>
+                                </div>
+                            </div>
+                        `);
+
+                        toastContainer.append(toast);
+                        toastContainer.css('display', 'block');
+
+                        setTimeout(() => {
+                            toast.toast('hide');
+                        }, 3000);
+
+                        toast.on('hidden.bs.toast', function() {
+                            toast.remove();
+                            if ($('#unread-messages-toast').children().length === 0) {
+                                $('#unread-messages-toast').hide();
+                            }
+                        });
+                    }
+                });
+
+                connection.on("NewGeneralChatNotification", function(notification) {
+                    fetchUnreadCounts();
+
+                    const currentUserId = '@User.FindFirstValue(ClaimTypes.NameIdentifier)';
+
+                    if (notification.SenderId === currentUserId) {
+                        return;
+                    }
+
+                    const toastContainer = $('#unread-messages-toast');
+                    const toast = $(`
+                        <div class="toast show mb-2" role="alert" aria-live="assertive" aria-atomic="true" 
+                             style="border-left: 4px solid #4e73df; background-color: #f8f9fa;">
+                            <div class="toast-header" style="background-color: #4e73df; color: white;">
+                                <i class="fas fa-users me-2"></i>
+                                <strong class="me-auto">Нове повідомлення у загальному чаті</strong>
+                                <small class="text-white">${notification.SentAt}</small>
+                                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="toast" aria-label="Close"></button>
+                            </div>
+                            <div class="toast-body">
+                                <div class="d-flex align-items-center mb-2">
+                                    ${notification.SenderAvatar ?
+                                        `<img src="${notification.SenderAvatar}" class="rounded-circle me-2" width="32" height="32" alt="${notification.SenderName}">` :
+                                        `<div class="user-avatar me-2" style="width: 32px; height: 32px; background-color: #2e51a2; border-radius: 50%; display: flex; align-items: center; justify-content: center; color: white;">
+                                            <span>${notification.SenderName.substring(0, 1)}</span>
+                                        </div>`
+                                    }
+                                    <div>
+                                        <strong style="color: #4e73df;">${notification.SenderName}</strong>
+                                        <div class="text-muted small">${notification.MessagePreview}</div>
+                                    </div>
+                                </div>
+                                <div class="d-flex justify-content-end">
+                                    <a href="/Chat/GeneralChat" class="btn btn-sm" style="background-color: #4e73df; color: white;">
+                                        <i class="fas fa-comments me-1"></i> Перейти до чату
+                                    </a>
+                                </div>
+                            </div>
+                        </div>
+                    `);
+
+                    toastContainer.append(toast);
+                    toastContainer.show();
+
+                    setTimeout(() => {
+                        toast.toast('hide');
+                    }, 3000);
+
+                    toast.on('hidden.bs.toast', function() {
+                        $(this).remove();
+                        if (toastContainer.children().length === 0) {
+                            toastContainer.hide();
+                        }
+                    });
+                });
+
+                async function startConnection() {
+                    try {
+                        await connection.start();
+                        console.log("SignalR connected for chat notifications.");
+                        fetchUnreadCounts();
+
+                        setInterval(fetchUnreadCounts, 30000);
+                    } catch (err) {
+                        console.error("SignalR Connection Error:", err);
+                        setTimeout(startConnection, 3000);
+                    }
+                }
+
+                connection.onclose(async () => {
+                    await startConnection();
+                });
+
+                startConnection();
+            </text>
+        }
+    });
 </script>
 </body>
 </html>

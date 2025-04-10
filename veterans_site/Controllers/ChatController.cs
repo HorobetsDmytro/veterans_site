@@ -1,3 +1,4 @@
+using System.Security.Claims;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
@@ -9,17 +10,20 @@ using veterans_site.Hubs;
 
 namespace veterans_site.Controllers
 {
-    [Authorize(Roles = "Veteran")]
+    [Authorize]
     public class ChatController : Controller
     {
         private readonly VeteranSupportDbContext _context;
         private readonly UserManager<ApplicationUser> _userManager;
+        private readonly RoleManager<IdentityRole> _roleManager;
         private readonly IWebHostEnvironment _webHostEnvironment;
         
-        public ChatController(VeteranSupportDbContext context, UserManager<ApplicationUser> userManager, IWebHostEnvironment webHostEnvironment)
+        public ChatController(VeteranSupportDbContext context, UserManager<ApplicationUser> userManager, 
+            RoleManager<IdentityRole> roleManager, IWebHostEnvironment webHostEnvironment)
         {
             _context = context;
             _userManager = userManager;
+            _roleManager = roleManager;
             _webHostEnvironment = webHostEnvironment;
         }
         
@@ -27,11 +31,43 @@ namespace veterans_site.Controllers
         {
             var currentUserId = _userManager.GetUserId(User);
             
-            var veterans = await _userManager.GetUsersInRoleAsync("Veteran");
+            var allUsers = await _userManager.Users
+                .Where(v => v.Id != currentUserId)
+                .ToListAsync();
             
-            var filteredVeterans = veterans.Where(v => v.Id != currentUserId).ToList();
+            var usersWithRoles = new List<UserWithRole>();
             
-            return View(filteredVeterans);
+            foreach (var user in allUsers)
+            {
+                var roles = await _userManager.GetRolesAsync(user);
+                var primaryRole = roles.FirstOrDefault() ?? "Користувач";
+                
+                usersWithRoles.Add(new UserWithRole
+                {
+                    User = user,
+                    Role = primaryRole
+                });
+            }
+            
+            ViewBag.HasGeneralChat = true;
+            
+            return View(usersWithRoles);
+        }
+        
+        public async Task<IActionResult> GeneralChat()
+        {
+            var currentUserId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+            ViewBag.CurrentUserId = currentUserId;
+    
+            var messages = await _context.ChatMessages
+                .Where(m => m.IsGeneralChat == true) 
+                .Include(m => m.Sender)
+                .OrderBy(m => m.SentAt)
+                .ToListAsync();
+    
+            ViewBag.CurrentUserRoles = await _userManager.GetRolesAsync(await _userManager.GetUserAsync(User));
+    
+            return View(messages);
         }
         
         public async Task<IActionResult> Conversation(string userId)
@@ -67,9 +103,13 @@ namespace veterans_site.Controllers
                 await _context.SaveChangesAsync();
             }
             
+            var userRoles = await _userManager.GetRolesAsync(user);
+            var userRole = userRoles.FirstOrDefault() ?? "Користувач";
+            
             ViewBag.CurrentUserId = currentUserId;
             ViewBag.ReceiverId = userId;
             ViewBag.ReceiverName = $"{user.FirstName} {user.LastName}";
+            ViewBag.ReceiverRole = userRole;
             ViewBag.ReceiverAvatar = user.AvatarPath;
             ViewBag.ReceiverIsOnline = user.IsOnline;
             ViewBag.ReceiverLastOnline = user.LastOnline;
@@ -256,5 +296,103 @@ namespace veterans_site.Controllers
     
             return Ok(new { success = true });
         }
+        
+        [HttpGet]
+        public async Task<int> GetUnreadGeneralChatMessages()
+        {
+            var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+            if (string.IsNullOrEmpty(userId))
+                return 0;
+
+            var lastReadId = await _context.UserLastReadGeneralChats
+                .Where(u => u.UserId == userId)
+                .Select(u => u.LastReadMessageId)
+                .FirstOrDefaultAsync();
+
+            var unreadCount = await _context.ChatMessages
+                .Where(m => m.IsGeneralChat && m.Id > lastReadId && m.SenderId != userId)
+                .CountAsync();
+
+            return unreadCount;
+        }
+        
+        [HttpPost]
+        public async Task<IActionResult> MarkGeneralChatMessagesAsRead([FromBody] MarkGeneralChatReadModel model)
+        {
+            var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+            if (string.IsNullOrEmpty(userId))
+                return Unauthorized();
+        
+            var lastMessageId = model?.LastMessageId ?? 0;
+    
+            if (lastMessageId == 0)
+            {
+                lastMessageId = await _context.ChatMessages
+                    .Where(m => m.IsGeneralChat)
+                    .OrderByDescending(m => m.Id)
+                    .Select(m => m.Id)
+                    .FirstOrDefaultAsync();
+            }
+    
+            var userLastRead = await _context.UserLastReadGeneralChats
+                .FirstOrDefaultAsync(u => u.UserId == userId);
+        
+            if (userLastRead == null)
+            {
+                _context.UserLastReadGeneralChats.Add(new UserLastReadGeneralChat
+                {
+                    UserId = userId,
+                    LastReadMessageId = lastMessageId,
+                    LastReadAt = DateTime.Now
+                });
+            }
+            else
+            {
+                userLastRead.LastReadMessageId = lastMessageId;
+                userLastRead.LastReadAt = DateTime.Now;
+            }
+    
+            await _context.SaveChangesAsync();
+    
+            return Ok();
+        }
+
+        public class MarkGeneralChatReadModel
+        {
+            public int LastMessageId { get; set; }
+        }
+        
+        [HttpGet]
+        public async Task<IActionResult> GetTotalUnreadMessagesCount()
+        {
+            var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+            if (string.IsNullOrEmpty(userId))
+                return Unauthorized();
+
+            var privateUnread = await _context.ChatMessages
+                .Where(m => m.ReceiverId == userId && !m.IsRead && !m.IsGeneralChat)
+                .CountAsync();
+
+            var lastReadGeneral = await _context.UserLastReadGeneralChats
+                .Where(u => u.UserId == userId)
+                .Select(u => u.LastReadMessageId)
+                .FirstOrDefaultAsync();
+
+            var generalUnread = await _context.ChatMessages
+                .Where(m => m.IsGeneralChat && m.Id > lastReadGeneral && m.SenderId != userId)
+                .CountAsync();
+
+            return Ok(new { 
+                totalUnread = privateUnread + generalUnread,
+                privateUnread = privateUnread,
+                generalUnread = generalUnread
+            });
+        }
+    }
+    
+    public class UserWithRole
+    {
+        public ApplicationUser User { get; set; }
+        public string Role { get; set; }
     }
 }

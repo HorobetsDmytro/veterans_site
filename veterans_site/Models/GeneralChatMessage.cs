@@ -2,22 +2,14 @@ using System.ComponentModel.DataAnnotations.Schema;
 
 namespace veterans_site.Models;
 
-public class ChatMessage
+public class GeneralChatMessage
 {
     public int Id { get; set; }
-        
     public string SenderId { get; set; }
     [ForeignKey("SenderId")]
     public ApplicationUser Sender { get; set; }
-        
-    public string? ReceiverId { get; set; }
-    [ForeignKey("ReceiverId")]
-    public ApplicationUser? Receiver { get; set; }
-        
     public string Content { get; set; }
-        
     public DateTime SentAt { get; set; } = DateTime.Now;
-        
     public bool IsRead { get; set; } = false;
     
     public bool IsEdited { get; set; } = false;
@@ -35,6 +27,4 @@ public class ChatMessage
     public string? FileSize { get; set; }
     
     public bool HasFile => !string.IsNullOrEmpty(FilePath);
-    
-    public bool IsGeneralChat { get; set; } = false;
 }

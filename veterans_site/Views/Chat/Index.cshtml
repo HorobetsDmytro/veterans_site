@@ -1,5 +1,5 @@
 @using Microsoft.AspNetCore.Mvc.TagHelpers
-@model IEnumerable<ApplicationUser>
+@model IEnumerable<veterans_site.Controllers.UserWithRole>
 @{
     ViewData["Title"] = "Чат для спілкування";
 }
@@ -9,14 +9,45 @@
         <div class="col-md-12 mb-4">
             <div class="card shadow">
                 <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
-                    <h5 class="mb-0"><i class="fas fa-users me-2"></i>Ветерани</h5>
+                    <h5 class="mb-0"><i class="fas fa-comments me-2"></i>Чат</h5>
                 </div>
                 <div class="card-body">
+                    @if (ViewBag.HasGeneralChat)
+                    {
+                        <div class="mb-4">
+                            <div class="d-flex align-items-center justify-content-between p-3 border rounded mb-2 bg-light">
+                                <div class="d-flex align-items-center">
+                                    <div class="general-chat-icon me-3" style="width: 45px; height: 45px; background-color: #007bff; display: flex; align-items: center; justify-content: center; border-radius: 50%;">
+                                        <i class="fas fa-users text-white fa-lg"></i>
+                                    </div>
+                                    <div>
+                                        <strong>Загальний чат</strong>
+                                        <div class="small text-muted">Спілкування для всіх користувачів Ветеран Хабу</div>
+                                    </div>
+                                </div>
+                                <div class="d-flex align-items-center">
+                                    <div class="me-3">
+                                        <div class="small text-muted">Непрочитані</div>
+                                        <div class="text-center">
+                                            <span id="general-chat-unread-count" class="badge bg-danger rounded-pill">0</span>
+                                        </div>
+                                    </div>
+                                    <a asp-controller="Chat" asp-action="GeneralChat" class="btn btn-primary">
+                                        <i class="fas fa-comment me-1"></i> Приєднатися
+                                    </a>
+                                </div>
+                            </div>
+                        </div>
+                    }
+
+                    <h6 class="border-bottom pb-2 mb-3">Особисті повідомлення</h6>
+
                     <div class="table-responsive">
                         <table class="table table-hover">
                             <thead>
                             <tr>
                                 <th>Користувач</th>
+                                <th>Роль</th>
                                 <th>Статус</th>
                                 <th>Остання активність</th>
                                 <th>Непрочитані</th>
@@ -24,39 +55,68 @@
                             </tr>
                             </thead>
                             <tbody>
-                            @foreach (var veteran in Model)
+                            @foreach (var userWithRole in Model)
                             {
-                                <tr data-user-id="@veteran.Id">
+                                var user = userWithRole.User;
+                                var role = userWithRole.Role;
+
+                                <tr data-user-id="@user.Id">
                                     <td>
                                         <div class="d-flex align-items-center">
-                                            @if (!string.IsNullOrEmpty(veteran.AvatarPath))
+                                            @if (!string.IsNullOrEmpty(user.AvatarPath))
                                             {
-                                                <img src="@Url.Content(veteran.AvatarPath)" class="rounded-circle me-2" width="40" height="40" alt="@veteran.FirstName">
+                                                <img src="@Url.Content(user.AvatarPath)" class="rounded-circle me-2" width="40" height="40" alt="@user.FirstName">
                                             }
                                             else
                                             {
                                                 <div class="user-avatar me-2" style="width: 40px; height: 40px; background-color: #2e51a2; display: flex; align-items: center; justify-content: center; border-radius: 50%;">
-                                                    <span class="text-white">@veteran.FirstName[0]</span>
+                                                    <span class="text-white">@user.FirstName[0]</span>
                                                 </div>
                                             }
                                             <div>
-                                                <strong>@veteran.FirstName @veteran.LastName</strong>
+                                                <strong>@user.FirstName @user.LastName</strong>
                                             </div>
                                         </div>
                                     </td>
                                     <td>
-                                            <span id="status-@veteran.Id" class="badge @(veteran.IsOnline ? "bg-success" : "bg-secondary")">
-                                                @(veteran.IsOnline ? "Онлайн" : "Офлайн")
-                                            </span>
-                                    </td>
-                                    <td id="last-seen-@veteran.Id">
-                                        @(veteran.IsOnline ? "Зараз на сайті" : $"Був(ла) {veteran.LastOnline.ToString("dd.MM.yyyy HH:mm")}")
+                                        @{
+                                            string badgeClass = "bg-secondary";
+
+                                            switch (role)
+                                            {
+                                                case "Admin":
+                                                    badgeClass = "bg-danger";
+                                                    role = "Адмін";
+                                                    break;
+                                                case "Veteran":
+                                                    badgeClass = "bg-primary";
+                                                    role = "Ветеран";
+                                                    break;
+                                                case "Specialist":
+                                                    badgeClass = "bg-info";
+                                                    role = "Спеціаліст";
+                                                    break;
+                                                case "Volunteer":
+                                                    badgeClass = "bg-success";
+                                                    role = "Волонтер";
+                                                    break;
+                                            }
+                                        }
+                                        <span class="badge @badgeClass">@role</span>
                                     </td>
                                     <td>
-                                        <span id="unread-count-@veteran.Id" class="badge bg-danger rounded-pill" style="display: none;"></span>
+                                        <span id="status-@user.Id" class="badge @(user.IsOnline ? "bg-success" : "bg-secondary")">
+                                            @(user.IsOnline ? "Онлайн" : "Офлайн")
+                                        </span>
+                                    </td>
+                                    <td id="last-seen-@user.Id">
+                                        @(user.IsOnline ? "Зараз на сайті" : $"Був(ла) {user.LastOnline.ToString("dd.MM.yyyy HH:mm")}")
                                     </td>
                                     <td>
-                                        <a asp-controller="Chat" asp-action="Conversation" asp-route-userId="@veteran.Id" class="btn btn-primary btn-sm">
+                                        <span id="unread-count-@user.Id" class="badge bg-danger rounded-pill" style="display: none;"></span>
+                                    </td>
+                                    <td>
+                                        <a asp-controller="Chat" asp-action="Conversation" asp-route-userId="@user.Id" class="btn btn-primary btn-sm">
                                             <i class="fas fa-comment me-1"></i> Написати
                                         </a>
                                     </td>
@@ -74,6 +134,7 @@
 @section Scripts {
     <script src="https://cdnjs.cloudflare.com/ajax/libs/microsoft-signalr/6.0.6/signalr.min.js"></script>
     <script>
+
         $(function() {
             const connection = new signalR.HubConnectionBuilder()
                 .withUrl("/chatHub")
@@ -83,6 +144,7 @@
             const currentUserId = '@ViewBag.CurrentUserId' || $('body').data('current-user-id');
 
             const unreadCounts = {};
+            let generalChatUnreadCount = 0;
 
             function updateUnreadCountsDisplay() {
                 let totalUnread = 0;
@@ -95,8 +157,18 @@
                         badge.text(count).show();
                         totalUnread += count;
                     } else {
-                        badge.hide();
+                        badge.text('0');
                     }
+                }
+
+                const generalChatBadge = $('#general-chat-unread-count');
+                if (generalChatUnreadCount > 0) {
+                    generalChatBadge.text(generalChatUnreadCount);
+                    generalChatBadge.removeClass('bg-secondary').addClass('bg-danger');
+                    totalUnread += generalChatUnreadCount;
+                } else {
+                    generalChatBadge.text('0');
+                    generalChatBadge.removeClass('bg-danger').addClass('bg-secondary');
                 }
 
                 const totalBadge = $('#total-unread-count');
@@ -115,40 +187,42 @@
 
                     updateUnreadCountsDisplay();
                 });
+
+                $.get("/Chat/GetUnreadGeneralChatMessages", function(count) {
+                    generalChatUnreadCount = count;
+                    updateUnreadCountsDisplay();
+                });
             }
 
             connection.on("UserStatusChanged", function (userId, isOnline, lastSeen) {
-                const statusElement = $(`#status-${userId}`);
-                const lastSeenElement = $(`#last-seen-${userId}`);
-
-                if (statusElement.length) {
-                    if (isOnline) {
-                        statusElement.removeClass("bg-secondary").addClass("bg-success");
-                        statusElement.text("Онлайн");
-                        lastSeenElement.text("Зараз на сайті");
-                    } else {
-                        statusElement.removeClass("bg-success").addClass("bg-secondary");
-                        statusElement.text("Офлайн");
-
-                        const lastSeenDate = new Date(lastSeen);
-                        const formattedDate = `${lastSeenDate.getDate().toString().padStart(2, '0')}.${(lastSeenDate.getMonth() + 1).toString().padStart(2, '0')}.${lastSeenDate.getFullYear()} ${lastSeenDate.getHours().toString().padStart(2, '0')}:${lastSeenDate.getMinutes().toString().padStart(2, '0')}`;
-
-                        lastSeenElement.text(`Був(ла) ${formattedDate}`);
-                    }
-                }
             });
 
             connection.on("UpdateUnreadMessageCount", function(receiverId) {
-                if (currentUserId === receiverId) {
+                if (receiverId === "general-chat") {
+                    $.get("/Chat/GetUnreadGeneralChatMessages", function(count) {
+                        generalChatUnreadCount = count;
+                        updateUnreadCountsDisplay();
+                    });
+                }
+                else if (currentUserId === receiverId) {
                     fetchInitialUnreadCounts();
                 }
             });
 
-            connection.on("ReceiveMessage", function(messageId, senderId, senderName, senderAvatar, message, sentAt) {
-                if (unreadCounts[senderId] === undefined) {
-                    unreadCounts[senderId] = 0;
+            connection.on("ReceiveMessage", function(messageId, senderId, senderName, senderAvatar, message, sentAt, fileUrl, fileName, fileType, fileSize) {
+                if (senderId === "general-chat" || (fileUrl && typeof fileUrl === 'string' && fileUrl.includes("general-chat"))) {
+                    if (typeof messageId === 'object' && messageId.SenderId !== currentUserId) {
+                        generalChatUnreadCount++;
+                    } else if (senderId !== currentUserId) {
+                        generalChatUnreadCount++;
+                    }
                 }
-                unreadCounts[senderId]++;
+                else if (senderId !== currentUserId) {
+                    if (unreadCounts[senderId] === undefined) {
+                        unreadCounts[senderId] = 0;
+                    }
+                    unreadCounts[senderId]++;
+                }
                 updateUnreadCountsDisplay();
             });
 
@@ -159,8 +233,11 @@
                         updateUnreadCountsDisplay();
                     }
                 }
-                else if (currentUserId === senderId) {
-                }
+            });
+
+            connection.on("GeneralChatMessageRead", function() {
+                generalChatUnreadCount = 0;
+                updateUnreadCountsDisplay();
             });
 
             connection.on("UpdateAllUnreadCounts", function() {
@@ -179,6 +256,9 @@
                 try {
                     await connection.start();
                     console.log("SignalR підключено.");
+
+                    await connection.invoke("RegisterConnection");
+
                     fetchInitialUnreadCounts();
                 } catch (err) {
                     console.error("SignalR Connection Error:", err);
@@ -188,6 +268,5 @@
 
             startConnection();
         });
-    
     </script>
 }
