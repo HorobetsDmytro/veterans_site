@@ -1,0 +1,125 @@
+@model veterans_site.ViewModels.MarkerDetailsViewModel
+
+<div class="marker-details">
+    <h4 class="marker-title">@Model.Title</h4>
+
+    @if (!string.IsNullOrEmpty(Model.Address))
+    {
+        <div class="marker-address mb-3">
+            <i class="fas fa-map-marker-alt text-primary me-2"></i> @Model.Address
+        </div>
+    }
+
+    @if (!string.IsNullOrEmpty(Model.Description))
+    {
+        <div class="marker-description mb-3">
+            @Model.Description
+        </div>
+    }
+
+    <h5 class="features-title">Доступність:</h5>
+    <div class="row accessibility-features">
+        <div class="col-md-6">
+            <div class="feature-item @(Model.HasRamp ? "feature-available" : "feature-unavailable")">
+                <i class="fas fa-wheelchair me-2 @(Model.HasRamp ? "text-success" : "text-muted")"></i>
+                @(Model.HasRamp ? "Є пандус" : "Немає пандуса")
+            </div>
+            <div class="feature-item @(Model.HasBlindSupport ? "feature-available" : "feature-unavailable")">
+                <i class="fas fa-eye-slash me-2 @(Model.HasBlindSupport ? "text-success" : "text-muted")"></i>
+                @(Model.HasBlindSupport ? "Є обладнання для незрячих" : "Немає обладнання для незрячих")
+            </div>
+            <div class="feature-item @(Model.HasElevator ? "feature-available" : "feature-unavailable")">
+                <i class="fas fa-arrow-alt-circle-up me-2 @(Model.HasElevator ? "text-success" : "text-muted")"></i>
+                @(Model.HasElevator ? "Є ліфт" : "Немає ліфта")
+            </div>
+        </div>
+        <div class="col-md-6">
+            <div class="feature-item @(Model.HasAccessibleToilet ? "feature-available" : "feature-unavailable")">
+                <i class="fas fa-restroom me-2 @(Model.HasAccessibleToilet ? "text-success" : "text-muted")"></i>
+                @(Model.HasAccessibleToilet ? "Є доступний туалет" : "Немає доступного туалету")
+            </div>
+            <div class="feature-item @(Model.HasParking ? "feature-available" : "feature-unavailable")">
+                <i class="fas fa-parking me-2 @(Model.HasParking ? "text-success" : "text-muted")"></i>
+                @(Model.HasParking ? "Є паркування для інвалідів" : "Немає паркування для інвалідів")
+            </div>
+        </div>
+    </div>
+
+    <div class="marker-meta mt-3">
+        <small class="text-muted">
+            Додано: @Model.CreatedAt.ToString("dd.MM.yyyy HH:mm") користувачем @Model.UserName
+        </small>
+    </div>
+
+    <div class="mb-3">
+        <strong>Координати:</strong>
+        <div class="input-group">
+            <input type="text" class="form-control" value="@Model.Latitude, @Model.Longitude" readonly>
+            <button class="btn btn-outline-secondary copy-coords-btn"
+                    data-lat="@Model.Latitude"
+                    data-lng="@Model.Longitude"
+                    title="Копіювати координати">
+                <i class="fas fa-copy"></i> Копіювати
+            </button>
+        </div>
+    </div>
+
+    <div class="modal-footer justify-content-between">
+        <div>
+            <a href="#"
+               class="btn btn-primary route-btn"
+               data-lat="@Model.Latitude"
+               data-lng="@Model.Longitude"
+               target="_blank">
+                <i class="fas fa-directions"></i> Прокласти маршрут
+            </a>
+        </div>
+
+        <div>
+            <button id="editMarkerBtn" class="btn btn-warning d-none">
+                <i class="fas fa-edit"></i> Редагувати
+            </button>
+            <button id="deleteMarkerBtn" class="btn btn-danger d-none ms-2">
+                <i class="fas fa-trash"></i> Видалити
+            </button>
+        </div>
+    </div>
+</div>
+
+<script>
+    function copyToClipboard(text) {
+        navigator.clipboard.writeText(text).then(function() {
+            const notification = document.createElement('div');
+            notification.className = 'copy-notification';
+            notification.textContent = 'Координати скопійовано';
+            document.body.appendChild(notification);
+
+            setTimeout(() => {
+                document.body.removeChild(notification);
+            }, 2000);
+        });
+    }
+</script>
+
+<style>
+    .copy-notification {
+        position: fixed;
+        bottom: 20px;
+        left: 50%;
+        transform: translateX(-50%);
+        background-color: rgba(0, 0, 0, 0.7);
+        color: white;
+        padding: 8px 16px;
+        border-radius: 4px;
+        z-index: 9999;
+    }
+
+    .feature-item {
+        margin-bottom: 8px;
+    }
+
+    .marker-description {
+        white-space: pre-line;
+        line-height: 1.5;
+    }
+</style>

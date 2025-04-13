@@ -1,0 +1,236 @@
+@{
+    ViewData["Title"] = "Карта доступності | Ветеран Хаб";
+}
+
+@section Styles {
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <link rel="stylesheet" href="~/css/accessibility-map.css" />
+}
+
+<section class="map-header">
+    <div class="container">
+        <div class="row align-items-center">
+            <div class="col-md-8">
+                <h1 class="map-title">Карта доступності для ветеранів</h1>
+                <p class="map-description">
+                    Інтерактивна карта доступності допоможе вам знайти місця, які обладнані для людей з особливими потребами.
+                    Ви також можете додати нові місця, щоб допомогти іншим ветеранам.
+                </p>
+            </div>
+            <div class="col-md-4 text-md-end">
+                @if (User.Identity.IsAuthenticated)
+                {
+                    <button id="addMarkerModeBtn" class="btn btn-primary rounded-pill">
+                        <i class="fas fa-map-marker-alt me-2"></i> Додати нове місце
+                    </button>
+                }
+                else
+                {
+                    <a asp-area="Identity" asp-page="/Account/Login" class="btn btn-outline-primary rounded-pill">
+                        <i class="fas fa-sign-in-alt me-2"></i> Увійдіть, щоб додати місце
+                    </a>
+                }
+            </div>
+        </div>
+    </div>
+</section>
+
+<section class="map-section">
+    <div class="container-fluid">
+        <div class="row">
+            <div class="col-md-3">
+                <div class="card filter-card">
+                    <div class="card-header bg-primary text-white">
+                        <h5 class="mb-0"><i class="fas fa-filter me-2"></i> Фільтри</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="form-check mb-3">
+                            <input class="form-check-input filter-checkbox" type="checkbox" id="filterRamp">
+                            <label class="form-check-label" for="filterRamp">
+                                <i class="fas fa-wheelchair me-2 text-primary"></i> Пандуси
+                            </label>
+                        </div>
+                        <div class="form-check mb-3">
+                            <input class="form-check-input filter-checkbox" type="checkbox" id="filterBlind">
+                            <label class="form-check-label" for="filterBlind">
+                                <i class="fas fa-eye-slash me-2 text-primary"></i> Для незрячих
+                            </label>
+                        </div>
+                        <div class="form-check mb-3">
+                            <input class="form-check-input filter-checkbox" type="checkbox" id="filterElevator">
+                            <label class="form-check-label" for="filterElevator">
+                                <i class="fas fa-arrow-alt-circle-up me-2 text-primary"></i> Ліфти
+                            </label>
+                        </div>
+                        <div class="form-check mb-3">
+                            <input class="form-check-input filter-checkbox" type="checkbox" id="filterToilet">
+                            <label class="form-check-label" for="filterToilet">
+                                <i class="fas fa-restroom me-2 text-primary"></i> Доступні туалети
+                            </label>
+                        </div>
+                        <div class="form-check mb-3">
+                            <input class="form-check-input filter-checkbox" type="checkbox" id="filterParking">
+                            <label class="form-check-label" for="filterParking">
+                                <i class="fas fa-parking me-2 text-primary"></i> Паркування
+                            </label>
+                        </div>
+                        <button id="resetFiltersBtn" class="btn btn-outline-secondary btn-sm w-100 mb-3">
+                            <i class="fas fa-undo me-2"></i> Скинути фільтри
+                        </button>
+                        <hr>
+                        <button id="findNearbyBtn" class="btn btn-outline-primary btn-sm w-100 mb-3">
+                            <i class="fas fa-location-arrow me-2"></i> Місця поруч зі мною
+                        </button>
+                        <div class="input-group mb-3">
+                            <input type="text" id="searchAddress" class="form-control" placeholder="Пошук за адресою...">
+                            <button class="btn btn-primary" type="button" id="searchAddressBtn">
+                                <i class="fas fa-search"></i>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="card my-markers mt-3">
+                    @if (User.Identity.IsAuthenticated)
+                    {
+                        <div class="card-header bg-primary text-white">
+                            <h5 class="mb-0"><i class="fas fa-list me-2"></i> Мої місця</h5>
+                        </div>
+                        <div class="card-body">
+                            <div id="userMarkersList">
+                                <p class="text-center text-muted">Завантаження...</p>
+                            </div>
+                        </div>
+                    }
+                </div>
+            </div>
+            <div class="col-md-9">
+                <div class="map-container">
+                    <div id="accessibilityMap"></div>
+                    @if (User.Identity.IsAuthenticated)
+                    {
+                        <div id="addMarkerHelp" class="d-none">
+                            <div class="alert alert-info mb-0">
+                                <i class="fas fa-info-circle me-2"></i> Клікніть на карту, щоб додати нове місце
+                                <button id="cancelAddMarkerBtn" class="btn btn-sm btn-outline-secondary ms-3">Скасувати</button>
+                            </div>
+                        </div>
+                    }
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<div class="modal fade" id="markerModal" tabindex="-1" aria-labelledby="markerModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header bg-primary text-white">
+                <h5 class="modal-title" id="markerModalLabel">Додати нове місце</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <form id="markerForm">
+                    @Html.AntiForgeryToken()
+                    <input type="hidden" id="markerId" value="0">
+                    <input type="hidden" id="markerLat">
+                    <input type="hidden" id="markerLng">
+
+                    <div class="mb-3">
+                        <label for="markerTitle" class="form-label">Назва місця *</label>
+                        <input type="text" class="form-control" id="markerTitle" required>
+                        <div class="invalid-feedback">Введіть назву місця</div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="markerAddress" class="form-label">Адреса *</label>
+                        <div class="input-group">
+                            <input type="text" class="form-control" id="markerAddress" required>
+                            <button class="btn btn-outline-secondary" type="button" id="detectAddressBtn">
+                                <i class="fas fa-map-marker-alt"></i> Визначити
+                            </button>
+                        </div>
+                        <div class="invalid-feedback">Введіть адресу</div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="markerDescription" class="form-label">Опис *</label>
+                        <textarea class="form-control" id="markerDescription" rows="3" required></textarea>
+                        <div class="invalid-feedback">Введіть опис</div>
+                    </div>
+
+                    <div class="row">
+                        <div class="col-md-6">
+                            <h6 class="mb-3">Доступність:</h6>
+                            <div class="form-check mb-2">
+                                <input class="form-check-input" type="checkbox" id="markerHasRamp">
+                                <label class="form-check-label" for="markerHasRamp">
+                                    <i class="fas fa-wheelchair me-1 text-primary"></i> Є пандус
+                                </label>
+                            </div>
+                            <div class="form-check mb-2">
+                                <input class="form-check-input" type="checkbox" id="markerHasBlindSupport">
+                                <label class="form-check-label" for="markerHasBlindSupport">
+                                    <i class="fas fa-eye-slash me-1 text-primary"></i> Є обладнання для незрячих
+                                </label>
+                            </div>
+                            <div class="form-check mb-2">
+                                <input class="form-check-input" type="checkbox" id="markerHasElevator">
+                                <label class="form-check-label" for="markerHasElevator">
+                                    <i class="fas fa-arrow-alt-circle-up me-1 text-primary"></i> Є ліфт
+                                </label>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <h6 class="mb-3">&nbsp;</h6>
+                            <div class="form-check mb-2">
+                                <input class="form-check-input" type="checkbox" id="markerHasAccessibleToilet">
+                                <label class="form-check-label" for="markerHasAccessibleToilet">
+                                    <i class="fas fa-restroom me-1 text-primary"></i> Є доступний туалет
+                                </label>
+                            </div>
+                            <div class="form-check mb-2">
+                                <input class="form-check-input" type="checkbox" id="markerHasParking">
+                                <label class="form-check-label" for="markerHasParking">
+                                    <i class="fas fa-parking me-1 text-primary"></i> Є паркування для людей з інвалідністю
+                                </label>
+                            </div>
+                        </div>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Скасувати</button>
+                <button type="button" class="btn btn-primary" id="saveMarkerBtn">Зберегти</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="modal fade" id="markerDetailsModal" tabindex="-1" aria-labelledby="markerDetailsModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header bg-primary text-white">
+                <h5 class="modal-title" id="markerDetailsModalLabel">Деталі місця</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body" id="markerDetailsContent">
+                <div class="text-center">
+                    <div class="spinner-border text-primary" role="status">
+                        <span class="visually-hidden">Завантаження...</span>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Закрити</button>
+                <button type="button" class="btn btn-primary d-none" id="editMarkerBtn">Редагувати</button>
+                <button type="button" class="btn btn-danger d-none" id="deleteMarkerBtn">Видалити</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script src="~/js/accessibility-map.js"></script>
+}

@@ -26,7 +26,7 @@ public class VeteranSupportDbContext : IdentityDbContext<ApplicationUser>
     public DbSet<UserConnection> UsersConnections { get; set; }
     public DbSet<GeneralChatMessage> GeneralChatMessages { get; set; }
     public DbSet<UserLastReadGeneralChat> UserLastReadGeneralChats { get; set; }
-    
+    public DbSet<AccessibilityMarker> AccessibilityMarkers { get; set; }
 
     protected override void OnModelCreating(ModelBuilder builder)
     {
