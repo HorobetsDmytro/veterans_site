@@ -8,8 +8,6 @@ namespace veterans_site.Models
         public string Title { get; set; }
         public string Content { get; set; }
         public DateTime PublishDate { get; set; }
-
-        // Зробіть поле ImagePath nullable
         public string? ImagePath { get; set; }
     }
 

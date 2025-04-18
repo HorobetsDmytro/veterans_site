@@ -27,7 +27,11 @@ public class VeteranSupportDbContext : IdentityDbContext<ApplicationUser>
     public DbSet<GeneralChatMessage> GeneralChatMessages { get; set; }
     public DbSet<UserLastReadGeneralChat> UserLastReadGeneralChats { get; set; }
     public DbSet<AccessibilityMarker> AccessibilityMarkers { get; set; }
-
+    public DbSet<Job> Jobs { get; set; }
+    public DbSet<JobApplication> JobApplications { get; set; }
+    public DbSet<Resume> Resumes { get; set; }
+    public DbSet<SavedJob> SavedJobs { get; set; }
+        
     protected override void OnModelCreating(ModelBuilder builder)
     {
         base.OnModelCreating(builder);
