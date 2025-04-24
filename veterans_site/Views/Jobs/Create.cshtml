@@ -1,0 +1,89 @@
+@model Job
+@{
+    ViewData["Title"] = "Додати вакансію";
+    var minDate = DateTime.Now.ToString("yyyy-MM-dd");
+}
+
+<div class="container mt-4">
+    <h1>Додати нову вакансію</h1>
+
+    <form asp-action="Create" method="post">
+        <div asp-validation-summary="ModelOnly" class="text-danger"></div>
+        
+        <div class="row mb-3">
+            <div class="col-md-6">
+                <div class="form-group mb-3">
+                    <label asp-for="Title" class="form-label">Назва вакансії</label>
+                    <input asp-for="Title" class="form-control" />
+                    <span asp-validation-for="Title" class="text-danger"></span>
+                </div>
+                
+                <div class="form-group mb-3">
+                    <label asp-for="Company" class="form-label">Компанія</label>
+                    <input asp-for="Company" class="form-control" />
+                    <span asp-validation-for="Company" class="text-danger"></span>
+                </div>
+                
+                <div class="form-group mb-3">
+                    <label asp-for="Location" class="form-label">Місцезнаходження</label>
+                    <input asp-for="Location" class="form-control" />
+                    <span asp-validation-for="Location" class="text-danger"></span>
+                </div>
+                
+                <div class="form-group mb-3">
+                    <label asp-for="Salary" class="form-label">Зарплата</label>
+                    <input asp-for="Salary" class="form-control" type="number" />
+                    <span asp-validation-for="Salary" class="text-danger"></span>
+                </div>
+            </div>
+            
+            <div class="col-md-6">
+                <div class="form-group mb-3">
+                    <label asp-for="JobType" class="form-label">Тип роботи</label>
+                    <select asp-for="JobType" asp-items="Html.GetEnumSelectList<JobType>()" class="form-select"></select>
+                    <span asp-validation-for="JobType" class="text-danger"></span>
+                </div>
+                
+                <div class="form-group mb-3">
+                    <label asp-for="Category" class="form-label">Категорія</label>
+                    <input asp-for="Category" class="form-control" />
+                    <span asp-validation-for="Category" class="text-danger"></span>
+                </div>
+                
+                <div class="form-group mb-3">
+                    <label asp-for="ExpiryDate" class="form-label">Дата закінчення актуальності</label>
+                    <input asp-for="ExpiryDate" class="form-control" type="date" 
+                           min="@minDate" id="expiryDateInput" />
+                    <span asp-validation-for="ExpiryDate" class="text-danger"></span>
+                </div>
+            </div>
+        </div>
+        
+        <div class="form-group mb-3">
+            <label asp-for="Description" class="form-label">Опис вакансії</label>
+            <textarea asp-for="Description" class="form-control editor" rows="10"></textarea>
+            <span asp-validation-for="Description" class="text-danger"></span>
+        </div>
+        
+        <div class="form-group">
+            <button type="submit" class="btn btn-primary">Зберегти</button>
+            <a asp-action="Index" class="btn btn-secondary">Скасувати</a>
+        </div>
+    </form>
+</div>
+
+@section Scripts {
+    <script src="https://cdn.tiny.cloud/1/abvzd1aol98dkpdxi35ty05fve0az1cxb61miltrbou0tcz8/tinymce/6/tinymce.min.js" referrerpolicy="origin"></script>
+    <script>
+        tinymce.init({
+            selector: '.editor',
+            plugins: 'lists link autolink',
+            toolbar: 'undo redo | formatselect | bold italic | alignleft aligncenter alignright | bullist numlist | link',
+            menubar: false,
+            forced_root_block: '',
+            force_br_newlines: true,
+            force_p_newlines: false
+        });
+    </script>
+    @{await Html.RenderPartialAsync("_ValidationScriptsPartial");}
+}

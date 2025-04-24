@@ -1,0 +1,185 @@
+@model veterans_site.ViewModels.ResumeViewModel
+@{
+    ViewData["Title"] = "Редагування резюме";
+}
+
+<div class="container mt-4">
+    <h1>Редагування резюме</h1>
+    
+    <form asp-action="Edit" method="post" enctype="multipart/form-data">
+        <input type="hidden" asp-for="Id" />
+        <input type="hidden" asp-for="ExistingFilePath" />
+        <input type="hidden" asp-for="OriginalResumeInputType" value="@Model.ResumeInputType" />
+        <div asp-validation-summary="ModelOnly" class="text-danger"></div>
+        
+        <div class="card mb-4">
+            <div class="card-header">
+                <h5>Вибір способу редагування резюме</h5>
+            </div>
+            <div class="card-body">
+                <div class="form-check form-check-inline mb-3">
+                    <input class="form-check-input" type="radio" name="ResumeInputType" id="manualInput" value="manual" @(Model.ResumeInputType == "manual" ? "checked" : "")>
+                    <label class="form-check-label" for="manualInput">
+                        Редагувати текстові дані
+                    </label>
+                </div>
+                <div class="form-check form-check-inline">
+                    <input class="form-check-input" type="radio" name="ResumeInputType" id="fileInput" value="file" @(Model.ResumeInputType == "file" ? "checked" : "")>
+                    <label class="form-check-label" for="fileInput">
+                        Використовувати файл резюме
+                    </label>
+                </div>
+                
+                <div class="alert alert-warning mt-3" id="typeChangeWarning" style="display: none;">
+                    <i class="bi bi-exclamation-triangle-fill"></i> <strong>Увага!</strong> Зміна типу резюме призведе до втрати попередніх даних.
+                    <ul>
+                        <li>При переході з текстового на файлове резюме - всі текстові поля будуть видалені</li>
+                        <li>При переході з файлового на текстове резюме - файл буде видалено</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+        
+        <div id="manualInputSection" style="@(Model.ResumeInputType == "manual" ? "" : "display:none;")">
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h5>Основна інформація</h5>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="form-group mb-3">
+                                <label asp-for="FullName" class="form-label">ПІБ</label>
+                                <input asp-for="FullName" class="form-control" />
+                                <span asp-validation-for="FullName" class="text-danger"></span>
+                            </div>
+                        </div>
+                        
+                        <div class="col-md-6">
+                            <div class="form-group mb-3">
+                                <label asp-for="Email" class="form-label">Email</label>
+                                <input asp-for="Email" class="form-control" type="email" />
+                                <span asp-validation-for="Email" class="text-danger"></span>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="form-group mb-3">
+                        <label asp-for="Phone" class="form-label">Телефон</label>
+                        <input asp-for="Phone" class="form-control" />
+                        <span asp-validation-for="Phone" class="text-danger"></span>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h5>Навички та досвід</h5>
+                </div>
+                <div class="card-body">
+                    <div class="form-group mb-3">
+                        <label asp-for="Skills" class="form-label">Навички</label>
+                        <textarea asp-for="Skills" class="form-control" rows="4"></textarea>
+                        <span asp-validation-for="Skills" class="text-danger"></span>
+                        <div class="form-text">Опишіть ваші навички, технічні знання, мови програмування тощо.</div>
+                    </div>
+                    
+                    <div class="form-group mb-3">
+                        <label asp-for="Experience" class="form-label">Досвід роботи</label>
+                        <textarea asp-for="Experience" class="form-control editor" rows="6"></textarea>
+                        <span asp-validation-for="Experience" class="text-danger"></span>
+                    </div>
+                    
+                    <div class="form-group mb-3">
+                        <label asp-for="Education" class="form-label">Освіта</label>
+                        <textarea asp-for="Education" class="form-control editor" rows="4"></textarea>
+                        <span asp-validation-for="Education" class="text-danger"></span>
+                    </div>
+                    
+                    <div class="form-group mb-3">
+                        <label asp-for="AdditionalInfo" class="form-label">Додаткова інформація</label>
+                        <textarea asp-for="AdditionalInfo" class="form-control editor" rows="4"></textarea>
+                        <span asp-validation-for="AdditionalInfo" class="text-danger"></span>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div id="fileInputSection" style="@(Model.ResumeInputType == "file" ? "" : "display:none;")">
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h5>Файл резюме</h5>
+                </div>
+                <div class="card-body">
+                    @if (!string.IsNullOrEmpty(Model.ExistingFilePath))
+                    {
+                        <div class="alert alert-info mb-3">
+                            <p>Поточний файл: <a href="@Url.Action("Download", "Resume", new { id = Model.Id })">Завантажити</a></p>
+                            <p>Якщо ви завантажите новий файл, поточний буде замінено.</p>
+                        </div>
+                    }
+                    
+                    <div class="form-group mb-3">
+                        <label asp-for="ResumeFile" class="form-label">Завантажте новий файл резюме</label>
+                        <input asp-for="ResumeFile" class="form-control" type="file" accept=".pdf,.doc,.docx" />
+                        <span asp-validation-for="ResumeFile" class="text-danger"></span>
+                        <div class="form-text">Підтримувані формати: PDF, DOC, DOCX. Максимальний розмір: 5 МБ</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="form-group mb-4">
+            <button type="submit" class="btn btn-primary">Зберегти зміни</button>
+            <a asp-action="Index" class="btn btn-secondary">Скасувати</a>
+        </div>
+    </form>
+</div>
+
+@section Scripts {
+    <script src="https://cdn.tiny.cloud/1/abvzd1aol98dkpdxi35ty05fve0az1cxb61miltrbou0tcz8/tinymce/5/tinymce.min.js"></script>
+    <script>
+        tinymce.init({
+            selector: '.editor',
+            plugins: 'lists link autolink',
+            toolbar: 'undo redo | formatselect | bold italic | alignleft aligncenter alignright | bullist numlist | link',
+            menubar: false
+        });
+        
+        document.addEventListener('DOMContentLoaded', function() {
+            const manualInput = document.getElementById('manualInput');
+            const fileInput = document.getElementById('fileInput');
+            const manualSection = document.getElementById('manualInputSection');
+            const fileSection = document.getElementById('fileInputSection');
+            const warningDiv = document.getElementById('typeChangeWarning');
+            const originalType = document.querySelector('input[name="OriginalResumeInputType"]').value;
+            
+            manualInput.addEventListener('change', function() {
+                if (this.checked) {
+                    manualSection.style.display = 'block';
+                    fileSection.style.display = 'none';
+                    
+                    if (originalType === 'file') {
+                        warningDiv.style.display = 'block';
+                    } else {
+                        warningDiv.style.display = 'none';
+                    }
+                }
+            });
+            
+            fileInput.addEventListener('change', function() {
+                if (this.checked) {
+                    manualSection.style.display = 'none';
+                    fileSection.style.display = 'block';
+                    
+                    if (originalType === 'manual') {
+                        warningDiv.style.display = 'block';
+                    } else {
+                        warningDiv.style.display = 'none';
+                    }
+                }
+            });
+        });
+    </script>
+    @{await Html.RenderPartialAsync("_ValidationScriptsPartial");}
+}

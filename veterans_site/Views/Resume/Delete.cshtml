@@ -1,0 +1,55 @@
+@model Resume
+@{
+    ViewData["Title"] = "Видалити резюме";
+}
+
+<div class="container mt-4">
+    <h1>Видалити резюме</h1>
+    
+    @if (TempData["HasApplications"] != null && (bool)TempData["HasApplications"])
+    {
+        <div class="alert alert-warning">
+            <h4>Увага! Це резюме використовується в заявках на вакансії.</h4>
+        </div>
+    }
+    else 
+    {
+        <div class="alert alert-danger">
+            <h4>Ви впевнені, що хочете видалити це резюме?</h4>
+            <p>Цю дію не можна буде скасувати.</p>
+        </div>
+    }
+    
+    <div class="card mb-4">
+        <div class="card-header">
+            <h5>@Model.FullName</h5>
+        </div>
+        <div class="card-body">
+            <dl class="row">
+                <dt class="col-sm-3">Email:</dt>
+                <dd class="col-sm-9">@Model.Email</dd>
+                
+                <dt class="col-sm-3">Телефон:</dt>
+                <dd class="col-sm-9">@(string.IsNullOrEmpty(Model.Phone) ? "-" : Model.Phone)</dd>
+                
+                <dt class="col-sm-3">Тип:</dt>
+                <dd class="col-sm-9">@(Model.IsPublic ? "Публічне" : "Приватне")</dd>
+                
+                <dt class="col-sm-3">Створено:</dt>
+                <dd class="col-sm-9">@Model.CreatedDate.ToString("dd.MM.yyyy")</dd>
+                
+                @if (Model.LastUpdated.HasValue)
+                {
+                    <dt class="col-sm-3">Оновлено:</dt>
+                    <dd class="col-sm-9">@Model.LastUpdated.Value.ToString("dd.MM.yyyy")</dd>
+                }
+            </dl>
+        </div>
+    </div>
+    
+    <form asp-action="Delete">
+        <input type="hidden" asp-for="Id" />
+        <button type="submit" class="btn btn-danger" @(TempData["ErrorMessage"] != null ? "disabled" : "")>Видалити</button>
+        <a asp-action="Index" class="btn btn-secondary">Скасувати</a>
+    </form>
+</div>

@@ -1,0 +1,138 @@
+@model JobApplication
+@{
+    ViewData["Title"] = "Деталі заявки";
+}
+
+<div class="container mt-4">
+    <nav aria-label="breadcrumb">
+        <ol class="breadcrumb">
+            <li class="breadcrumb-item"><a href="@Url.Action("Index", "Home")">Головна</a></li>
+            <li class="breadcrumb-item"><a href="@Url.Action("MyApplications", "JobApplication")">Мої заявки</a></li>
+            <li class="breadcrumb-item active" aria-current="page">Деталі заявки</li>
+        </ol>
+    </nav>
+    
+    <div class="row">
+        <div class="col-md-8">
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h1>Деталі заявки на вакансію</h1>
+                </div>
+                <div class="card-body">
+                    <h4>Інформація про вакансію</h4>
+                    <dl class="row">
+                        <dt class="col-sm-3">Назва вакансії:</dt>
+                        <dd class="col-sm-9">
+                            <a href="@Url.Action("Details", "Jobs", new { id = Model.JobId })">@Model.Job.Title</a>
+                        </dd>
+                        
+                        <dt class="col-sm-3">Компанія:</dt>
+                        <dd class="col-sm-9">@Model.Job.Company</dd>
+                        
+                        <dt class="col-sm-3">Місцезнаходження:</dt>
+                        <dd class="col-sm-9">@Model.Job.Location</dd>
+                    </dl>
+                    
+                    <h4 class="mt-4">Інформація про заявку</h4>
+                    <dl class="row">
+                        <dt class="col-sm-3">Дата подачі:</dt>
+                        <dd class="col-sm-9">@Model.ApplicationDate.ToString("dd.MM.yyyy HH:mm")</dd>
+                        
+                        <dt class="col-sm-3">Статус:</dt>
+                        <dd class="col-sm-9">
+                            @switch (Model.Status)
+                            {
+                                case ApplicationStatus.Pending:
+                                    <span class="badge bg-warning text-dark">В очікуванні</span>
+                                    break;
+                                case ApplicationStatus.Reviewed:
+                                    <span class="badge bg-info">Розглянуто</span>
+                                    break;
+                                case ApplicationStatus.InterviewInvited:
+                                    <span class="badge bg-primary">Запрошення на співбесіду</span>
+                                    break;
+                                case ApplicationStatus.Accepted:
+                                    <span class="badge bg-success">Прийнято</span>
+                                    break;
+                                case ApplicationStatus.Rejected:
+                                    <span class="badge bg-danger">Відхилено</span>
+                                    break;
+                                default:
+                                    <span class="badge bg-secondary">Невідомо</span>
+                                    break;
+                            }
+                        </dd>
+                        
+                        @if (!string.IsNullOrEmpty(Model.StatusNote))
+                        {
+                            <dt class="col-sm-3">Коментар до статусу:</dt>
+                            <dd class="col-sm-9">@Model.StatusNote</dd>
+                        }
+                        
+                        <dt class="col-sm-3">Вибране резюме:</dt>
+                        <dd class="col-sm-9">
+                            <a href="@Url.Action("Download", "Resume", new { id = Model.ResumeId })" target="_blank">
+                                @Model.Resume.FullName (@Model.Resume.CreatedDate.ToString("dd.MM.yyyy"))
+                            </a>
+                        </dd>
+                    </dl>
+                    
+                    <h4 class="mt-4">Супровідний лист</h4>
+                    <div class="border p-3 rounded bg-light">
+                        @if (string.IsNullOrEmpty(Model.CoverLetter))
+                        {
+                            <p class="text-muted">Супровідний лист не надано</p>
+                        }
+                        else
+                        {
+                            <p>@Html.Raw(Model.CoverLetter.Replace("\n", "<br>"))</p>
+                        }
+                    </div>
+                </div>
+                <div class="card-footer">
+                    <div class="d-flex justify-content-between">
+                        <a href="@Url.Action("MyApplications", "JobApplication")" class="btn btn-secondary">
+                            <i class="bi bi-arrow-left"></i> Назад до списку
+                        </a>
+                        
+                        @if (Model.Status == ApplicationStatus.Pending)
+                        {
+                            <form asp-action="Withdraw" asp-route-id="@Model.Id" method="post">
+                                <button type="submit" class="btn btn-danger" onclick="return confirm('Ви впевнені, що хочете відкликати заявку?');">
+                                    <i class="bi bi-x-circle"></i> Відкликати заявку
+                                </button>
+                            </form>
+                        }
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-md-4">
+            <div class="card">
+                <div class="card-header bg-info text-white">
+                    <h5 class="mb-0">Поради для успішного працевлаштування</h5>
+                </div>
+                <div class="card-body">
+                    <ul class="list-unstyled">
+                        <li class="mb-2">
+                            <i class="bi bi-check-circle-fill text-success"></i> Підготуйтеся до можливої співбесіди заздалегідь
+                        </li>
+                        <li class="mb-2">
+                            <i class="bi bi-check-circle-fill text-success"></i> Дослідіть компанію та її цінності
+                        </li>
+                        <li class="mb-2">
+                            <i class="bi bi-check-circle-fill text-success"></i> Підготуйте відповіді на часті запитання
+                        </li>
+                        <li class="mb-2">
+                            <i class="bi bi-check-circle-fill text-success"></i> Не соромтеся підкреслювати свій військовий досвід
+                        </li>
+                        <li class="mb-2">
+                            <i class="bi bi-check-circle-fill text-success"></i> Розкажіть про свої навички командної роботи
+                        </li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>

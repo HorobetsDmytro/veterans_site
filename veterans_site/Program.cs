@@ -1,7 +1,9 @@
+using DinkToPdf;
+using DinkToPdf.Contracts;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Identity.UI.Services;
 using Microsoft.EntityFrameworkCore;
-using veterans_site.Areas.Specialist.Controllers;
+using veterans_site.Areas.Admin.Controllers;
 using veterans_site.Data;
 using veterans_site.Hubs;
 using veterans_site.Interfaces;
@@ -9,6 +11,7 @@ using veterans_site.Middleware;
 using veterans_site.Models;
 using veterans_site.Repositories;
 using veterans_site.Services;
+using ConsultationController = veterans_site.Areas.Specialist.Controllers.ConsultationController;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -60,6 +63,7 @@ builder.Services.AddControllers()
 
 builder.Services.Configure<IdentityOptions>(options => { });
 builder.Services.AddScoped<IUserClaimsPrincipalFactory<ApplicationUser>, CustomUserClaimsPrincipalFactory>();
+builder.Services.AddSingleton(typeof(IConverter), new SynchronizedConverter(new PdfTools()));
 
 builder.Services.AddScoped(typeof(IGenericRepository<>), typeof(GenericRepository<>));
 builder.Services.AddScoped<IEventRepository, EventRepository>();
@@ -67,8 +71,14 @@ builder.Services.AddScoped<INewsRepository, NewsRepository>();
 builder.Services.AddScoped<IConsultationRepository, ConsultationRepository>();
 builder.Services.AddScoped<IAccessibilityMarkerRepository, AccessibilityMarkerRepository>();
 builder.Services.AddScoped<ILogger<ConsultationController>, Logger<ConsultationController>>();
+builder.Services.AddScoped<IJobRepository, JobRepository>();
+builder.Services.AddScoped<IJobApplicationRepository, JobApplicationRepository>();
+builder.Services.AddScoped<IResumeRepository, ResumeRepository>();
+builder.Services.AddScoped<ISavedJobRepository, SavedJobRepository>();
 builder.Services.AddScoped<GoogleCalendarService>();
 builder.Services.AddScoped<IPDFService, PDFService>();
+builder.Services.AddHttpClient<IJoobleService, JoobleService>();
+builder.Services.AddScoped<IJoobleService, JoobleService>();
 
 builder.Services.AddDataProtection();
 
@@ -79,16 +89,14 @@ builder.Services.AddTransient<IEmailSender, EmailSender>();
 
 builder.Services.AddControllersWithViews();
 
-builder.Services.AddAuthorization(options =>
-{
-    options.AddPolicy("RequireAdminRole", policy => policy.RequireRole("Admin"));
-    options.AddPolicy("RequireVeteranRole", policy => policy.RequireRole("Veteran"));
-    options.AddPolicy("RequireSpecialistRole", policy => policy.RequireRole("Specialist"));
-});
+builder.Services.AddAuthorizationBuilder()
+    .AddPolicy("RequireAdminRole", policy => policy.RequireRole("Admin"))
+    .AddPolicy("RequireVeteranRole", policy => policy.RequireRole("Veteran"))
+    .AddPolicy("RequireSpecialistRole", policy => policy.RequireRole("Specialist"));
 
 builder.Services.AddHostedService<ConsultationBackgroundService>();
-
 builder.Services.AddHostedService<EventBackgroundService>();
+builder.Services.AddHostedService<JoobleBackgroundService>();
 
 builder.Services.AddAuthorization(options =>
 {

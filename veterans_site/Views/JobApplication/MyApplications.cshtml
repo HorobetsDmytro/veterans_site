@@ -1,0 +1,82 @@
+@model IEnumerable<JobApplication>
+@{
+    ViewData["Title"] = "Мої заявки на вакансії";
+}
+
+<div class="container mt-4">
+    <h1>Мої заявки на вакансії</h1>
+    
+    @if (!Model.Any())
+    {
+        <div class="alert alert-info">
+            <p>Ви ще не відгукувалися на жодну вакансію.</p>
+            <a href="@Url.Action("Index", "Jobs")" class="btn btn-primary">Переглянути вакансії</a>
+        </div>
+    }
+    else
+    {
+        <div class="table-responsive">
+            <table class="table table-hover">
+                <thead class="table-light">
+                    <tr>
+                        <th>Вакансія</th>
+                        <th>Компанія</th>
+                        <th>Дата подачі</th>
+                        <th>Статус</th>
+                        <th>Дії</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var application in Model)
+                    {
+                        <tr>
+                            <td>
+                                <a href="@Url.Action("Details", "Jobs", new { id = application.JobId })">@application.Job.Title</a>
+                            </td>
+                            <td>@application.Job.Company</td>
+                            <td>@application.ApplicationDate.ToString("dd.MM.yyyy")</td>
+                            <td>
+                                @switch (application.Status)
+                                {
+                                    case ApplicationStatus.Pending:
+                                        <span class="badge bg-warning text-dark">В очікуванні</span>
+                                        break;
+                                    case ApplicationStatus.Reviewed:
+                                        <span class="badge bg-info">Розглянуто</span>
+                                        break;
+                                    case ApplicationStatus.InterviewInvited:
+                                        <span class="badge bg-primary">Запрошення на співбесіду</span>
+                                        break;
+                                    case ApplicationStatus.Accepted:
+                                        <span class="badge bg-success">Прийнято</span>
+                                        break;
+                                    case ApplicationStatus.Rejected:
+                                        <span class="badge bg-danger">Відхилено</span>
+                                        break;
+                                    default:
+                                        <span class="badge bg-secondary">Невідомо</span>
+                                        break;
+                                }
+                            </td>
+                            <td>
+                                <div class="btn-group" role="group">
+                                    <a href="@Url.Action("Details", "JobApplication", new { id = application.Id })" class="btn btn-sm btn-outline-primary">
+                                        <i class="bi bi-eye"></i> Деталі
+                                    </a>
+                                    @if (application.Status == ApplicationStatus.Pending)
+                                    {
+                                        <form asp-action="Withdraw" asp-route-id="@application.Id" method="post" style="display: inline;">
+                                            <button type="submit" class="btn btn-sm btn-outline-danger" onclick="return confirm('Ви впевнені, що хочете відкликати заявку?');">
+                                                <i class="bi bi-x-circle"></i> Відкликати
+                                            </button>
+                                        </form>
+                                    }
+                                </div>
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    }
+</div>

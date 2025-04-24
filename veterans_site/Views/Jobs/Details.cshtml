@@ -1,0 +1,256 @@
+@model Job
+
+<style>
+    .job-description .bg-light {
+        overflow: visible;
+        max-height: none;
+        white-space: normal;
+    }
+</style>
+
+<div class="container">
+    <nav aria-label="breadcrumb" class="mt-3">
+        <ol class="breadcrumb">
+            <li class="breadcrumb-item"><a href="@Url.Action("Index", "Jobs")">Вакансії</a></li>
+            <li class="breadcrumb-item active" aria-current="page">@Model.Title</li>
+        </ol>
+    </nav>
+
+    @if (TempData["SuccessMessage"] != null)
+    {
+    <div class="alert alert-success alert-dismissible fade show" role="alert">
+        <i class="fas fa-check-circle me-2"></i> @TempData["SuccessMessage"]
+        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+    </div>
+    }
+
+    @if (TempData["ErrorMessage"] != null)
+    {
+    <div class="alert alert-danger alert-dismissible fade show" role="alert">
+        <i class="fas fa-exclamation-circle me-2"></i> @TempData["ErrorMessage"]
+        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+    </div>
+    }
+
+    <div class="card shadow-sm mb-4">
+        <div class="card-header py-3 d-flex justify-content-between align-items-center">
+            <h4 class="m-0 font-weight-bold">@Model.Title</h4>
+            <div>
+                @if (User.Identity.IsAuthenticated && User.IsInRole("Veteran"))
+                {
+                    @if (Model.IsSaved)
+                    {
+                        <button class="btn btn-outline-warning unsave-job-btn" data-job-id="@Model.Id">
+                            <i class="fas fa-star me-1"></i> Видалити з обраного
+                        </button>
+                    }
+                    else
+                    {
+                        <button class="btn btn-outline-primary save-job-btn" data-job-id="@Model.Id">
+                            <i class="far fa-star me-1"></i> Додати до обраного
+                        </button>
+                    }
+                }
+                @if (User.IsInRole("Admin"))
+                {
+                    @if (!Model.IsExternal)
+                    {
+                        <a asp-action="Edit" asp-route-id="@Model.Id" class="btn btn-outline-secondary ms-2">
+                            <i class="fas fa-edit me-1"></i> Редагувати
+                        </a>
+                        <a asp-action="Delete" asp-route-id="@Model.Id" class="btn btn-outline-danger ms-2">
+                            <i class="fas fa-trash-alt me-1"></i> Видалити
+                        </a>
+                    }
+                    @* <a asp-action="Delete" asp-route-id="@Model.Id" class="btn btn-outline-danger ms-2"> *@
+                    @*     <i class="fas fa-trash-alt me-1"></i> Видалити *@
+                    @* </a> *@
+                }
+            </div>
+        </div>
+        <div class="card-body">
+            <div class="row mb-4">
+                <div class="col-md-6">
+                    <h5 class="mb-3">Інформація про вакансію</h5>
+                    <p>
+                        <i class="fas fa-building me-2 text-secondary"></i>
+                        <strong>Компанія:</strong> @Model.Company
+                    </p>
+                    <p>
+                        <i class="fas fa-map-marker-alt me-2 text-secondary"></i>
+                        <strong>Місце роботи:</strong> @Model.Location
+                    </p>
+                    <p>
+                        <i class="fas fa-tags me-2 text-secondary"></i>
+                        <strong>Категорія:</strong> @Model.Category
+                    </p>
+                    <p>
+                        <i class="fas fa-clock me-2 text-secondary"></i>
+                        <strong>Тип зайнятості:</strong>
+                        @{
+                            string typeName = Model.JobType switch
+                            {
+                            JobType.FullTime => "Повна зайнятість",
+                            JobType.PartTime => "Часткова зайнятість",
+                            JobType.Freelance => "Фріланс",
+                            JobType.Contract => "Контракт",
+                            JobType.Internship => "Стажування",
+                            _ => Model.JobType.ToString()
+                            };
+                        }
+                        @typeName
+                    </p>
+                    <p>
+                        <i class="fas fa-calendar-alt me-2 text-secondary"></i>
+                        <strong>Дата розміщення:</strong>
+                        @Model.PostedDate.ToString("dd.MM.yyyy")
+                    </p>
+                    @if (Model.Salary.HasValue)
+                    {
+                    <p>
+                        <i class="fas fa-money-bill-wave me-2 text-secondary"></i>
+                        <strong>Зарплата:</strong> @Model.Salary.Value.ToString("N0") грн
+                    </p>
+                    }
+                </div>
+                <div class="col-md-6">
+                    <div class="text-center mb-3">
+                        @if (User.Identity.IsAuthenticated)
+                        {
+                            @if (User.IsInRole("Veteran"))
+                            {
+                                @if (Model.IsApplied)
+                                {
+                                    <div class="alert alert-success">
+                                        <i class="fas fa-check-circle me-2"></i>
+                                        Ви вже відгукнулися на цю вакансію
+                                    </div>
+                                    <a asp-controller="JobApplication" asp-action="MyApplications" class="btn btn-outline-primary">
+                                        <i class="fas fa-list me-1"></i> Мої заявки
+                                    </a>
+                                }
+                                else
+                                {
+                                    <a asp-controller="JobApplication" asp-action="Apply" asp-route-jobId="@Model.Id" class="btn btn-primary btn-lg">
+                                        <i class="fas fa-paper-plane me-2"></i> Відгукнутися на вакансію
+                                    </a>
+                                    <p class="text-muted mt-2">Залиште своє резюме та супровідний лист для розгляду</p>
+                                }
+                            }
+                        }
+                        else
+                        {
+                            <div class="alert alert-info">
+                                <i class="fas fa-info-circle me-2"></i>
+                                Увійдіть в систему для відгуку на вакансію
+                            </div>
+                            <a asp-area="Identity" asp-page="/Account/Login" class="btn btn-outline-primary">
+                                <i class="fas fa-sign-in-alt me-1"></i> Увійти
+                            </a>
+                        }
+                    </div>
+
+                    @if (Model.IsExternal)
+                    {
+                        <div class="alert alert-warning">
+                            <i class="fas fa-external-link-alt me-2"></i>
+                            Це зовнішня вакансія. Ви можете також переглянути її на сайті роботодавця.
+                        </div>
+                        <a href="@Model.ExternalUrl" target="_blank" class="btn btn-outline-secondary w-100">
+                            <i class="fas fa-external-link-alt me-1"></i> Переглянути оригінал вакансії
+                        </a>
+                    }
+                </div>
+            </div>
+
+            <hr class="my-4">
+
+            <div class="job-description mt-4">
+                <h5 class="mb-3">Опис вакансії</h5>
+                <div class="bg-light p-4 rounded">
+                    @Html.Raw(Model.Description)
+                </div>
+            </div>
+
+            @if (!string.IsNullOrEmpty(Model.Requirements))
+            {
+            <div class="job-requirements mt-4">
+                <h5 class="mb-3">Вимоги до кандидата</h5>
+                <div class="bg-light p-4 rounded">
+                    @Html.Raw(Model.Requirements)
+                </div>
+            </div>
+            }
+        </div>
+        <div class="card-footer bg-white">
+            <div class="d-flex justify-content-between">
+                <a asp-action="Index" class="btn btn-outline-secondary">
+                    <i class="fas fa-arrow-left me-1"></i> Назад до списку вакансій
+                </a>
+
+                @if (User.Identity.IsAuthenticated && User.IsInRole("Admin"))
+                {
+                    <a asp-controller="JobApplication" asp-action="JobApplications" asp-route-jobId="@Model.Id" class="btn btn-outline-info">
+                        <i class="fas fa-clipboard-list me-1"></i> Переглянути заявки (@Model.ApplicationsCount)
+                    </a>
+                }
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+<script>
+    $(function() {
+        $(document).on("click", ".save-job-btn", function() {
+            const jobId = $(this).data("job-id");
+            const button = $(this);
+
+            $.ajax({
+                url: "@Url.Action("SaveJob", "Jobs")",
+                type: "POST",
+                data: { jobId: jobId },
+                success: function(response) {
+                    if (response.success) {
+                        button.removeClass("btn-outline-primary").addClass("btn-outline-warning");
+                        button.find("i").removeClass("far").addClass("fas");
+                        button.text(" Видалити з обраного").prepend('<i class="fas fa-star me-1"></i>');
+                        button.removeClass("save-job-btn").addClass("unsave-job-btn");
+                        toastr.success("Вакансію додано до обраного");
+                    } else {
+                        toastr.warning(response.message);
+                    }
+                },
+                error: function() {
+                    toastr.error("Помилка під час збереження вакансії");
+                }
+            });
+        });
+
+        $(document).on("click", ".unsave-job-btn", function() {
+            const jobId = $(this).data("job-id");
+            const button = $(this);
+
+            $.ajax({
+                url: "@Url.Action("UnsaveJob", "Jobs")",
+                type: "POST",
+                data: { jobId: jobId },
+                success: function(response) {
+                    if (response.success) {
+                        button.removeClass("btn-outline-warning").addClass("btn-outline-primary");
+                        button.find("i").removeClass("fas").addClass("far");
+                        button.text(" Додати до обраного").prepend('<i class="far fa-star me-1"></i>');
+                        button.removeClass("unsave-job-btn").addClass("save-job-btn");
+                        toastr.success("Вакансію видалено з обраного");
+                    } else {
+                        toastr.warning(response.message);
+                    }
+                },
+                error: function() {
+                    toastr.error("Помилка під час видалення вакансії з обраного");
+                }
+            });
+        });
+    });
+</script>
+}

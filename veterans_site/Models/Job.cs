@@ -1,4 +1,5 @@
 using System.ComponentModel.DataAnnotations;
+using System.ComponentModel.DataAnnotations.Schema;
 
 namespace veterans_site.Models;
 
@@ -17,14 +18,14 @@ public class Job
     [DataType(DataType.MultilineText)]
     public string Description { get; set; }
     
-    public string Requirements { get; set; }
+    public string? Requirements { get; set; }
     
     [DataType(DataType.Currency)]
     public decimal? Salary { get; set; }
     
-    public string ContactEmail { get; set; }
+    public string? ContactEmail { get; set; }
     
-    public string ContactPhone { get; set; }
+    public string? ContactPhone { get; set; }
     
     public DateTime PostedDate { get; set; }
     
@@ -38,9 +39,17 @@ public class Job
     
     public bool IsExternal { get; set; }
     
-    public string ExternalId { get; set; }
+    public string? ExternalId { get; set; }
     
-    public string ExternalUrl { get; set; }
+    public string? ExternalUrl { get; set; }
+    
+    [NotMapped]
+    public bool IsSaved { get; set; }
+    
+    [NotMapped]
+    public bool IsApplied { get; set; }
+    
+    public int ApplicationsCount { get; set; }
     
     public ICollection<JobApplication> Applications { get; set; }
     public ICollection<SavedJob> SavedJobs { get; set; }

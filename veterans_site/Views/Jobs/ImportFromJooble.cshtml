@@ -1,0 +1,60 @@
+@model veterans_site.ViewModels.JoobleImportViewModel
+@{
+    ViewData["Title"] = "Імпорт вакансій з Jooble";
+}
+
+<div class="container mt-4">
+    <nav aria-label="breadcrumb">
+        <ol class="breadcrumb">
+            <li class="breadcrumb-item"><a href="@Url.Action("Index", "Home")">Головна</a></li>
+            <li class="breadcrumb-item"><a href="@Url.Action("Index", "Jobs")">Вакансії</a></li>
+            <li class="breadcrumb-item active" aria-current="page">Імпорт з Jooble</li>
+        </ol>
+    </nav>
+    
+    <div class="card">
+        <div class="card-header">
+            <h2>Імпорт вакансій з Jooble API</h2>
+        </div>
+        <div class="card-body">
+            <form asp-action="ImportFromJooble" method="post">
+                <div asp-validation-summary="ModelOnly" class="text-danger"></div>
+                
+                <div class="mb-3">
+                    <label asp-for="Keywords" class="form-label"></label>
+                    <input asp-for="Keywords" class="form-control" />
+                    <span asp-validation-for="Keywords" class="text-danger"></span>
+                    <div class="form-text">Наприклад: Ветеран, IT, Медицина</div>
+                </div>
+                
+                <div class="mb-3">
+                    <label asp-for="Location" class="form-label"></label>
+                    <input asp-for="Location" class="form-control" />
+                    <span asp-validation-for="Location" class="text-danger"></span>
+                    <div class="form-text">Наприклад: Київ, Львів, Україна</div>
+                </div>
+                
+                <div class="mb-3">
+                    <label asp-for="Count" class="form-label"></label>
+                    <input asp-for="Count" class="form-control" type="number" min="1" max="100" />
+                    <span asp-validation-for="Count" class="text-danger"></span>
+                </div>
+                
+                <div class="d-grid">
+                    <button type="submit" class="btn btn-primary">
+                        <i class="bi bi-cloud-download"></i> Імпортувати вакансії
+                    </button>
+                </div>
+            </form>
+        </div>
+        <div class="card-footer">
+            <div class="alert alert-info mb-0">
+                <i class="bi bi-info-circle"></i> Імпортовані вакансії будуть додані до списку вакансій і доступні для користувачів.
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    @{await Html.RenderPartialAsync("_ValidationScriptsPartial");}
+}

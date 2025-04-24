@@ -1,0 +1,109 @@
+@model List<Job>
+@{
+    ViewData["Title"] = "Збережені вакансії";
+}
+
+<div class="container mt-4">
+    <h1>Збережені вакансії</h1>
+    
+    @if (!Model.Any())
+    {
+        <div class="alert alert-info">
+            <p>У вас немає збережених вакансій.</p>
+            <a href="@Url.Action("Index", "Jobs")" class="btn btn-primary">Переглянути всі вакансії</a>
+        </div>
+    }
+    else
+    {
+        <div class="row">
+            @foreach (var job in Model)
+            {
+                <div class="col-md-6 mb-4">
+                    <div class="card h-100">
+                        <div class="card-body">
+                            <h5 class="card-title">@job.Title</h5>
+                            <h6 class="card-subtitle mb-2 text-muted">@job.Company</h6>
+                            <p class="card-text">
+                                <i class="bi bi-geo-alt"></i> @job.Location<br>
+                                @if (job.Salary.HasValue)
+                                {
+                                    <span><i class="bi bi-currency-dollar"></i> @job.Salary.Value.ToString("C0")</span><br>
+                                }
+                                <span class="badge bg-secondary">
+                                    @{
+                                        string typeName = job.JobType switch
+                                        {
+                                            JobType.FullTime => "Повна зайнятість",
+                                            JobType.PartTime => "Часткова зайнятість",
+                                            JobType.Freelance => "Фріланс",
+                                            JobType.Contract => "Контракт",
+                                            JobType.Internship => "Стажування",
+                                            _ => job.JobType.ToString()
+                                        };
+                                    }
+                                    @typeName
+                                </span>
+                                @if (!string.IsNullOrEmpty(job.Category))
+                                {
+                                    <span class="badge bg-info text-dark">@job.Category</span>
+                                }
+                            </p>
+                            <p class="card-text">
+                                @(job.Description.Length > 200 ? job.Description.Substring(0, 200) + "..." : job.Description)
+                            </p>
+                        </div>
+                        <div class="card-footer d-flex justify-content-between">
+                            <small class="text-muted">
+                                Опубліковано: @job.PostedDate.ToString("dd.MM.yyyy")
+                                @if (job.IsExternal)
+                                {
+                                    <span class="ms-2 badge bg-secondary">Зовнішня вакансія</span>
+                                }
+                            </small>
+                            <div>
+                                <button class="btn btn-sm btn-outline-danger unsave-job" data-job-id="@job.Id">
+                                    <i class="bi bi-bookmark-x"></i> Видалити з обраних
+                                </button>
+                                <a href="@Url.Action("Details", "Jobs", new { id = job.Id })" class="btn btn-sm btn-primary">Детальніше</a>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            }
+        </div>
+    }
+</div>
+
+@section Scripts {
+    <script>
+        $(document).ready(function() {
+            $('.unsave-job').click(function() {
+                var jobId = $(this).data('job-id');
+                var card = $(this).closest('.col-md-6');
+                
+                $.ajax({
+                    url: '@Url.Action("UnsaveJob", "Jobs")',
+                    type: 'POST',
+                    data: { jobId: jobId },
+                    success: function(response) {
+                        if (response.success) {
+                            card.fadeOut(300, function() {
+                                $(this).remove();
+                                
+                                if ($('.col-md-6').length === 0) {
+                                    location.reload();
+                                }
+                            });
+                            toastr.success('Вакансію видалено з обраних');
+                        } else {
+                            toastr.warning(response.message);
+                        }
+                    },
+                    error: function() {
+                        toastr.error('Помилка при видаленні вакансії з обраних');
+                    }
+                });
+            });
+        });
+    </script>
+}

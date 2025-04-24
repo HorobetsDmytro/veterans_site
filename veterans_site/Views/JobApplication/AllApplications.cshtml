@@ -1,0 +1,417 @@
+@model veterans_site.ViewModels.AllJobApplicationsViewModel
+@{
+    ViewData["Title"] = "Всі заявки на вакансії";
+}
+
+<div class="container mt-4">
+    <nav aria-label="breadcrumb">
+        <ol class="breadcrumb">
+            <li class="breadcrumb-item"><a href="@Url.Action("Index", "Home")">Головна</a></li>
+            <li class="breadcrumb-item"><a href="@Url.Action("Index", "Jobs")">Вакансії</a></li>
+            <li class="breadcrumb-item active" aria-current="page">Всі заявки</li>
+        </ol>
+    </nav>
+    
+    <div class="card mb-4">
+        <div class="card-header d-flex justify-content-between align-items-center">
+            <h2>Всі заявки на вакансії</h2>
+            <span class="badge bg-primary">Всього заявок: @Model.Applications.Count()</span>
+        </div>
+        <div class="card-body">
+            <div class="row mb-4">
+                <div class="col-md-12">
+                    <div class="card">
+                        <div class="card-header">
+                            <h5>Фільтри</h5>
+                        </div>
+                        <div class="card-body">
+                            <form id="filterForm" method="get" asp-action="AllApplications" class="row g-3">
+                                <div class="col-md-5">
+                                    <label for="jobFilter" class="form-label">Вакансія:</label>
+                                    <select id="jobFilter" name="jobFilter" class="form-select">
+                                        <option value="">Всі вакансії</option>
+                                        @foreach (var job in Model.Jobs)
+                                        {
+                                            if (job.Id.ToString() == Model.JobFilter)
+                                            {
+                                                <option value="@job.Id" selected>@job.Title</option>
+                                            }
+                                            else
+                                            {
+                                                <option value="@job.Id">@job.Title</option>
+                                            }
+                                        }
+                                    </select>
+                                </div>
+                                <div class="col-md-5">
+                                    <label for="statusFilter" class="form-label">Статус:</label>
+                                    <select id="statusFilter" name="statusFilter" class="form-select">
+                                        <option value="">Всі статуси</option>
+                                        @{
+                                            var statuses = new Dictionary<string, string>
+                                            {
+                                                ["Pending"] = "В очікуванні",
+                                                ["Reviewed"] = "Розглянуто",
+                                                ["InterviewInvited"] = "Співбесіда",
+                                                ["Accepted"] = "Прийнято",
+                                                ["Rejected"] = "Відхилено"
+                                            };
+                                        }
+                                        
+                                        @foreach (var status in statuses)
+                                        {
+                                            if (status.Key == Model.StatusFilter)
+                                            {
+                                                <option value="@status.Key" selected>@status.Value</option>
+                                            }
+                                            else
+                                            {
+                                                <option value="@status.Key">@status.Value</option>
+                                            }
+                                        }
+                                    </select>
+                                </div>
+                                <div class="col-md-2 d-flex align-items-end">
+                                    <button type="submit" class="btn btn-primary w-100">
+                                        <i class="bi bi-search"></i> Застосувати
+                                    </button>
+                                </div>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            @if (!Model.Applications.Any())
+            {
+                <div class="alert alert-info">
+                    <p>Немає заявок, що відповідають заданим критеріям.</p>
+                </div>
+            }
+            else
+            {
+                <div class="mb-3">
+                    <div class="btn-group" role="group">
+                        <button type="button" class="btn btn-outline-primary filter-btn active" data-filter="all">Всі</button>
+                        <button type="button" class="btn btn-outline-warning filter-btn" data-filter="Pending">В очікуванні</button>
+                        <button type="button" class="btn btn-outline-info filter-btn" data-filter="Reviewed">Розглянуто</button>
+                        <button type="button" class="btn btn-outline-primary filter-btn" data-filter="InterviewInvited">Співбесіда</button>
+                        <button type="button" class="btn btn-outline-success filter-btn" data-filter="Accepted">Прийнято</button>
+                        <button type="button" class="btn btn-outline-danger filter-btn" data-filter="Rejected">Відхилено</button>
+                    </div>
+                </div>
+                
+                <div class="table-responsive">
+                    <table class="table table-hover application-table">
+                        <thead class="table-light">
+                            <tr>
+                                <th>ID</th>
+                                <th>Вакансія</th>
+                                <th>Кандидат</th>
+                                <th>Дата заявки</th>
+                                <th>Резюме</th>
+                                <th>Статус</th>
+                                <th>Дії</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var application in Model.Applications.OrderByDescending(a => a.ApplicationDate))
+                            {
+                                <tr class="application-row" data-status="@application.Status">
+                                    <td>@application.Id</td>
+                                    <td>
+                                        <a href="@Url.Action("Details", "Jobs", new { id = application.JobId })">@application.Job.Title</a>
+                                    </td>
+                                    <td>
+                                        <strong>@application.User.FirstName @application.User.LastName</strong><br>
+                                        <small class="text-muted">@application.User.Email</small>
+                                    </td>
+                                    <td>@application.ApplicationDate.ToString("dd.MM.yyyy HH:mm")</td>
+                                    <td>
+                                        <a href="@Url.Action("Download", "Resume", new { id = application.ResumeId })" class="btn btn-sm btn-outline-secondary">
+                                            <i class="bi bi-file-earmark-pdf"></i> Завантажити
+                                        </a>
+                                    </td>
+                                    <td>
+                                        @switch (application.Status)
+                                        {
+                                            case ApplicationStatus.Pending:
+                                                <span class="badge bg-warning text-dark">В очікуванні</span>
+                                                break;
+                                            case ApplicationStatus.Reviewed:
+                                                <span class="badge bg-info">Розглянуто</span>
+                                                break;
+                                            case ApplicationStatus.InterviewInvited:
+                                                <span class="badge bg-primary">Співбесіда</span>
+                                                break;
+                                            case ApplicationStatus.Accepted:
+                                                <span class="badge bg-success">Прийнято</span>
+                                                break;
+                                            case ApplicationStatus.Rejected:
+                                                <span class="badge bg-danger">Відхилено</span>
+                                                break;
+                                            default:
+                                                <span class="badge bg-secondary">Невідомо</span>
+                                                break;
+                                        }
+                                    </td>
+                                    <td>
+                                        <div class="btn-group">
+                                            <button type="button" class="btn btn-sm btn-outline-primary" data-bs-toggle="modal" data-bs-target="#applicationModal-@application.Id">
+                                                <i class="bi bi-eye"></i> Деталі
+                                            </button>
+                                            <button type="button" class="btn btn-sm btn-outline-warning" data-bs-toggle="modal" data-bs-target="#statusModal-@application.Id">
+                                                <i class="bi bi-pencil"></i> Змінити статус
+                                            </button>
+                                        </div>
+                                        
+                                        <div class="modal fade" id="applicationModal-@application.Id" tabindex="-1" aria-labelledby="applicationModalLabel-@application.Id" aria-hidden="true">
+                                            <div class="modal-dialog modal-lg">
+                                                <div class="modal-content">
+                                                    <div class="modal-header">
+                                                        <h5 class="modal-title" id="applicationModalLabel-@application.Id">Заявка від @application.User.FirstName @application.User.LastName</h5>
+                                                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                                                    </div>
+                                                    <div class="modal-body">
+                                                        <h5>Вакансія:</h5>
+                                                        <p><a href="@Url.Action("Details", "Jobs", new { id = application.JobId })">@application.Job.Title</a></p>
+                                                        
+                                                        <h5>Супровідний лист:</h5>
+                                                        <div class="border p-3 rounded bg-light mb-3">
+                                                            @if (string.IsNullOrEmpty(application.CoverLetter))
+                                                            {
+                                                                <p class="text-muted">Супровідний лист не надано</p>
+                                                            }
+                                                            else
+                                                            {
+                                                                <p>@Html.Raw(application.CoverLetter.Replace("\n", "<br>"))</p>
+                                                            }
+                                                        </div>
+                                                        
+                                                        @if (!string.IsNullOrEmpty(application.StatusNote))
+                                                        {
+                                                            <h5>Коментар до статусу:</h5>
+                                                            <div class="border p-3 rounded mb-3">
+                                                                <p>@application.StatusNote</p>
+                                                            </div>
+                                                        }
+                                                        
+                                                        <div class="row">
+                                                            <div class="col-md-6">
+                                                                <h5>Інформація про кандидата:</h5>
+                                                                <dl class="row">
+                                                                    <dt class="col-sm-4">Ім'я:</dt>
+                                                                    <dd class="col-sm-8">@application.User.FirstName @application.User.LastName</dd>
+                                                                    
+                                                                    <dt class="col-sm-4">Email:</dt>
+                                                                    <dd class="col-sm-8">@application.User.Email</dd>
+                                                                    
+                                                                    <dt class="col-sm-4">Телефон:</dt>
+                                                                    <dd class="col-sm-8">@(string.IsNullOrEmpty(application.Resume?.Phone) ? "Не вказано" : application.Resume.Phone)</dd>
+                                                                </dl>
+                                                            </div>
+                                                            <div class="col-md-6">
+                                                                <h5>Інформація про заявку:</h5>
+                                                                <dl class="row">
+                                                                    <dt class="col-sm-4">Дата:</dt>
+                                                                    <dd class="col-sm-8">@application.ApplicationDate.ToString("dd.MM.yyyy HH:mm")</dd>
+                                                                    
+                                                                    <dt class="col-sm-4">Статус:</dt>
+                                                                    <dd class="col-sm-8">
+                                                                        @switch (application.Status)
+                                                                        {
+                                                                            case ApplicationStatus.Pending:
+                                                                                <span class="badge bg-warning text-dark">В очікуванні</span>
+                                                                                break;
+                                                                            case ApplicationStatus.Reviewed:
+                                                                                <span class="badge bg-info">Розглянуто</span>
+                                                                                break;
+                                                                            case ApplicationStatus.InterviewInvited:
+                                                                                <span class="badge bg-primary">Співбесіда</span>
+                                                                                break;
+                                                                            case ApplicationStatus.Accepted:
+                                                                                <span class="badge bg-success">Прийнято</span>
+                                                                                break;
+                                                                            case ApplicationStatus.Rejected:
+                                                                                <span class="badge bg-danger">Відхилено</span>
+                                                                                break;
+                                                                            default:
+                                                                                <span class="badge bg-secondary">Невідомо</span>
+                                                                                break;
+                                                                        }
+                                                                    </dd>
+                                                                </dl>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                    <div class="modal-footer">
+                                                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Закрити</button>
+                                                        <a href="@Url.Action("Download", "Resume", new { id = application.ResumeId })" class="btn btn-primary">Завантажити резюме</a>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        
+                                        <div class="modal fade" id="statusModal-@application.Id" tabindex="-1" aria-labelledby="statusModalLabel-@application.Id" aria-hidden="true">
+                                            <div class="modal-dialog">
+                                                <div class="modal-content">
+                                                    <div class="modal-header">
+                                                        <h5 class="modal-title" id="statusModalLabel-@application.Id">Оновити статус заявки</h5>
+                                                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                                                    </div>
+                                                <form asp-action="UpdateStatus" method="post">
+                                                    <div class="modal-body">
+                                                        <input type="hidden" name="id" value="@application.Id">
+                                                            
+                                                        <div class="form-group mb-3">
+                                                            <label class="form-label">Поточний статус:</label>
+                                                            <div>
+                                                                @switch (application.Status)
+                                                                {
+                                                                    case ApplicationStatus.Pending:
+                                                                        <span class="badge bg-warning text-dark">В очікуванні</span>
+                                                                        break;
+                                                                    case ApplicationStatus.Reviewed:
+                                                                        <span class="badge bg-info">Розглянуто</span>
+                                                                        break;
+                                                                    case ApplicationStatus.InterviewInvited:
+                                                                        <span class="badge bg-primary">Співбесіда</span>
+                                                                        break;
+                                                                    case ApplicationStatus.Accepted:
+                                                                        <span class="badge bg-success">Прийнято</span>
+                                                                        break;
+                                                                    case ApplicationStatus.Rejected:
+                                                                        <span class="badge bg-danger">Відхилено</span>
+                                                                        break;
+                                                                    default:
+                                                                        <span class="badge bg-secondary">Невідомо</span>
+                                                                        break;
+                                                                }
+                                                            </div>
+                                                        </div>
+                                                            
+                                                        <div class="form-group mb-3">
+                                                            <label for="status-@application.Id" class="form-label">Новий статус:</label>
+                                                            <select id="status-@application.Id" name="status" class="form-select">
+                                                                @{
+                                                                    var statusOptions = new Dictionary<ApplicationStatus, string>
+                                                                    {
+                                                                        [ApplicationStatus.Pending] = "В очікуванні",
+                                                                        [ApplicationStatus.Reviewed] = "Розглянуто",
+                                                                        [ApplicationStatus.InterviewInvited] = "Запрошення на співбесіду",
+                                                                        [ApplicationStatus.Accepted] = "Прийнято",
+                                                                        [ApplicationStatus.Rejected] = "Відхилено"
+                                                                    };
+                                                                }
+    
+                                                                @foreach (var status in statusOptions)
+                                                                {
+                                                                    if (application.Status == status.Key)
+                                                                    {
+                                                                        <option value="@status.Key" selected>@status.Value</option>
+                                                                    }
+                                                                    else
+                                                                    {
+                                                                        <option value="@status.Key">@status.Value</option>
+                                                                    }
+                                                                }
+                                                            </select>
+                                                        </div>
+                                                            
+                                                        <div class="form-group">
+                                                            <label for="statusNote-@application.Id" class="form-label">Коментар (необов'язково):</label>
+                                                            <textarea id="statusNote-@application.Id" name="statusNote" class="form-control" rows="3">@application.StatusNote</textarea>
+                                                            <div class="form-text">Додайте коментар для кандидата, наприклад, дату та час співбесіди або причину відхилення.</div>
+                                                        </div>
+                                                    </div>
+                                                    <div class="modal-footer">
+                                                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Скасувати</button>
+                                                        <button type="submit" class="btn btn-primary">Зберегти зміни</button>
+                                                    </div>
+                                                    </form>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+                
+                <div class="d-flex justify-content-end">
+                    <button type="button" class="btn btn-success" data-bs-toggle="modal" data-bs-target="#exportModal">
+                        <i class="bi bi-file-earmark-excel"></i> Експорт до Excel
+                    </button>
+                </div>
+                
+                <div class="modal fade" id="exportModal" tabindex="-1" aria-labelledby="exportModalLabel" aria-hidden="true">
+                    <div class="modal-dialog">
+                        <div class="modal-content">
+                            <div class="modal-header">
+                                <h5 class="modal-title" id="exportModalLabel">Експорт заявок</h5>
+                                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                            </div>
+                            <div class="modal-body">
+                                <form asp-action="ExportAllToExcel" method="post">
+                                    <input type="hidden" name="jobFilter" value="@Model.JobFilter">
+                                    <input type="hidden" name="statusFilter" value="@Model.StatusFilter">
+                                    
+                                    <div class="form-group mb-3">
+                                        <label class="form-label">Статуси для експорту:</label>
+                                        <div class="form-check">
+                                            <input class="form-check-input" type="checkbox" name="statuses" value="Pending" id="status-pending" checked>
+                                            <label class="form-check-label" for="status-pending">В очікуванні</label>
+                                        </div>
+                                        <div class="form-check">
+                                            <input class="form-check-input" type="checkbox" name="statuses" value="Reviewed" id="status-reviewed" checked>
+                                            <label class="form-check-label" for="status-reviewed">Розглянуто</label>
+                                        </div>
+                                        <div class="form-check">
+                                            <input class="form-check-input" type="checkbox" name="statuses" value="InterviewInvited" id="status-interview" checked>
+                                            <label class="form-check-label" for="status-interview">Співбесіда</label>
+                                        </div>
+                                        <div class="form-check">
+                                            <input class="form-check-input" type="checkbox" name="statuses" value="Accepted" id="status-accepted" checked>
+                                            <label class="form-check-label" for="status-accepted">Прийнято</label>
+                                        </div>
+                                        <div class="form-check">
+                                            <input class="form-check-input" type="checkbox" name="statuses" value="Rejected" id="status-rejected" checked>
+                                            <label class="form-check-label" for="status-rejected">Відхилено</label>
+                                        </div>
+                                    </div>
+                                    
+                                    <div class="d-grid">
+                                        <button type="submit" class="btn btn-success">
+                                            <i class="bi bi-download"></i> Завантажити Excel
+                                        </button>
+                                    </div>
+                                </form>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            }
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        $(document).ready(function() {
+            $('.filter-btn').click(function() {
+                $('.filter-btn').removeClass('active');
+                $(this).addClass('active');
+                
+                var filter = $(this).data('filter');
+                
+                if (filter === 'all') {
+                    $('.application-row').show();
+                } else {
+                    $('.application-row').hide();
+                    $('.application-row[data-status="' + filter + '"]').show();
+                }
+            });
+        });
+    </script>
+}

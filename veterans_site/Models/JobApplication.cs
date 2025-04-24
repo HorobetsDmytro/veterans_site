@@ -22,7 +22,7 @@ public class JobApplication
     
     public ApplicationStatus Status { get; set; }
     
-    public string StatusNote { get; set; }
+    public string? StatusNote { get; set; }
 }
 
 public enum ApplicationStatus

@@ -1,0 +1,43 @@
+@model Job
+@{
+    ViewData["Title"] = "Видалити вакансію";
+}
+
+<div class="container mt-4">
+    <h1>Видалити вакансію</h1>
+    
+    <div class="alert alert-danger">
+        <h4>Ви впевнені, що хочете видалити цю вакансію?</h4>
+        <p>Цю дію не можна буде скасувати.</p>
+    </div>
+    
+    <div class="card mb-4">
+        <div class="card-header">
+            <h5>@Model.Title</h5>
+        </div>
+        <div class="card-body">
+            <dl class="row">
+                <dt class="col-sm-3">Компанія:</dt>
+                <dd class="col-sm-9">@Model.Company</dd>
+                
+                <dt class="col-sm-3">Місцезнаходження:</dt>
+                <dd class="col-sm-9">@Model.Location</dd>
+                
+                <dt class="col-sm-3">Тип роботи:</dt>
+                <dd class="col-sm-9">@Model.JobType</dd>
+                
+                <dt class="col-sm-3">Категорія:</dt>
+                <dd class="col-sm-9">@(string.IsNullOrEmpty(Model.Category) ? "-" : Model.Category)</dd>
+                
+                <dt class="col-sm-3">Опубліковано:</dt>
+                <dd class="col-sm-9">@Model.PostedDate.ToString("dd.MM.yyyy")</dd>
+            </dl>
+        </div>
+    </div>
+    
+    <form asp-action="Delete">
+        <input type="hidden" asp-for="Id" />
+        <button type="submit" class="btn btn-danger">Видалити</button>
+        <a asp-action="Index" class="btn btn-secondary">Скасувати</a>
+    </form>
+</div>

@@ -1,0 +1,258 @@
+@model veterans_site.ViewModels.JobsIndexViewModel
+
+<div class="container">
+    <h2 class="mb-4">Вакансії для ветеранів</h2>
+    
+    <div class="card shadow mb-4">
+        <div class="card-header py-3 d-flex align-items-center justify-content-between">
+            <h6 class="m-0 font-weight-bold text-primary">Пошук вакансій</h6>
+            <div>
+                @if (User.IsInRole("Admin")) 
+                {
+                    <a href="@Url.Action("Create", "Jobs")" class="btn btn-success me-2">
+                        <i class="fas fa-plus me-1"></i> Додати вакансію
+                    </a>
+                    <a href="@Url.Action("ImportFromJooble", "Jobs")" class="btn btn-info me-2">
+                        <i class="fas fa-cloud-download-alt me-1"></i> Імпортувати з Jooble
+                    </a>
+                    <a href="@Url.Action("MyJobs", "Jobs")" class="btn btn-secondary me-2">
+                        <i class="fas fa-list me-1"></i> Мої вакансії
+                    </a>
+                    <a href="@Url.Action("AllApplications", "JobApplication")" class="btn btn-info me-2">
+                        <i class="fas fa-list me-1"></i> Всі заявки
+                    </a>
+                }
+                @if (User.IsInRole("Veteran"))
+                {
+                    <a href="https://localhost:7037/Resume" class="btn btn-secondary me-2">
+                        <i class="fas fa-list me-1"></i> Мої резюме 
+                    </a>
+                    <a href="https://localhost:7037/JobApplication/MyApplications" class="btn btn-primary me-2">
+                        <i class="fas fa-file-alt me-1"></i> Мої заявки 
+                    </a>
+                    <a href="https://localhost:7037/Jobs/SavedJobs" class="btn btn-warning">
+                        <i class="fas fa-star me-1"></i> Улюблені 
+                    </a>
+                }
+            </div>
+        </div>
+        <div class="card-body">
+            <form method="get" class="mb-4">
+                <div class="row g-3">
+                    <div class="col-md-2">
+                        <div class="input-group">
+                            <span class="input-group-text"><i class="fas fa-search"></i></span>
+                            <input type="text" class="form-control" name="query" placeholder="Пошук за назвою" value="@Model.Query">
+                        </div>
+                    </div>
+                    <div class="col-md-2">
+                        <div class="input-group">
+                            <span class="input-group-text"><i class="fas fa-map-marker-alt"></i></span>
+                            <input type="text" class="form-control" name="location" placeholder="Місто" value="@Model.Location">
+                        </div>
+                    </div>
+                    <div class="col-md-2">
+                        <select class="form-select" name="category">
+                            <option value="">Всі категорії</option>
+                            @foreach (var category in Model.Categories)
+                            {
+                                <option value="@category" selected="@(Model.Category == category)">@category</option>
+                            }
+                        </select>
+                    </div>
+                    <div class="col-md-2">
+                        <select class="form-select" name="jobType">
+                            <option value="">Всі типи</option>
+                            @foreach (var type in Html.GetEnumSelectList<JobType>())
+                            {
+                                <option value="@type.Value" selected="@(Model.JobType.HasValue && Model.JobType.Value.ToString() == type.Value)">
+                                    @type.Text
+                                </option>
+                            }
+                        </select>
+                    </div>
+                    <div class="col-md-4">
+                        <button type="submit" class="btn btn-primary w-100 py-2 fs-5">Пошук</button>
+                    </div>
+                </div>
+            </form>
+        </div>
+    </div>
+    
+    <div class="row">
+        @foreach (var job in Model.Jobs)
+        {
+            <div class="col-md-6 mb-4">
+                <div class="card h-100 shadow-sm">
+                    <div class="card-body">
+                        <div class="d-flex justify-content-between align-items-center mb-2">
+                            <h5 class="card-title mb-0">@job.Title</h5>
+                            <div>
+                                @if (User.Identity.IsAuthenticated && User.IsInRole("Veteran"))
+                                {
+                                    @if (job.IsSaved)
+                                    {
+                                        <button class="btn btn-link text-warning unsave-job-btn" data-job-id="@job.Id">
+                                            <i class="fas fa-star"></i>
+                                        </button>
+                                    }
+                                    else
+                                    {
+                                        <button class="btn btn-link text-muted save-job-btn" data-job-id="@job.Id">
+                                            <i class="far fa-star"></i>
+                                        </button>
+                                    }
+                                }
+                            </div>
+                        </div>
+                        <h6 class="card-subtitle mb-2 text-muted">@job.Company</h6>
+                        <p class="card-text mb-2">
+                            <i class="fas fa-map-marker-alt me-1 text-secondary"></i> @job.Location
+                        </p>
+                        <p class="card-text mb-3">
+                            @(job.Description.Length > 150 ? job.Description.Substring(0, 150) + "..." : job.Description)
+                        </p>
+                        <div class="d-flex justify-content-between align-items-center">
+                            <div>
+                                <span class="badge bg-primary me-1">@job.Category</span>
+                                <span class="badge bg-info">
+                                    @{
+                                        string typeName = job.JobType switch
+                                        {
+                                            JobType.FullTime => "Повна зайнятість",
+                                            JobType.PartTime => "Часткова зайнятість",
+                                            JobType.Freelance => "Фріланс",
+                                            JobType.Contract => "Контракт",
+                                            JobType.Internship => "Стажування",
+                                            _ => job.JobType.ToString()
+                                        };
+                                    }
+                                    @typeName
+                                </span>
+                            </div>
+                            <small class="text-muted">
+                                <i class="far fa-clock me-1"></i>
+                                @job.PostedDate.ToString("dd.MM.yyyy")
+                            </small>
+                        </div>
+                    </div>
+                    <div class="card-footer bg-white">
+                        <div class="d-flex justify-content-between">
+                            <a href="@Url.Action("Details", "Jobs", new { id = job.Id })" class="btn btn-outline-primary">
+                                <i class="fas fa-info-circle me-1"></i> Детальніше
+                            </a>
+                            @if (User.Identity.IsAuthenticated && User.IsInRole("Veteran"))
+                            {
+                                @if (job.IsApplied)
+                                {
+                                    <button class="btn btn-success" disabled>
+                                        <i class="fas fa-check me-1"></i> Ви вже відгукнулись
+                                    </button>
+                                }
+                                else
+                                {
+                                    <a href="@Url.Action("Apply", "JobApplication", new { jobId = job.Id })" class="btn btn-primary">
+                                        <i class="fas fa-paper-plane me-1"></i> Відгукнутися
+                                    </a>
+                                }
+                            }
+                            @if (User.Identity.IsAuthenticated && User.IsInRole("Admin"))
+                            {
+                                <a asp-controller="JobApplication" asp-action="JobApplications" asp-route-jobId="@job.Id" class="btn btn-outline-info">
+                                    <i class="fas fa-clipboard-list me-1"></i> Переглянути заявки (@(job.ApplicationsCount))
+                                </a>
+                            }
+                        </div>
+                    </div>
+                </div>
+            </div>
+        }
+    </div>
+    
+    @if (!Model.Jobs.Any())
+    {
+        <div class="alert alert-info text-center">
+            <i class="fas fa-info-circle me-2"></i> Нажаль, за вашим запитом не знайдено вакансій. Спробуйте змінити параметри пошуку.
+        </div>
+    }
+    
+    @if (Model.TotalPages > 1)
+    {
+        <nav aria-label="Навігація по сторінках">
+            <ul class="pagination justify-content-center">
+                <li class="page-item @(Model.CurrentPage == 1 ? "disabled" : "")">
+                    <a class="page-link" href="@Url.Action("Index", new { page = Model.CurrentPage - 1, query = Model.Query, location = Model.Location, category = Model.Category, jobType = Model.JobType })">
+                        <i class="fas fa-chevron-left"></i>
+                    </a>
+                </li>
+                
+                @for (int i = Math.Max(1, Model.CurrentPage - 2); i <= Math.Min(Model.TotalPages, Model.CurrentPage + 2); i++)
+                {
+                    <li class="page-item @(i == Model.CurrentPage ? "active" : "")">
+                        <a class="page-link" href="@Url.Action("Index", new { page = i, query = Model.Query, location = Model.Location, category = Model.Category, jobType = Model.JobType })">@i</a>
+                    </li>
+                }
+                
+                <li class="page-item @(Model.CurrentPage == Model.TotalPages ? "disabled" : "")">
+                    <a class="page-link" href="@Url.Action("Index", new { page = Model.CurrentPage + 1, query = Model.Query, location = Model.Location, category = Model.Category, jobType = Model.JobType })">
+                        <i class="fas fa-chevron-right"></i>
+                    </a>
+                </li>
+            </ul>
+        </nav>
+    }
+</div>
+
+@section Scripts {
+    <script>
+        $(function() {
+            $(document).on("click", ".save-job-btn", function() {
+                const jobId = $(this).data("job-id");
+                const button = $(this);
+                
+                $.ajax({
+                    url: "@Url.Action("SaveJob", "Jobs")",
+                    type: "POST",
+                    data: { jobId: jobId },
+                    success: function(response) {
+                        if (response.success) {
+                            button.removeClass("text-muted").addClass("text-warning");
+                            button.find("i").removeClass("far").addClass("fas");
+                            button.removeClass("save-job-btn").addClass("unsave-job-btn");
+                            toastr.success("Вакансію додано до обраного");
+                        } else {
+                            toastr.warning(response.message);
+                        }
+                    },
+                    error: function() {
+                        toastr.error("Помилка під час збереження вакансії");
+                    }
+                });
+            });
+            
+            $(document).on("click", ".unsave-job-btn", function() {
+                const jobId = $(this).data("job-id");
+                const button = $(this);
+                
+                $.ajax({
+                    url: "@Url.Action("UnsaveJob", "Jobs")",
+                    type: "POST",
+                    data: { jobId: jobId },
+                    success: function(response) {
+                        if (response.success) {
+                            button.removeClass("text-warning").addClass("text-muted");
+                            button.find("i").removeClass("fas").addClass("far");
+                            button.removeClass("unsave-job-btn").addClass("save-job-btn");
+                            toastr.success("Вакансію видалено з обраного");
+                        } else {
+                            toastr.warning(response.message);
+                        }
+                    },
+                    error: function() {
+                        toastr.error("Помилка під час видалення вакансії з обраного");
+                    }
+                });
+            });
+        });
+    </script>
+}

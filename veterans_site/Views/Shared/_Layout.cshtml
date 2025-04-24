@@ -276,8 +276,14 @@
                     </li>
                     <li class="nav-item">
                         <a class="nav-link @(ViewContext.RouteData.Values["controller"]?.ToString() == "AccessibilityMap" ? "active" : "")"
-                               asp-area="" asp-controller="AccessibilityMap" asp-action="Index">
+                           asp-area="" asp-controller="AccessibilityMap" asp-action="Index">
                             <i class="fas fa-map-marked-alt"></i> Карта доступності
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link @(ViewContext.RouteData.Values["controller"]?.ToString() == "Jobs" ? "active" : "")"
+                           asp-area="" asp-controller="Jobs" asp-action="Index">
+                            <i class="fas fa-briefcase me-1"></i> Вакансії
                         </a>
                     </li>
                     <li class="nav-item">

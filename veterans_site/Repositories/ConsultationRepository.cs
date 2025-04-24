@@ -14,16 +14,16 @@ namespace veterans_site.Repositories
         }
 
         public async Task<IEnumerable<Consultation>> GetFilteredConsultationsAsync(
-        ConsultationType? type = null,
-        ConsultationFormat? format = null,
-        ConsultationStatus? status = null,
-        double? minPrice = null,
-        double? maxPrice = null,
-        string sortOrder = null,
-        int page = 1,
-        int pageSize = 10,
-        string specialistName = null,
-        bool parentOnly = false)
+            ConsultationType? type = null,
+            ConsultationFormat? format = null,
+            ConsultationStatus? status = null,
+            double? minPrice = null,
+            double? maxPrice = null,
+            string sortOrder = null,
+            int page = 1,
+            int pageSize = 10,
+            string specialistName = null,
+            bool parentOnly = false)
         {
             var query = _context.Consultations
                 .Include(c => c.Slots)
@@ -177,7 +177,6 @@ namespace veterans_site.Repositories
             if (maxPrice.HasValue)
                 query = query.Where(c => c.Price <= maxPrice.Value);
 
-            // Сортування
             query = sortOrder switch
             {
                 "date_desc" => query.OrderByDescending(c => c.DateTime),
@@ -204,7 +203,6 @@ namespace veterans_site.Repositories
                 if (consultation == null)
                     return false;
 
-                // Перевіряємо можливість бронювання
                 if (consultation.Format == ConsultationFormat.Individual)
                 {
                     if (consultation.IsBooked)
@@ -213,7 +211,7 @@ namespace veterans_site.Repositories
                     consultation.IsBooked = true;
                     consultation.UserId = userId;
                 }
-                else // Group
+                else
                 {
                     if (consultation.BookedParticipants >= consultation.MaxParticipants)
                         return false;
@@ -286,7 +284,6 @@ namespace veterans_site.Repositories
 
         public async Task RemoveUserBookingsAsync(string userId)
         {
-            // Видаляємо записи з групових консультацій
             var bookings = await _context.ConsultationBookings
                 .Where(b => b.UserId == userId)
                 .ToListAsync();

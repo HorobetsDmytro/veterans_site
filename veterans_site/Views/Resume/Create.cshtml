@@ -1,0 +1,152 @@
+@model veterans_site.ViewModels.ResumeViewModel
+@{
+    ViewData["Title"] = "Створення резюме";
+}
+
+<div class="container mt-4">
+    <h1>Створення резюме</h1>
+    
+    <form asp-action="Create" method="post" enctype="multipart/form-data">
+        <div asp-validation-summary="ModelOnly" class="text-danger"></div>
+        
+        <div class="card mb-4">
+            <div class="card-header">
+                <h5>Вибір способу створення резюме</h5>
+            </div>
+            <div class="card-body">
+                <div class="form-check form-check-inline mb-3">
+                    <input class="form-check-input" type="radio" name="ResumeInputType" id="manualInput" value="manual" checked>
+                    <label class="form-check-label" for="manualInput">
+                        Заповнити форму вручну
+                    </label>
+                </div>
+                <div class="form-check form-check-inline">
+                    <input class="form-check-input" type="radio" name="ResumeInputType" id="fileInput" value="file">
+                    <label class="form-check-label" for="fileInput">
+                        Завантажити готовий файл резюме
+                    </label>
+                </div>
+            </div>
+        </div>
+        
+        <div id="manualInputSection">
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h5>Основна інформація</h5>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="form-group mb-3">
+                                <label asp-for="FullName" class="form-label">ПІБ</label>
+                                <input asp-for="FullName" class="form-control" />
+                                <span asp-validation-for="FullName" class="text-danger"></span>
+                            </div>
+                        </div>
+                        
+                        <div class="col-md-6">
+                            <div class="form-group mb-3">
+                                <label asp-for="Email" class="form-label">Email</label>
+                                <input asp-for="Email" class="form-control" type="email" />
+                                <span asp-validation-for="Email" class="text-danger"></span>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="form-group mb-3">
+                        <label asp-for="Phone" class="form-label">Телефон</label>
+                        <input asp-for="Phone" class="form-control" />
+                        <span asp-validation-for="Phone" class="text-danger"></span>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h5>Навички та досвід</h5>
+                </div>
+                <div class="card-body">
+                    <div class="form-group mb-3">
+                        <label asp-for="Skills" class="form-label">Навички</label>
+                        <textarea asp-for="Skills" class="form-control" rows="4"></textarea>
+                        <span asp-validation-for="Skills" class="text-danger"></span>
+                        <div class="form-text">Опишіть ваші навички, технічні знання, мови програмування тощо.</div>
+                    </div>
+                    
+                    <div class="form-group mb-3">
+                        <label asp-for="Experience" class="form-label">Досвід роботи</label>
+                        <textarea asp-for="Experience" class="form-control editor" rows="6"></textarea>
+                        <span asp-validation-for="Experience" class="text-danger"></span>
+                    </div>
+                    
+                    <div class="form-group mb-3">
+                        <label asp-for="Education" class="form-label">Освіта</label>
+                        <textarea asp-for="Education" class="form-control editor" rows="4"></textarea>
+                        <span asp-validation-for="Education" class="text-danger"></span>
+                    </div>
+                    
+                    <div class="form-group mb-3">
+                        <label asp-for="AdditionalInfo" class="form-label">Додаткова інформація</label>
+                        <textarea asp-for="AdditionalInfo" class="form-control editor" rows="4"></textarea>
+                        <span asp-validation-for="AdditionalInfo" class="text-danger"></span>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div id="fileInputSection" style="display:none;">
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h5>Файл резюме</h5>
+                </div>
+                <div class="card-body">
+                    <div class="form-group mb-3">
+                        <label asp-for="ResumeFile" class="form-label">Завантажте файл резюме</label>
+                        <input asp-for="ResumeFile" class="form-control" type="file" accept=".pdf,.doc,.docx" />
+                        <span asp-validation-for="ResumeFile" class="text-danger"></span>
+                        <div class="form-text">Підтримувані формати: PDF, DOC, DOCX. Максимальний розмір: 5 МБ</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="form-group mb-4">
+            <button type="submit" class="btn btn-primary">Створити резюме</button>
+            <a asp-action="Index" class="btn btn-secondary">Скасувати</a>
+        </div>
+    </form>
+</div>
+
+@section Scripts {
+    <script src="https://cdn.tiny.cloud/1/abvzd1aol98dkpdxi35ty05fve0az1cxb61miltrbou0tcz8/tinymce/5/tinymce.min.js"></script>
+    <script>
+        tinymce.init({
+            selector: '.editor',
+            plugins: 'lists link autolink',
+            toolbar: 'undo redo | formatselect | bold italic | alignleft aligncenter alignright | bullist numlist | link',
+            menubar: false
+        });
+        
+        document.addEventListener('DOMContentLoaded', function() {
+            const manualInput = document.getElementById('manualInput');
+            const fileInput = document.getElementById('fileInput');
+            const manualSection = document.getElementById('manualInputSection');
+            const fileSection = document.getElementById('fileInputSection');
+            
+            manualInput.addEventListener('change', function() {
+                if (this.checked) {
+                    manualSection.style.display = 'block';
+                    fileSection.style.display = 'none';
+                }
+            });
+            
+            fileInput.addEventListener('change', function() {
+                if (this.checked) {
+                    manualSection.style.display = 'none';
+                    fileSection.style.display = 'block';
+                }
+            });
+        });
+    </script>
+    @{await Html.RenderPartialAsync("_ValidationScriptsPartial");}
+}

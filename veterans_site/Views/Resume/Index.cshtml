@@ -1,0 +1,111 @@
+@model IEnumerable<Resume>
+@{
+    ViewData["Title"] = "Мої резюме";
+}
+
+<div class="container mt-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h1>Мої резюме</h1>
+        <a asp-action="Create" class="btn btn-success">
+            <i class="bi bi-plus-circle"></i> Створити нове резюме
+        </a>
+    </div>
+    
+    @if (!Model.Any())
+    {
+        <div class="alert alert-info">
+            <p>У вас ще немає резюме. Створіть своє перше резюме, щоб мати можливість відгукуватися на вакансії.</p>
+        </div>
+    }
+    else
+    {
+        <div class="row">
+            @foreach (var resume in Model)
+            {
+                <div class="col-md-6 mb-4">
+                    <div class="card h-100">
+                        <div class="card-header">
+                            <h5 class="mb-0">@resume.FullName</h5>
+                        </div>
+                        <div class="card-body">
+                            <dl class="row">
+                                <dt class="col-sm-4">Email:</dt>
+                                <dd class="col-sm-8">@resume.Email</dd>
+                                
+                                <dt class="col-sm-4">Телефон:</dt>
+                                <dd class="col-sm-8">@(string.IsNullOrEmpty(resume.Phone) ? "-" : resume.Phone)</dd>
+                                
+                                @if (!string.IsNullOrEmpty(resume.FilePath))
+                                {
+                                    <dt class="col-sm-4">Тип:</dt>
+                                    <dd class="col-sm-8">
+                                        <span class="badge bg-info">Файлове резюме</span>
+                                        <div class="mt-2">
+                                            <a href="@Url.Action("Download", "Resume", new { id = resume.Id })" class="btn btn-sm btn-primary">
+                                                <i class="bi bi-file-earmark-pdf"></i> Завантажити файл
+                                            </a>
+                                        </div>
+                                    </dd>
+                                }
+                                else
+                                {
+                                    <dt class="col-sm-4">Навички:</dt>
+                                    <dd class="col-sm-8">
+                                        @if (string.IsNullOrEmpty(resume.Skills))
+                                        {
+                                            <span>-</span>
+                                        }
+                                        else
+                                        {
+                                            <div class="skills-preview">@resume.Skills</div>
+                                        }
+                                    </dd>
+                                    
+                                    @if (!string.IsNullOrEmpty(resume.Experience) || !string.IsNullOrEmpty(resume.Education))
+                                    {
+                                        <dt class="col-sm-4">Інформація:</dt>
+                                        <dd class="col-sm-8">
+                                            <span class="badge bg-info">Заповнено повний профіль</span>
+                                        </dd>
+                                    }
+                                }
+                            </dl>
+                        </div>
+                        <div class="card-footer">
+                            <div class="d-flex justify-content-between align-items-center">
+                                <small class="text-muted">
+                                    Створено: @resume.CreatedDate.ToString("dd.MM.yyyy")
+                                    @if (resume.LastUpdated.HasValue)
+                                    {
+                                        <span> | Оновлено: @resume.LastUpdated.Value.ToString("dd.MM.yyyy")</span>
+                                    }
+                                </small>
+                                <div>
+                                    <a asp-action="Edit" asp-route-id="@resume.Id" class="btn btn-sm btn-warning">
+                                        <i class="bi bi-pencil"></i> Редагувати
+                                    </a>
+                                    <a asp-action="Delete" asp-route-id="@resume.Id" class="btn btn-sm btn-danger">
+                                        <i class="bi bi-trash"></i> Видалити
+                                    </a>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            }
+        </div>
+    }
+</div>
+
+<style>
+    .skills-preview {
+        max-height: 100px;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+    
+    .badge {
+        padding: 0.5em 0.75em;
+        font-size: 0.85em;
+    }
+</style>

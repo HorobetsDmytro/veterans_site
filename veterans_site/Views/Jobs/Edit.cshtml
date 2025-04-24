@@ -1,0 +1,90 @@
+@model Job
+@{
+    ViewData["Title"] = "Редагувати вакансію";
+    var minDate = DateTime.Now.ToString("yyyy-MM-dd");
+}
+
+<div class="container mt-4">
+    <h1>Редагувати вакансію</h1>
+
+    <form asp-action="Edit" method="post">
+        <input type="hidden" asp-for="Id" />
+        <input type="hidden" asp-for="IsExternal" />
+        <input type="hidden" asp-for="ExternalId" />
+        <input type="hidden" asp-for="ExternalUrl" />
+        <input type="hidden" asp-for="PostedDate" />
+        <div asp-validation-summary="ModelOnly" class="text-danger"></div>
+        
+        <div class="row mb-3">
+            <div class="col-md-6">
+                <div class="form-group mb-3">
+                    <label asp-for="Title" class="form-label">Назва вакансії</label>
+                    <input asp-for="Title" class="form-control" />
+                    <span asp-validation-for="Title" class="text-danger"></span>
+                </div>
+                
+                <div class="form-group mb-3">
+                    <label asp-for="Company" class="form-label">Компанія</label>
+                    <input asp-for="Company" class="form-control" />
+                    <span asp-validation-for="Company" class="text-danger"></span>
+                </div>
+                
+                <div class="form-group mb-3">
+                    <label asp-for="Location" class="form-label">Місцезнаходження</label>
+                    <input asp-for="Location" class="form-control" />
+                    <span asp-validation-for="Location" class="text-danger"></span>
+                </div>
+                
+                <div class="form-group mb-3">
+                    <label asp-for="Salary" class="form-label">Зарплата</label>
+                    <input asp-for="Salary" class="form-control" type="number" />
+                    <span asp-validation-for="Salary" class="text-danger"></span>
+                </div>
+            </div>
+            
+            <div class="col-md-6">
+                <div class="form-group mb-3">
+                    <label asp-for="JobType" class="form-label">Тип роботи</label>
+                    <select asp-for="JobType" asp-items="Html.GetEnumSelectList<JobType>()" class="form-select"></select>
+                    <span asp-validation-for="JobType" class="text-danger"></span>
+                </div>
+                
+            <div class="form-group mb-3">
+                <label asp-for="Category" class="form-label">Категорія</label>
+                <input asp-for="Category" class="form-control" />
+                <span asp-validation-for="Category" class="text-danger"></span>
+            </div>
+                <div class="form-group mb-3">
+                    <label asp-for="ExpiryDate" class="form-label">Дата закінчення актуальності</label>
+                    <input asp-for="ExpiryDate" class="form-control" type="date" 
+                           min="@minDate" id="expiryDateInput" />
+                    <span asp-validation-for="ExpiryDate" class="text-danger"></span>
+                </div>
+            </div>
+        </div>
+        
+        <div class="form-group mb-3">
+            <label asp-for="Description" class="form-label">Опис вакансії</label>
+            <textarea asp-for="Description" class="form-control editor" rows="10"></textarea>
+            <span asp-validation-for="Description" class="text-danger"></span>
+        </div>
+        
+        <div class="form-group">
+            <button type="submit" class="btn btn-primary">Зберегти зміни</button>
+            <a asp-action="Index" class="btn btn-secondary">Скасувати</a>
+        </div>
+    </form>
+</div>
+
+@section Scripts {
+    <script src="https://cdn.tiny.cloud/1/abvzd1aol98dkpdxi35ty05fve0az1cxb61miltrbou0tcz8/tinymce/5/tinymce.min.js"></script>
+    <script>
+        tinymce.init({
+            selector: '.editor',
+            plugins: 'lists link autolink',
+            toolbar: 'undo redo | formatselect | bold italic | alignleft aligncenter alignright | bullist numlist | link',
+            menubar: false
+        });
+    </script>
+    @{await Html.RenderPartialAsync("_ValidationScriptsPartial");}
+}
