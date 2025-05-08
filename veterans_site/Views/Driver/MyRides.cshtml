@@ -1,0 +1,487 @@
+@model veterans_site.Models.PaginatedList<veterans_site.Models.TaxiRide>
+@{
+    ViewData["Title"] = "Мої поїздки";
+    int pageSize = 10;
+}
+
+<div class="container mt-4">
+    <div class="row">
+        <div class="col-12">
+            <nav aria-label="breadcrumb">
+                <ol class="breadcrumb">
+                    <li class="breadcrumb-item"><a href="@Url.Action("Index", "Driver")">Панель водія</a></li>
+                    <li class="breadcrumb-item active" aria-current="page">Мої поїздки</li>
+                </ol>
+            </nav>
+
+            <div class="card">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h4>Історія моїх поїздок</h4>
+                    <a href="@Url.Action("AvailableRides", "Driver")" class="btn btn-outline-primary">
+                        <i class="bi bi-search"></i> Доступні поїздки
+                    </a>
+                </div>
+                <div class="card-body">
+                    <ul class="nav nav-tabs mb-3" id="ridesTab" role="tablist">
+                        <li class="nav-item" role="presentation">
+                            <button class="nav-link active" id="all-tab" data-bs-toggle="tab" data-bs-target="#all" type="button" role="tab" aria-controls="all" aria-selected="true">
+                                Всі поїздки
+                            </button>
+                        </li>
+                        <li class="nav-item" role="presentation">
+                            <button class="nav-link" id="active-tab" data-bs-toggle="tab" data-bs-target="#active" type="button" role="tab" aria-controls="active" aria-selected="false">
+                                Активні
+                            </button>
+                        </li>
+                        <li class="nav-item" role="presentation">
+                            <button class="nav-link" id="completed-tab" data-bs-toggle="tab" data-bs-target="#completed" type="button" role="tab" aria-controls="completed" aria-selected="false">
+                                Завершені
+                            </button>
+                        </li>
+                        <li class="nav-item" role="presentation">
+                            <button class="nav-link" id="canceled-tab" data-bs-toggle="tab" data-bs-target="#canceled" type="button" role="tab" aria-controls="canceled" aria-selected="false">
+                                Скасовані
+                            </button>
+                        </li>
+                    </ul>
+
+                    <div class="tab-content" id="ridesTabContent">
+                        <div class="tab-pane fade show active" id="all" role="tabpanel" aria-labelledby="all-tab">
+                            @if (!Model.Any())
+                            {
+                                <div class="alert alert-info">
+                                    У вас ще немає поїздок. Перегляньте <a href="@Url.Action("AvailableRides", "Driver")">доступні поїздки</a> для прийняття замовлень.
+                                </div>
+                            }
+                            else
+                            {
+                                <div class="table-responsive">
+                                    <table class="table table-hover">
+                                        <thead>
+                                            <tr>
+                                                <th>Дата</th>
+                                                <th>Ветеран</th>
+                                                <th>Звідки</th>
+                                                <th>Куди</th>
+                                                <th>Статус</th>
+                                                <th>Дії</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            @foreach (var ride in Model)
+                                            {
+                                                <tr class="@GetRowClass(ride.Status)">
+                                                    <td>@ride.RequestTime.ToString("dd.MM.yyyy HH:mm")</td>
+                                                    <td>@(ride.Veteran != null ? $"{ride.Veteran.FirstName} {ride.Veteran.LastName}" : "Н/Д")</td>
+                                                    <td>@ride.StartAddress</td>
+                                                    <td>@ride.EndAddress</td>
+                                                    <td>
+                                                        <span class="badge @GetBadgeClass(ride.Status)">
+                                                            @GetStatusName(ride.Status)
+                                                        </span>
+                                                    </td>
+                                                    <td>
+                                                        <a href="@Url.Action("RideDetails", "Driver", new { id = ride.Id })" class="btn btn-sm btn-info">
+                                                            Деталі
+                                                        </a>
+                                                    </td>
+                                                </tr>
+                                            }
+                                        </tbody>
+                                    </table>
+                                </div>
+                                
+                                <nav aria-label="Пагінація">
+                                    <ul class="pagination justify-content-center">
+                                        @if (Model.HasPreviousPage)
+                                        {
+                                            <li class="page-item">
+                                                <a class="page-link" href="@Url.Action("MyRides", "Driver", new { page = Model.PageIndex - 1, tab = "all" })">
+                                                    Попередня
+                                                </a>
+                                            </li>
+                                        }
+                                        else
+                                        {
+                                            <li class="page-item disabled">
+                                                <span class="page-link">Попередня</span>
+                                            </li>
+                                        }
+
+                                        @for (int i = 1; i <= Model.TotalPages; i++)
+                                        {
+                                            <li class="page-item @(i == Model.PageIndex ? "active" : "")">
+                                                <a class="page-link" href="@Url.Action("MyRides", "Driver", new { page = i, tab = "all" })">
+                                                    @i
+                                                </a>
+                                            </li>
+                                        }
+
+                                        @if (Model.HasNextPage)
+                                        {
+                                            <li class="page-item">
+                                                <a class="page-link" href="@Url.Action("MyRides", "Driver", new { page = Model.PageIndex + 1, tab = "all" })">
+                                                    Наступна
+                                                </a>
+                                            </li>
+                                        }
+                                        else
+                                        {
+                                            <li class="page-item disabled">
+                                                <span class="page-link">Наступна</span>
+                                            </li>
+                                        }
+                                    </ul>
+                                </nav>
+                            }
+                        </div>
+                        <div class="tab-pane fade" id="active" role="tabpanel" aria-labelledby="active-tab">
+                            @{
+                                var activeRides = ViewBag.ActiveRides as veterans_site.Models.PaginatedList<veterans_site.Models.TaxiRide>;
+                                if (activeRides == null || !activeRides.Any())
+                                {
+                                    <div class="alert alert-info">
+                                        У вас немає активних поїздок на даний момент.
+                                    </div>
+                                }
+                                else
+                                {
+                                    <div class="table-responsive">
+                                        <table class="table table-hover">
+                                            <thead>
+                                                <tr>
+                                                    <th>Дата</th>
+                                                    <th>Ветеран</th>
+                                                    <th>Звідки</th>
+                                                    <th>Куди</th>
+                                                    <th>Статус</th>
+                                                    <th>Дії</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody>
+                                                @foreach (var ride in activeRides)
+                                                {
+                                                    <tr class="@GetRowClass(ride.Status)">
+                                                        <td>@ride.RequestTime.ToString("dd.MM.yyyy HH:mm")</td>
+                                                        <td>@(ride.Veteran != null ? $"{ride.Veteran.FirstName} {ride.Veteran.LastName}" : "Н/Д")</td>
+                                                        <td>@ride.StartAddress</td>
+                                                        <td>@ride.EndAddress</td>
+                                                        <td>
+                                                            <span class="badge @GetBadgeClass(ride.Status)">
+                                                                @GetStatusName(ride.Status)
+                                                            </span>
+                                                        </td>
+                                                        <td>
+                                                            <a href="@Url.Action("RideDetails", "Driver", new { id = ride.Id })" class="btn btn-sm btn-info">
+                                                                Деталі
+                                                            </a>
+                                                        </td>
+                                                    </tr>
+                                                }
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                    
+                                    <nav aria-label="Пагінація активних поїздок">
+                                        <ul class="pagination justify-content-center">
+                                            @if (activeRides.HasPreviousPage)
+                                            {
+                                                <li class="page-item">
+                                                    <a class="page-link" href="@Url.Action("MyRides", "Driver", new { page = activeRides.PageIndex - 1, tab = "active" })">
+                                                        Попередня
+                                                    </a>
+                                                </li>
+                                            }
+                                            else
+                                            {
+                                                <li class="page-item disabled">
+                                                    <span class="page-link">Попередня</span>
+                                                </li>
+                                            }
+
+                                            @for (int i = 1; i <= activeRides.TotalPages; i++)
+                                            {
+                                                <li class="page-item @(i == activeRides.PageIndex ? "active" : "")">
+                                                    <a class="page-link" href="@Url.Action("MyRides", "Driver", new { page = i, tab = "active" })">
+                                                        @i
+                                                    </a>
+                                                </li>
+                                            }
+
+                                            @if (activeRides.HasNextPage)
+                                            {
+                                                <li class="page-item">
+                                                    <a class="page-link" href="@Url.Action("MyRides", "Driver", new { page = activeRides.PageIndex + 1, tab = "active" })">
+                                                        Наступна
+                                                    </a>
+                                                </li>
+                                            }
+                                            else
+                                            {
+                                                <li class="page-item disabled">
+                                                    <span class="page-link">Наступна</span>
+                                                </li>
+                                            }
+                                        </ul>
+                                    </nav>
+                                }
+                            }
+                        </div>
+                        <div class="tab-pane fade" id="completed" role="tabpanel" aria-labelledby="completed-tab">
+                            @{
+                                var completedRides = ViewBag.CompletedRides as veterans_site.Models.PaginatedList<veterans_site.Models.TaxiRide>;
+                                if (completedRides == null || !completedRides.Any())
+                                {
+                                    <div class="alert alert-info">
+                                        У вас немає завершених поїздок.
+                                    </div>
+                                }
+                                else
+                                {
+                                    <div class="table-responsive">
+                                        <table class="table table-hover">
+                                            <thead>
+                                                <tr>
+                                                    <th>Дата</th>
+                                                    <th>Ветеран</th>
+                                                    <th>Звідки</th>
+                                                    <th>Куди</th>
+                                                    <th>Тривалість</th>
+                                                    <th>Дії</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody>
+                                                @foreach (var ride in completedRides)
+                                                {
+                                                    <tr>
+                                                        <td>@ride.RequestTime.ToString("dd.MM.yyyy HH:mm")</td>
+                                                        <td>@(ride.Veteran != null ? $"{ride.Veteran.FirstName} {ride.Veteran.LastName}" : "Н/Д")</td>
+                                                        <td>@ride.StartAddress</td>
+                                                        <td>@ride.EndAddress</td>
+                                                        <td>
+                                                            @{
+                                                                var duration = ride.CompleteTime.HasValue && ride.PickupTime.HasValue
+                                                                    ? (ride.CompleteTime.Value - ride.PickupTime.Value)
+                                                                    : TimeSpan.Zero;
+                                                                @duration.ToString(@"hh\:mm")
+                                                            }
+                                                        </td>
+                                                        <td>
+                                                            <a href="@Url.Action("RideDetails", "Driver", new { id = ride.Id })" class="btn btn-sm btn-info">
+                                                                Деталі
+                                                            </a>
+                                                        </td>
+                                                    </tr>
+                                                }
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                    
+                                    <nav aria-label="Пагінація завершених поїздок">
+                                        <ul class="pagination justify-content-center">
+                                            @if (completedRides.HasPreviousPage)
+                                            {
+                                                <li class="page-item">
+                                                    <a class="page-link" href="@Url.Action("MyRides", "Driver", new { page = completedRides.PageIndex - 1, tab = "completed" })">
+                                                        Попередня
+                                                    </a>
+                                                </li>
+                                            }
+                                            else
+                                            {
+                                                <li class="page-item disabled">
+                                                    <span class="page-link">Попередня</span>
+                                                </li>
+                                            }
+
+                                            @for (int i = 1; i <= completedRides.TotalPages; i++)
+                                            {
+                                                <li class="page-item @(i == completedRides.PageIndex ? "active" : "")">
+                                                    <a class="page-link" href="@Url.Action("MyRides", "Driver", new { page = i, tab = "completed" })">
+                                                        @i
+                                                    </a>
+                                                </li>
+                                            }
+
+                                            @if (completedRides.HasNextPage)
+                                            {
+                                                <li class="page-item">
+                                                    <a class="page-link" href="@Url.Action("MyRides", "Driver", new { page = completedRides.PageIndex + 1, tab = "completed" })">
+                                                        Наступна
+                                                    </a>
+                                                </li>
+                                            }
+                                            else
+                                            {
+                                                <li class="page-item disabled">
+                                                    <span class="page-link">Наступна</span>
+                                                </li>
+                                            }
+                                        </ul>
+                                    </nav>
+                                }
+                            }
+                        </div>
+                        <div class="tab-pane fade" id="canceled" role="tabpanel" aria-labelledby="canceled-tab">
+                            @{
+                                var canceledRides = ViewBag.CanceledRides as veterans_site.Models.PaginatedList<veterans_site.Models.TaxiRide>;
+                                if (canceledRides == null || !canceledRides.Any())
+                                {
+                                    <div class="alert alert-info">
+                                        У вас немає скасованих поїздок.
+                                    </div>
+                                }
+                                else
+                                {
+                                    <div class="table-responsive">
+                                        <table class="table table-hover">
+                                            <thead>
+                                                <tr>
+                                                    <th>Дата</th>
+                                                    <th>Ветеран</th>
+                                                    <th>Звідки</th>
+                                                    <th>Куди</th>
+                                                    <th>Дії</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody>
+                                                @foreach (var ride in canceledRides)
+                                                {
+                                                    <tr>
+                                                        <td>@ride.RequestTime.ToString("dd.MM.yyyy HH:mm")</td>
+                                                        <td>@(ride.Veteran != null ? $"{ride.Veteran.FirstName} {ride.Veteran.LastName}" : "Н/Д")</td>
+                                                        <td>@ride.StartAddress</td>
+                                                        <td>@ride.EndAddress</td>
+                                                        <td>
+                                                            <a href="@Url.Action("RideDetails", "Driver", new { id = ride.Id })" class="btn btn-sm btn-info">
+                                                                Деталі
+                                                            </a>
+                                                        </td>
+                                                    </tr>
+                                                }
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                    
+                                    <nav aria-label="Пагінація скасованих поїздок">
+                                        <ul class="pagination justify-content-center">
+                                            @if (canceledRides.HasPreviousPage)
+                                            {
+                                                <li class="page-item">
+                                                    <a class="page-link" href="@Url.Action("MyRides", "Driver", new { page = canceledRides.PageIndex - 1, tab = "canceled" })">
+                                                        Попередня
+                                                    </a>
+                                                </li>
+                                            }
+                                            else
+                                            {
+                                                <li class="page-item disabled">
+                                                    <span class="page-link">Попередня</span>
+                                                </li>
+                                            }
+
+                                            @for (int i = 1; i <= canceledRides.TotalPages; i++)
+                                            {
+                                                <li class="page-item @(i == canceledRides.PageIndex ? "active" : "")">
+                                                    <a class="page-link" href="@Url.Action("MyRides", "Driver", new { page = i, tab = "canceled" })">
+                                                        @i
+                                                    </a>
+                                                </li>
+                                            }
+
+                                            @if (canceledRides.HasNextPage)
+                                            {
+                                                <li class="page-item">
+                                                    <a class="page-link" href="@Url.Action("MyRides", "Driver", new { page = canceledRides.PageIndex + 1, tab = "canceled" })">
+                                                        Наступна
+                                                    </a>
+                                                </li>
+                                            }
+                                            else
+                                            {
+                                                <li class="page-item disabled">
+                                                    <span class="page-link">Наступна</span>
+                                                </li>
+                                            }
+                                        </ul>
+                                    </nav>
+                                }
+                            }
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        $(document).ready(function() {
+            var activeTab = '@ViewBag.ActiveTab';
+            if (activeTab) {
+                $('#ridesTab button[data-bs-target="#' + activeTab + '"]').tab('show');
+            }
+            
+            var triggerTabList = [].slice.call(document.querySelectorAll('#ridesTab button'))
+            triggerTabList.forEach(function (triggerEl) {
+                var tabTrigger = new bootstrap.Tab(triggerEl)
+                triggerEl.addEventListener('click', function (event) {
+                    event.preventDefault();
+                    
+                    var tabId = triggerEl.getAttribute('data-bs-target').substring(1);
+                    
+                    window.location.href = '@Url.Action("MyRides", "Driver")' + '?page=1&tab=' + tabId;
+                })
+            })
+            
+            $("#searchInput").on("keyup", function() {
+                var value = $(this).val().toLowerCase();
+                $("table tbody tr").filter(function() {
+                    $(this).toggle($(this).text().toLowerCase().indexOf(value) > -1)
+                });
+            });
+        });
+    </script>
+}
+
+@functions {
+    string GetStatusName(TaxiRideStatus status)
+    {
+        return status switch
+        {
+            TaxiRideStatus.Requested => "Запит",
+            TaxiRideStatus.Accepted => "Прийнято",
+            TaxiRideStatus.DriverArriving => "Водій прибув",
+            TaxiRideStatus.InProgress => "В дорозі",
+            TaxiRideStatus.Completed => "Завершено",
+            TaxiRideStatus.Canceled => "Скасовано",
+            _ => "Невідомий"
+        };
+    }
+
+    string GetBadgeClass(TaxiRideStatus status)
+    {
+        return status switch
+        {
+            TaxiRideStatus.Requested => "bg-secondary",
+            TaxiRideStatus.Accepted => "bg-primary",
+            TaxiRideStatus.DriverArriving => "bg-warning text-dark",
+            TaxiRideStatus.InProgress => "bg-info",
+            TaxiRideStatus.Completed => "bg-success",
+            TaxiRideStatus.Canceled => "bg-danger",
+            _ => "bg-secondary"
+        };
+    }
+
+    string GetRowClass(TaxiRideStatus status)
+    {
+        return status switch
+        {
+            TaxiRideStatus.InProgress => "table-info",
+            TaxiRideStatus.Completed => "table-success",
+            TaxiRideStatus.Canceled => "table-danger",
+            _ => ""
+        };
+    }
+}

@@ -1,0 +1,436 @@
+@model PaginatedList<TaxiRide>
+@{
+    ViewData["Title"] = "Мої поїздки";
+}
+
+<div class="container mt-4">
+    <h2>Мої поїздки</h2>
+    
+    <ul class="nav nav-tabs mb-3" id="myTab" role="tablist">
+        <li class="nav-item" role="presentation">
+            <button class="nav-link active" id="all-rides-tab" data-bs-toggle="tab" data-bs-target="#all-rides" type="button" role="tab" aria-controls="all-rides" aria-selected="true">
+                Всі поїздки
+            </button>
+        </li>
+        <li class="nav-item" role="presentation">
+            <button class="nav-link" id="scheduled-rides-tab" data-bs-toggle="tab" data-bs-target="#scheduled-rides" type="button" role="tab" aria-controls="scheduled-rides" aria-selected="false">
+                Заплановані поїздки
+            </button>
+        </li>
+        <li class="nav-item" role="presentation">
+            <button class="nav-link" id="completed-rides-tab" data-bs-toggle="tab" data-bs-target="#completed-rides" type="button" role="tab" aria-controls="completed-rides" aria-selected="false">
+                Завершені поїздки
+            </button>
+        </li>
+    </ul>
+    
+    <div class="tab-content" id="myTabContent">
+        <div class="tab-pane fade show active" id="all-rides" role="tabpanel" aria-labelledby="all-rides-tab">
+            @if (Model.Count > 0)
+            {
+                <div class="table-responsive">
+                    <table class="table table-striped table-hover">
+                        <thead>
+                            <tr>
+                                <th>Звідки</th>
+                                <th>Куди</th>
+                                <th>Статус</th>
+                                <th>Дата та час</th>
+                                <th>Заплановано на</th>
+                                <th>Дії</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var ride in Model)
+                            {
+                                <tr>
+                                    <td>@ride.StartAddress</td>
+                                    <td>@ride.EndAddress</td>
+                                    <td>
+                                        <span class="badge @GetStatusBadgeClass(ride.Status)">
+                                            @GetStatusDisplayName(ride.Status)
+                                        </span>
+                                    </td>
+                                    <td>
+                                        @if (ride.ScheduledTime.HasValue)
+                                        {
+                                            <span title="Запланована поїздка">
+                                                <i class="far fa-calendar-alt"></i>
+                                                @ride.ScheduledTime.Value.ToString("dd.MM.yyyy HH:mm")
+                                            </span>
+                                        }
+                                        else
+                                        {
+                                            @ride.RequestTime.ToString("dd.MM.yyyy HH:mm")
+                                        }
+                                    </td>
+                                    <td>
+                                        @if (ride.ScheduledTime.HasValue)
+                                        {
+                                            @ride.ScheduledTime.Value.ToString("dd.MM.yyyy HH:mm")
+                                        }
+                                        else
+                                        {
+                                            <span>-</span>
+                                        }
+                                    </td>
+                                    <td>
+                                        <a asp-action="RideDetails" asp-route-id="@ride.Id" class="btn btn-sm btn-outline-primary">
+                                            Деталі
+                                        </a>
+                                        @if (ride.Status != TaxiRideStatus.Completed && ride.Status != TaxiRideStatus.Canceled)
+                                        {
+                                            <button type="button" class="btn btn-sm btn-outline-danger cancel-ride" data-ride-id="@ride.Id">
+                                                Скасувати
+                                            </button>
+                                        }
+                                    </td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+                
+                <nav aria-label="Навігація сторінками">
+                    <ul class="pagination justify-content-center">
+                        @if (Model.HasPreviousPage)
+                        {
+                            <li class="page-item">
+                                <a class="page-link" asp-action="MyRides" asp-route-page="@(Model.PageIndex - 1)">Попередня</a>
+                            </li>
+                        }
+                        else
+                        {
+                            <li class="page-item disabled">
+                                <span class="page-link">Попередня</span>
+                            </li>
+                        }
+                        
+                        @for (int i = 1; i <= Model.TotalPages; i++)
+                        {
+                            <li class="page-item @(i == Model.PageIndex ? "active" : "")">
+                                <a class="page-link" asp-action="MyRides" asp-route-page="@i">@i</a>
+                            </li>
+                        }
+                        
+                        @if (Model.HasNextPage)
+                        {
+                            <li class="page-item">
+                                <a class="page-link" asp-action="MyRides" asp-route-page="@(Model.PageIndex + 1)">Наступна</a>
+                            </li>
+                        }
+                        else
+                        {
+                            <li class="page-item disabled">
+                                <span class="page-link">Наступна</span>
+                            </li>
+                        }
+                    </ul>
+                </nav>
+            }
+            else
+            {
+                <div class="alert alert-info">
+                    У вас ще немає поїздок. <a asp-action="Index">Замовити таксі</a>
+                </div>
+            }
+        </div>
+        
+        <div class="tab-pane fade" id="scheduled-rides" role="tabpanel" aria-labelledby="scheduled-rides-tab">
+            @if (Model.Any(r => r.ScheduledTime.HasValue && r.Status != TaxiRideStatus.Completed && r.Status != TaxiRideStatus.Canceled))
+            {
+                <div class="table-responsive">
+                    <table class="table table-striped table-hover">
+                        <thead>
+                            <tr>
+                                <th>Звідки</th>
+                                <th>Куди</th>
+                                <th>Дата та час</th>
+                                <th>Дії</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var ride in Model.Where(r => r.ScheduledTime.HasValue && r.Status != TaxiRideStatus.Completed && r.Status != TaxiRideStatus.Canceled))
+                            {
+                                <tr>
+                                    <td>@ride.StartAddress</td>
+                                    <td>@ride.EndAddress</td>
+                                    <td>
+                                        <span>
+                                            <i class="far fa-calendar-alt"></i>
+                                            @ride.ScheduledTime.Value.ToString("dd.MM.yyyy HH:mm")
+                                        </span>
+                                    </td>
+                                    <td>
+                                        <a asp-action="RideDetails" asp-route-id="@ride.Id" class="btn btn-sm btn-outline-primary">
+                                            Деталі
+                                        </a>
+                                        <button type="button" class="btn btn-sm btn-outline-danger cancel-ride" data-ride-id="@ride.Id">
+                                            Скасувати
+                                        </button>
+                                    </td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            }
+            else
+            {
+                <div class="alert alert-info">
+                    У вас немає запланованих поїздок. <a asp-action="Index">Запланувати поїздку</a>
+                </div>
+            }
+        </div>
+        
+        <div class="tab-pane fade" id="completed-rides" role="tabpanel" aria-labelledby="completed-rides-tab">
+            @if (Model.Any(r => r.Status == TaxiRideStatus.Completed))
+            {
+                <div class="table-responsive">
+                    <table class="table table-striped table-hover">
+                        <thead>
+                            <tr>
+                                <th>Звідки</th>
+                                <th>Куди</th>
+                                <th>Дата</th>
+                                <th>Дії</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var ride in Model.Where(r => r.Status == TaxiRideStatus.Completed))
+                            {
+                                <tr>
+                                    <td>@ride.StartAddress</td>
+                                    <td>@ride.EndAddress</td>
+                                    <td>
+                                        @(ride.CompleteTime?.ToString("dd.MM.yyyy HH:mm") ?? ride.RequestTime.ToString("dd.MM.yyyy HH:mm"))
+                                    </td>
+                                    <td>
+                                        <a asp-action="RideDetails" asp-route-id="@ride.Id" class="btn btn-sm btn-outline-primary">
+                                            Деталі
+                                        </a>
+                                    </td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            }
+            else
+            {
+                <div class="alert alert-info">
+                    У вас немає завершених поїздок.
+                </div>
+            }
+        </div>
+    </div>
+    
+    <div class="text-center mt-4">
+        <a asp-action="Index" class="btn btn-primary">
+            <i class="fas fa-taxi"></i> 
+            Замовити таксі
+        </a>
+    </div>
+</div>
+
+@section Scripts {
+    <script src="https://cdn.jsdelivr.net/npm/@@microsoft/signalr@5.0.0/dist/browser/signalr.min.js"></script>
+    
+    <script>
+        $(document).ready(function() {
+            $('.cancel-ride').click(function() {
+                const rideId = $(this).data('ride-id');
+
+                if (confirm('Ви впевнені, що хочете скасувати цю поїздку?')) {
+                    $.ajax({
+                        url: '/SocialTaxi/CancelRide',
+                        type: 'POST',
+                        data: { rideId: rideId },
+                        success: function(response) {
+                            if (response.success) {
+                                alert('Поїздку скасовано');
+                                location.reload();
+                            } else {
+                                alert('Помилка скасування поїздки: ' + response.message);
+                            }
+                        },
+                        error: function() {
+                            alert('Помилка з\'єднання з сервером');
+                        }
+                    });
+                }
+            });
+
+            let connection;
+            setupSignalRConnection();
+
+            function setupSignalRConnection() {
+                connection = new signalR.HubConnectionBuilder()
+                    .withUrl("/taxiHub")
+                    .withAutomaticReconnect()
+                    .configureLogging(signalR.LogLevel.Information)
+                    .build();
+
+                connection.onreconnecting(error => {
+                    console.log(`Відновлення підключення: ${error ? error.message : "Невідома помилка"}`);
+                });
+
+                connection.onreconnected(connectionId => {
+                    console.log(`Підключення відновлено. ID: ${connectionId}`);
+                    joinActiveRides();
+                });
+
+                connection.onclose(error => {
+                    console.log(`Підключення закрито: ${error ? error.message : "Невідома причина"}`);
+                });
+
+                connection.on("RideStatusUpdated", function(data) {
+                    console.log("Отримано оновлення статусу поїздки:", data);
+
+                    const rideId = data.RideId || data.rideId;
+                    const status = data.Status || data.status;
+
+                    updateRideStatusUI(rideId, status);
+                });
+
+                connection.start()
+                    .then(function() {
+                        console.log("SignalR успішно підключено");
+                        joinActiveRides();
+                    })
+                    .catch(function(err) {
+                        console.error("Помилка підключення SignalR:", err.toString());
+                    });
+            }
+
+            function joinActiveRides() {
+                const activeRideIds = [];
+
+                $('tr').each(function() {
+                    const statusBadge = $(this).find('.badge');
+                    if (statusBadge.length &&
+                        !statusBadge.hasClass('bg-success') &&
+                        !statusBadge.hasClass('bg-danger')) {
+
+                        const rideId = $(this).find('.cancel-ride').data('ride-id');
+                        if (rideId) {
+                            activeRideIds.push(rideId.toString());
+                        }
+                    }
+                });
+
+                console.log("Активні поїздки для моніторингу:", activeRideIds);
+
+                activeRideIds.forEach(rideId => {
+                    connection.invoke("JoinRide", rideId)
+                        .then(() => console.log(`Приєднано до групи поїздки ${rideId}`))
+                        .catch(err => console.error(`Помилка при приєднанні до групи: ${err}`));
+                });
+            }
+
+            function updateRideStatusUI(rideId, status) {
+                const row = $(`tr`).filter(function() {
+                    return $(this).find('.cancel-ride').data('ride-id') == rideId ||
+                        $(this).find('td:first-child').text() == rideId;
+                });
+
+                if (row.length) {
+                    const badgeClass = getStatusBadgeClass(status);
+                    const statusText = getStatusDisplayName(status);
+
+                    const badgeElement = row.find('.badge');
+                    if (badgeElement.length) {
+                        badgeElement.removeClass(function(index, className) {
+                            return (className.match(/(^|\s)bg-\S+/g) || []).join(' ');
+                        }).addClass(badgeClass);
+
+                        badgeElement.text(statusText);
+                    }
+
+                    if (status === "Completed" || status === "Canceled") {
+                        row.find('.cancel-ride').remove();
+                    }
+
+                    if (status === "Completed") {
+                        const scheduledRow = $("#scheduled-rides").find(`tr`).filter(function() {
+                            return $(this).find('.cancel-ride').data('ride-id') == rideId ||
+                                $(this).find('td:first-child').text() == rideId;
+                        });
+
+                        if (scheduledRow.length) {
+                            scheduledRow.remove();
+                        }
+
+                        const completedRidesTab = $("#completed-rides");
+                        const existingCompletedRow = completedRidesTab.find(`tr`).filter(function() {
+                            return $(this).find('td:first-child').text() == rideId;
+                        });
+
+                        if (existingCompletedRow.length === 0 && row.length) {
+                            const newRow = row.clone();
+                            newRow.find('.cancel-ride').remove();
+                            completedRidesTab.find('tbody').prepend(newRow);
+                        }
+                    }
+                }
+            }
+
+            function getStatusBadgeClass(status) {
+                switch(status) {
+                    case "Requested": return "bg-warning";
+                    case "Accepted": return "bg-info";
+                    case "DriverArriving": return "bg-info";
+                    case "InProgress": return "bg-primary";
+                    case "Completed": return "bg-success";
+                    case "Canceled": return "bg-danger";
+                    default: return "bg-secondary";
+                }
+            }
+
+            function getStatusDisplayName(status) {
+                switch(status) {
+                    case "Requested": return "Очікування";
+                    case "Accepted": return "Прийнято";
+                    case "DriverArriving": return "Водій прибув";
+                    case "DriverArrived": return "Водій прибув";
+                    case "InProgress": return "В дорозі";
+                    case "Completed": return "Завершено";
+                    case "Canceled": return "Скасовано";
+                    default: return status;
+                }
+            }
+        });
+    </script>
+}
+
+@functions {
+    string GetStatusBadgeClass(TaxiRideStatus status)
+    {
+        return status switch
+        {
+            TaxiRideStatus.Requested => "bg-warning",
+            TaxiRideStatus.Accepted => "bg-info",
+            TaxiRideStatus.DriverArriving => "bg-info",
+            TaxiRideStatus.InProgress => "bg-primary",
+            TaxiRideStatus.Completed => "bg-success",
+            TaxiRideStatus.Canceled => "bg-danger",
+            _ => "bg-secondary"
+        };
+    }
+    
+    @functions {
+        string GetStatusDisplayName(TaxiRideStatus status)
+        {
+            return status switch
+            {
+                TaxiRideStatus.Requested => "Очікування",
+                TaxiRideStatus.Accepted => "Прийнято",
+                TaxiRideStatus.DriverArriving => "Водій прибув",
+                TaxiRideStatus.InProgress => "В дорозі",
+                TaxiRideStatus.Completed => "Завершено",
+                TaxiRideStatus.Canceled => "Скасовано",
+                _ => status.ToString()
+            };
+        }
+    }
+}

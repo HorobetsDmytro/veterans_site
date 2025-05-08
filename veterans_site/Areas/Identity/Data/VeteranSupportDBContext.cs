@@ -31,6 +31,7 @@ public class VeteranSupportDbContext : IdentityDbContext<ApplicationUser>
     public DbSet<JobApplication> JobApplications { get; set; }
     public DbSet<Resume> Resumes { get; set; }
     public DbSet<SavedJob> SavedJobs { get; set; }
+    public DbSet<TaxiRide> TaxiRides { get; set; }
         
     protected override void OnModelCreating(ModelBuilder builder)
     {
@@ -102,5 +103,63 @@ public class VeteranSupportDbContext : IdentityDbContext<ApplicationUser>
 
         builder.Entity<UserConnection>()
             .HasNoKey();
+        
+        builder.Entity<TaxiRide>()
+            .HasOne(r => r.Veteran)
+            .WithMany()
+            .HasForeignKey(r => r.VeteranId)
+            .OnDelete(DeleteBehavior.Restrict);
+                
+        builder.Entity<TaxiRide>()
+            .HasOne(r => r.Driver)
+            .WithMany(d => d.Rides)
+            .HasForeignKey(r => r.DriverId)
+            .IsRequired(false)
+            .OnDelete(DeleteBehavior.Restrict);
     }
+    
+    // private void SeedTaxiDrivers(ModelBuilder builder)
+    // {
+    //     builder.Entity<TaxiDriver>().HasData(
+    //         new TaxiDriver
+    //         {
+    //             Id = "driver1",
+    //             Name = "Олександр Петренко",
+    //             PhoneNumber = "+380991234567",
+    //             CarModel = "Toyota Camry",
+    //             LicensePlate = "АА1234ВВ",
+    //             PhotoUrl = "/images/drivers/driver1.jpg",
+    //             Rating = 4.8,
+    //             CurrentLatitude = 50.4501,
+    //             CurrentLongitude = 30.5234,
+    //             IsAvailable = true
+    //         },
+    //         new TaxiDriver
+    //         {
+    //             Id = "driver2",
+    //             Name = "Сергій Коваленко",
+    //             PhoneNumber = "+380992345678",
+    //             CarModel = "Hyundai Sonata",
+    //             LicensePlate = "АА5678ВС",
+    //             PhotoUrl = "/images/drivers/driver2.jpg",
+    //             Rating = 4.7,
+    //             CurrentLatitude = 50.4520,
+    //             CurrentLongitude = 30.5300,
+    //             IsAvailable = true
+    //         },
+    //         new TaxiDriver
+    //         {
+    //             Id = "driver3",
+    //             Name = "Іван Мельник",
+    //             PhoneNumber = "+380993456789",
+    //             CarModel = "Volkswagen Passat",
+    //             LicensePlate = "АА9012ВТ",
+    //             PhotoUrl = "/images/drivers/driver3.jpg",
+    //             Rating = 4.9,
+    //             CurrentLatitude = 50.4470,
+    //             CurrentLongitude = 30.5180,
+    //             IsAvailable = true
+    //         }
+    //     );
+    // }
 }

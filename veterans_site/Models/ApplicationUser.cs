@@ -24,6 +24,15 @@ namespace veterans_site.Models
         public string? VeteranCertificateNumber { get; set; }
         public string? SpecialistType { get; set; }
         public string? VolunteerOrganization { get; set; }
+        public string? CarModel { get; set; }
+    
+        public string? LicensePlate { get; set; }
+        public double? Rating { get; set; }
+        public double? CurrentLatitude { get; set; }
+        public double? CurrentLongitude { get; set; }
+        public bool? IsAvailable { get; set; } = true;
+        
+        public virtual ICollection<TaxiRide> Rides { get; set; }
 
         public virtual ICollection<ConsultationBooking> ConsultationBookings { get; set; }
         public virtual ICollection<EventParticipant> EventParticipants { get; set; }

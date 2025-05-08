@@ -1,0 +1,1352 @@
+@{
+ViewData["Title"] = "Панель водія";
+}
+
+<div class="container mt-4">
+    <div class="row">
+        <div class="col-md-8">
+            <div class="card">
+                <div class="card-header">
+                    <h4>Панель управління водія таксі</h4>
+                </div>
+                <div class="card-body">
+                    <div id="driverMap" style="height: 400px; width: 100%"></div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card mb-3">
+                <div class="card-header bg-primary text-white">
+                    <h5>Статус</h5>
+                </div>
+                <div class="card-body">
+                    <div class="form-check form-switch mb-3">
+                        <input class="form-check-input" type="checkbox" id="statusToggle" checked>
+                        <label class="form-check-label" for="statusToggle">
+                            <span id="statusLabel">На зв'язку</span>
+                        </label>
+                    </div>
+                    <div id="activeStatus">
+                        <span class="badge bg-success mb-2">Ви на зв'язку та можете отримувати замовлення</span>
+                    </div>
+                    <div id="inactiveStatus" class="d-none">
+                        <span class="badge bg-secondary mb-2">Ви не на зв'язку та не отримуєте замовлення</span>
+                    </div>
+                </div>
+            </div>
+
+            <div id="noActiveRideSection">
+                <div class="card mb-3">
+                    <div class="card-header bg-info text-white">
+                        <h5>Нові запити на поїздку</h5>
+                    </div>
+                    <div class="card-body" id="newRidesContainer">
+                        <div class="text-center py-3" id="noRidesMessage">
+                            <p class="text-muted">Немає нових запитів на поїздку</p>
+                        </div>
+                        <div id="rideRequestsContainer">
+                        </div>
+                    </div>
+                </div>
+
+                <div class="card mb-3">
+                    <div class="card-header bg-warning text-white">
+                        <h5>Заплановані поїздки</h5>
+                    </div>
+                    <div class="card-body" id="scheduledRidesContainer">
+                        <div class="text-center py-3" id="noScheduledRidesMessage">
+                            <p class="text-muted">Немає запланованих поїздок</p>
+                        </div>
+                        <div id="scheduledRidesListContainer">
+                        </div>
+                    </div>
+                </div>
+
+                <div class="card">
+                    <div class="card-body">
+                        <div class="d-grid gap-2">
+                            <a href="@Url.Action("AvailableRides", "Driver")" class="btn btn-outline-primary">
+                                Всі доступні поїздки
+                            </a>
+                            <a href="@Url.Action("MyRides", "Driver")" class="btn btn-outline-secondary">
+                                Історія моїх поїздок
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div id="activeRideSection" class="d-none">
+                <div class="card mb-3">
+                    <div class="card-header bg-success text-white">
+                        <h5>Активна поїздка</h5>
+                    </div>
+                    <div class="card-body">
+                        <div id="rideDetails">
+                            <h6 id="veteranName">Пасажир: <span></span></h6>
+                            <div class="mb-2">
+                                <strong>Звідки:</strong> <span id="startAddress"></span>
+                            </div>
+                            <div class="mb-3">
+                                <strong>Куди:</strong> <span id="endAddress"></span>
+                            </div>
+                            <div class="progress mb-2">
+                                <div id="rideProgress" class="progress-bar progress-bar-striped progress-bar-animated"
+                                     role="progressbar" style="width: 0%"></div>
+                            </div>
+                            <div id="rideStatusMessage" class="text-center py-2">Їдемо до пасажира</div>
+                        </div>
+
+                        <div class="btn-group w-100 mt-3" id="rideControlButtons">
+                            <button id="arrivedButton" class="btn btn-warning">Я прибув</button>
+                            <button id="startRideButton" class="btn btn-success d-none">Розпочати поїздку</button>
+                            <button id="completeRideButton" class="btn btn-primary d-none">Завершити поїздку</button>
+                            <button id="cancelRideButton" class="btn btn-danger">Скасувати</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="modal fade" id="newRideRequestModal" tabindex="-1" aria-labelledby="newRideRequestModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header bg-primary text-white">
+                <h5 class="modal-title" id="newRideRequestModalLabel">Нове замовлення таксі</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <div class="alert alert-info">
+                    <strong>Увага!</strong> Надійшло нове замовлення від ветерана.
+                </div>
+
+                <div class="card mb-3">
+                    <div class="card-body">
+                        <h6 class="card-subtitle mb-2 text-muted">Інформація про поїздку</h6>
+                        <div class="mb-2">
+                            <strong>Пасажир:</strong> <span id="modalVeteranName"></span>
+                        </div>
+                        <div class="mb-2">
+                            <strong>Звідки:</strong> <span id="modalStartAddress"></span>
+                        </div>
+                        <div class="mb-2">
+                            <strong>Куди:</strong> <span id="modalEndAddress"></span>
+                        </div>
+                        <div class="mb-2">
+                            <strong>Відстань:</strong> <span id="modalDistance"></span> км
+                        </div>
+                        <div class="mb-2">
+                            <strong>Орієнтовна вартість:</strong> <span id="modalPrice"></span> грн
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Відхилити</button>
+                <button type="button" class="btn btn-success" id="acceptRideModalBtn">Прийняти замовлення</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script src="https://cdn.jsdelivr.net/npm/@@microsoft/signalr@5.0.0/dist/browser/signalr.min.js"></script>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.7.1/dist/leaflet.css"/>
+    <script src="https://unpkg.com/leaflet@1.7.1/dist/leaflet.js"></script>
+    <script src="https://unpkg.com/esri-leaflet@3.0.0/dist/esri-leaflet.js"></script>
+    <script src="https://unpkg.com/esri-leaflet-geocoder@3.0.0/dist/esri-leaflet-geocoder.js"></script>
+    <link rel="stylesheet" href="https://unpkg.com/esri-leaflet-geocoder@3.0.0/dist/esri-leaflet-geocoder.css">
+
+    <script>
+    $(document).ready(function() {
+        let map, driverMarker, startMarker, endMarker, routeLine;
+        let connection;
+        let activeRideId = null;
+        let isOnline = true;
+        let watchPositionId = null;
+        let pendingRideRequestModal = null;
+        let currentRideRequestData = null;
+
+        setupSignalRConnection();
+        initMap();
+        startWatchingPosition();
+
+        checkActiveRide();
+
+        loadActiveRideRequests();
+        loadScheduledRides();
+        checkScheduledRidesBecomingActive();
+
+        function setupSignalRConnection() {
+            connection = new signalR.HubConnectionBuilder()
+                .withUrl("/taxiHub")
+                .withAutomaticReconnect()
+                .configureLogging(signalR.LogLevel.Information)
+                .build();
+
+            connection.onreconnecting(error => {
+                console.log(`Відновлення підключення: ${error ? error.message : "Невідома помилка"}`);
+            });
+
+            connection.onreconnected(connectionId => {
+                console.log(`Підключення відновлено. ID: ${connectionId}`);
+
+                if (isOnline) {
+                    connection.invoke("GoOnline")
+                        .then(() => console.log("Статус онлайн відновлено"))
+                        .catch(err => console.error(`Помилка при відновленні статусу: ${err}`));
+                }
+
+                if (activeRideId) {
+                    connection.invoke("JoinRide", activeRideId.toString())
+                        .then(() => console.log(`Повторно приєднано до групи поїздки ${activeRideId}`))
+                        .catch(err => console.error(`Помилка при повторному приєднанні до групи: ${err}`));
+                }
+            });
+
+            connection.onclose(error => {
+                console.log(`Підключення закрито: ${error ? error.message : "Невідома причина"}`);
+            });
+
+            setupSignalREventHandlers();
+
+            connection.start()
+                .then(() => {
+                    console.log("Підключення до SignalR встановлено");
+
+                    connection.invoke("JoinDriversGroup")
+                        .then(() => console.log("Приєднано до групи водіїв"))
+                        .catch(err => console.error(`Помилка при приєднанні до групи водіїв: ${err}`));
+                })
+                .catch(err => console.error(`Помилка при підключенні до SignalR: ${err}`));
+        }
+
+        function setupSignalREventHandlers() {
+            connection.on("NewRideRequest", function (data) {
+                $.ajax({
+                    url: '/Driver/CheckRideStatus?rideId=' + data.rideId,
+                    type: 'GET',
+                    success: function(statusResponse) {
+                        if (statusResponse.status !== "Canceled") {
+                            if (!isOnline) {
+                                console.log("Водій не на зв'язку, пропускаємо запит");
+                                return;
+                            }
+
+                            if (activeRideId) {
+                                console.log("Водій вже має активну поїздку, пропускаємо запит");
+                                return;
+                            }
+
+                            currentRideRequestData = data;
+                            $("#modalVeteranName").text(data.veteranName);
+                            $("#modalStartAddress").text(data.startAddress);
+                            $("#modalEndAddress").text(data.endAddress);
+                            $("#modalDistance").text(data.distanceKm);
+                            $("#modalPrice").text(data.estimatedPrice);
+
+                            pendingRideRequestModal = new bootstrap.Modal(document.getElementById('newRideRequestModal'));
+                            pendingRideRequestModal.show();
+
+                            addRideRequestCard(data);
+                        } else {
+                            console.log("Поїздка вже скасована, не показуємо pop-up");
+                        }
+                    },
+                    error: function() {
+                        console.error("Помилка при перевірці статусу поїздки");
+                    }
+                });
+            });
+
+            connection.on("RideRequestForDriver", function (data) {
+                console.log("Отримано персональне повідомлення про новий запит:", data);
+
+                if (!isOnline || activeRideId) return;
+
+                currentRideRequestData = data;
+
+                $("#modalVeteranName").text(data.veteranName);
+                $("#modalStartAddress").text(data.startAddress);
+                $("#modalEndAddress").text(data.endAddress);
+                $("#modalDistance").text(data.distanceKm);
+                $("#modalPrice").text(data.estimatedPrice);
+
+                pendingRideRequestModal = new bootstrap.Modal(document.getElementById('newRideRequestModal'));
+                pendingRideRequestModal.show();
+                
+                addRideRequestCard(data);
+            });
+
+            connection.on("NewScheduledRideRequest", function (data) {
+                console.log("Отримано нове заплановане замовлення:", data);
+
+                if (!isOnline) return;
+
+                const scheduledRideCard = `
+                    <div class="card mb-2 scheduled-ride" data-ride-id="${data.rideId}">
+                        <div class="card-body p-3">
+                            <div class="d-flex justify-content-between align-items-start mb-2">
+                                <h6 class="mb-0">На: ${data.scheduledTime}</h6>
+                                <span class="badge bg-warning">${data.distanceKm} км</span>
+                            </div>
+                            <div class="mb-1">Від: ${data.startAddress}</div>
+                            <div class="mb-2">До: ${data.endAddress}</div>
+                            <div class="d-flex justify-content-between align-items-center">
+                                <span class="text-success fw-bold">${data.estimatedPrice} грн</span>
+                                <button class="btn btn-sm btn-warning accept-scheduled-btn" 
+                                        data-ride-id="${data.rideId}">Прийняти</button>
+                            </div>
+                        </div>
+                    </div>
+                `;
+
+                $("#noScheduledRidesMessage").addClass("d-none");
+                $("#scheduledRidesListContainer").append(scheduledRideCard);
+
+                $(".accept-scheduled-btn").off("click").on("click", function () {
+                    const rideId = $(this).data("ride-id");
+                    acceptScheduledRide(rideId);
+                });
+
+            });
+
+            connection.on("RideAssigned", function (data) {
+                console.log("Поїздка вже не доступна:", data);
+
+                $(`.ride-request[data-ride-id="${data.rideId}"]`).fadeOut(300, function () {
+                    $(this).remove();
+
+                    if ($("#rideRequestsContainer").children().length === 0) {
+                        $("#noRidesMessage").removeClass("d-none");
+                    }
+                });
+
+                if (pendingRideRequestModal && currentRideRequestData && currentRideRequestData.rideId === data.rideId) {
+                    pendingRideRequestModal.hide();
+                    pendingRideRequestModal = null;
+                    currentRideRequestData = null;
+                }
+            });
+
+            connection.on("StartRideFlow", function (data) {
+                console.log("Початок процесу поїздки:", data);
+
+                $(`.scheduled-ride[data-ride-id="${data.rideId}"]`).fadeOut(300, function() {
+                    $(this).remove();
+                    checkNoScheduledRidesMessage();
+                });
+
+                $(`.ride-request[data-ride-id="${data.rideId}"]`).fadeOut(300, function() {
+                    $(this).remove();
+                    checkNoRidesMessage();
+                });
+
+                activeRideId = data.rideId;
+
+                $("#veteranName span").text(data.veteranName);
+                $("#startAddress").text(data.startAddress);
+                $("#endAddress").text(data.endAddress);
+
+                $("#noActiveRideSection").addClass("d-none");
+                $("#activeRideSection").removeClass("d-none");
+
+                if (startMarker) map.removeLayer(startMarker);
+                if (endMarker) map.removeLayer(endMarker);
+                if (routeLine) map.removeLayer(routeLine);
+
+                startMarker = L.marker([data.startLat, data.startLng], {
+                    icon: L.icon({
+                        iconUrl: '/images/start-marker.png',
+                        iconSize: [32, 32],
+                        iconAnchor: [16, 32]
+                    })
+                }).addTo(map);
+
+                endMarker = L.marker([data.endLat, data.endLng], {
+                    icon: L.icon({
+                        iconUrl: '/images/end-marker.png',
+                        iconSize: [32, 32],
+                        iconAnchor: [16, 32]
+                    })
+                }).addTo(map);
+
+                fetchRoute(data.startLat, data.startLng, data.endLat, data.endLng);
+
+                const bounds = L.latLngBounds([
+                    [data.startLat, data.startLng],
+                    [data.endLat, data.endLng]
+                ]);
+                map.fitBounds(bounds, {padding: [50, 50]});
+
+                $("#rideStatusMessage").text("Їдемо до пасажира");
+                $("#rideProgress").css("width", "10%");
+
+                $("#arrivedButton").removeClass("d-none");
+                $("#startRideButton").addClass("d-none");
+                $("#completeRideButton").addClass("d-none");
+                $("#cancelRideButton").removeClass("d-none");
+
+                connection.invoke("JoinRide", activeRideId.toString())
+                    .then(() => console.log(`Приєднано до групи поїздки ${activeRideId}`))
+                    .catch(err => console.error(`Помилка при приєднанні до групи: ${err}`));
+            });
+
+            connection.on("RideStatusUpdated", function (data) {
+                console.log("Оновлення статусу поїздки:", data);
+
+                $("#rideStatusMessage").text(data.Message);
+
+                if (data.Status === "Completed" || data.Status === "Canceled") {
+                    setTimeout(() => {
+                        resetRideUI();
+                    }, 5000);
+                }
+            });
+
+            connection.on("RideCanceled", function(data) {
+                console.log("Отримано повідомлення про скасування поїздки:", data);
+
+                removeRideRequestCard(data.rideId);
+
+                if (data.rideId == activeRideId) {
+                    console.log("Скасовано активну поїздку, скидаємо інтерфейс");
+                    $("#rideStatusMessage").text("Поїздку скасовано пасажиром");
+
+                    setTimeout(function() {
+                        resetRideUI();
+                    }, 3000);
+                }
+
+                if (data.wasSearching && pendingRideRequestModal && currentRideRequestData && currentRideRequestData.rideId === data.rideId) {
+                    console.log("Закриваємо pop-up з скасованим замовленням");
+                    pendingRideRequestModal.hide();
+                    pendingRideRequestModal = null;
+                    currentRideRequestData = null;
+                }
+            });
+
+            connection.on("NewScheduledRide", function (data) {
+                console.log("Отримано нове заплановане замовлення:", data);
+
+                if (!isOnline) return;
+
+                const scheduledRideCard = `
+                    <div class="card mb-2 scheduled-ride" data-ride-id="${data.rideId}">
+                        <div class="card-body p-3">
+                            <div class="d-flex justify-content-between align-items-start mb-2">
+                                <h6 class="mb-0">На: ${data.scheduledTime}</h6>
+                                <span class="badge bg-warning">${data.distanceKm} км</span>
+                            </div>
+                            <div class="mb-1">Від: ${data.startAddress}</div>
+                            <div class="mb-2">До: ${data.endAddress}</div>
+                            <div class="d-flex justify-content-between align-items-center">
+                                <span class="text-success fw-bold">${data.estimatedPrice} грн</span>
+                                <button class="btn btn-sm btn-warning accept-scheduled-btn" 
+                                        data-ride-id="${data.rideId}">Прийняти</button>
+                            </div>
+                        </div>
+                    </div>
+                `;
+
+                $("#noScheduledRidesMessage").addClass("d-none");
+                $("#scheduledRidesListContainer").append(scheduledRideCard);
+
+                $(".accept-scheduled-btn").off("click").on("click", function () {
+                    const rideId = $(this).data("ride-id");
+                    acceptScheduledRide(rideId);
+                });
+            });
+
+            connection.on("ScheduledRideActive", function (data) {
+                console.log("Заплановане замовлення стало активним:", data);
+
+                if (!isOnline || activeRideId) return;
+
+                addRideRequestCard(data);
+
+                const scheduledCard = $(`.scheduled-ride[data-ride-id="${data.rideId}"]`);
+                if (scheduledCard.length > 0) {
+                    scheduledCard.find('.badge')
+                        .removeClass('bg-warning')
+                        .addClass('bg-success')
+                        .text('Час настав');
+
+                    scheduledCard.find('.accept-scheduled-btn')
+                        .removeClass('btn-warning')
+                        .addClass('btn-success')
+                        .text('Прийняти зараз');
+
+                    if (!scheduledCard.find('.urgent-message').length) {
+                        scheduledCard.find('.card-body').prepend(
+                            '<div class="alert alert-success py-1 mb-2 urgent-message">Поїздка активна зараз!</div>'
+                        );
+                    }
+                }
+
+                if (!$("#scheduledRideActivatedAlert").length) {
+                    $("body").append(`
+                <div id="scheduledRideActivatedAlert" class="alert alert-success alert-dismissible fade show position-fixed" 
+                     style="bottom: 20px; right: 20px; z-index: 1050;" role="alert">
+                    <strong>Увага!</strong> Час запланованої поїздки настав!
+                    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                </div>
+            `);
+
+                    const audio = new Audio('/sounds/notification.mp3');
+                    audio.play().catch(e => console.log("Не вдалося відтворити звук: ", e));
+
+                    setTimeout(function() {
+                        $("#scheduledRideActivatedAlert").alert('close');
+                    }, 10000);
+                }
+            });
+
+            connection.on("ScheduledRideActivated", function (data) {
+                console.log("Отримано подію активації запланованої поїздки:", data);
+
+                if (!isOnline) return;
+
+                if (data.driverAssigned) {
+                    if (!activeRideId) {
+                        $(`.scheduled-ride[data-ride-id="${data.rideId}"]`).fadeOut(300, function() {
+                            $(this).remove();
+                            checkNoScheduledRidesMessage();
+                        });
+
+                        startScheduledRide(data.rideId);
+
+                        if (!$("#scheduledRideActivatedAlert").length) {
+                            $("body").append(`
+                    <div id="scheduledRideActivatedAlert" class="alert alert-success alert-dismissible fade show position-fixed" 
+                         style="bottom: 20px; right: 20px; z-index: 1050;" role="alert">
+                        <strong>Увага!</strong> ${data.message || "Час вашої запланованої поїздки настав!"}
+                        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                    </div>
+                `);
+
+                            setTimeout(function() {
+                                $("#scheduledRideActivatedAlert").alert('close');
+                            }, 10000);
+                        }
+                    }
+                }
+            });
+        }
+
+        function startScheduledRide(rideId) {
+            console.log("Автоматичний початок запланованої поїздки:", rideId);
+
+            $.ajax({
+                url: '/Driver/StartScheduledRide',
+                type: 'POST',
+                data: { rideId: rideId },
+                success: function(response) {
+                    if (response.success) {
+                        console.log("Поїздку успішно розпочато:", response);
+                        activeRideId = rideId;
+
+                        $("#veteranName span").text(response.ride.veteranName);
+                        $("#startAddress").text(response.ride.startAddress);
+                        $("#endAddress").text(response.ride.endAddress);
+
+                        $("#noActiveRideSection").addClass("d-none");
+                        $("#activeRideSection").removeClass("d-none");
+
+                        if (startMarker) map.removeLayer(startMarker);
+                        if (endMarker) map.removeLayer(endMarker);
+                        if (routeLine) map.removeLayer(routeLine);
+
+                        startMarker = L.marker([response.ride.startLat, response.ride.startLng], {
+                            icon: L.icon({
+                                iconUrl: '/images/start-marker.png',
+                                iconSize: [32, 32],
+                                iconAnchor: [16, 32]
+                            })
+                        }).addTo(map);
+
+                        endMarker = L.marker([response.ride.endLat, response.ride.endLng], {
+                            icon: L.icon({
+                                iconUrl: '/images/end-marker.png',
+                                iconSize: [32, 32],
+                                iconAnchor: [16, 32]
+                            })
+                        }).addTo(map);
+
+                        fetchRoute(response.ride.startLat, response.ride.startLng,
+                            response.ride.endLat, response.ride.endLng);
+
+                        const bounds = L.latLngBounds([
+                            [response.ride.startLat, response.ride.startLng],
+                            [response.ride.endLat, response.ride.endLng]
+                        ]);
+                        map.fitBounds(bounds, {padding: [50, 50]});
+
+                        $("#rideStatusMessage").text("Їдемо до пасажира");
+                        $("#rideProgress").css("width", "10%");
+
+                        $("#arrivedButton").removeClass("d-none");
+                        $("#startRideButton").addClass("d-none");
+                        $("#completeRideButton").addClass("d-none");
+                        $("#cancelRideButton").removeClass("d-none");
+
+                        connection.invoke("JoinRide", activeRideId.toString())
+                            .then(() => console.log(`Приєднано до групи поїздки ${activeRideId}`))
+                            .catch(err => console.error(`Помилка при приєднанні до групи: ${err}`));
+                    } else {
+                        console.error("Помилка при початку запланованої поїздки:", response.message);
+                        alert("Помилка: " + response.message);
+                    }
+                },
+                error: function() {
+                    console.error("Помилка з'єднання з сервером");
+                    alert("Помилка з'єднання з сервером");
+                }
+            });
+        }
+
+        function removeRideRequestCard(rideId) {
+            const requestCard = $(`.ride-request[data-ride-id="${rideId}"]`);
+            const scheduledCard = $(`.scheduled-ride[data-ride-id="${rideId}"]`);
+
+            if (requestCard.length > 0) {
+                console.log("Видаляємо картку запиту для поїздки:", rideId);
+                requestCard.fadeOut(300, function() {
+                    $(this).remove();
+                    checkNoRidesMessage();
+                });
+            }
+
+            if (scheduledCard.length > 0) {
+                console.log("Видаляємо заплановану поїздку:", rideId);
+                scheduledCard.fadeOut(300, function() {
+                    $(this).remove();
+                    checkNoScheduledRidesMessage();
+                });
+            }
+}
+
+        function checkNoRidesMessage() {
+            if ($("#rideRequestsContainer").children().length === 0) {
+                $("#noRidesMessage").removeClass("d-none");
+            }
+}
+
+        function checkNoScheduledRidesMessage() {
+            if ($("#scheduledRidesListContainer").children().length === 0) {
+                $("#noScheduledRidesMessage").removeClass("d-none");
+            }
+}
+
+        function fetchRoute(startLat, startLng, endLat, endLng) {
+            const url = `https://router.project-osrm.org/route/v1/driving/${startLng},${startLat};${endLng},${endLat}?overview=full&geometries=geojson`;
+
+            $.ajax({
+                url: url,
+                type: 'GET',
+                dataType: 'json',
+                success: function (data) {
+                    if (data.code === 'Ok' && data.routes && data.routes.length > 0) {
+                        if (routeLine) map.removeLayer(routeLine);
+
+                        routeLine = L.geoJSON(data.routes[0].geometry, {
+                            style: {
+                                color: '#3388ff',
+                                weight: 5,
+                                opacity: 0.7
+                            }
+                        }).addTo(map);
+                    }
+                },
+                error: function (error) {
+                    console.error("Помилка при отриманні маршруту:", error);
+                }
+            });
+        }
+
+        function initMap() {
+            map = L.map('driverMap').setView([50.4501, 30.5234], 12);
+
+            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                attribution: '&copy; OpenStreetMap contributors'
+            }).addTo(map);
+
+            if (navigator.geolocation) {
+                navigator.geolocation.getCurrentPosition(function (position) {
+                    const lat = position.coords.latitude;
+                    const lng = position.coords.longitude;
+
+                    map.setView([lat, lng], 15);
+                    updateDriverMarker(lat, lng);
+                });
+            }
+        }
+
+        function updateDriverMarker(lat, lng) {
+            if (driverMarker) {
+                map.removeLayer(driverMarker);
+            }
+
+            driverMarker = L.marker([lat, lng], {
+                icon: L.icon({
+                    iconUrl: '/images/car-marker.png',
+                    iconSize: [32, 32],
+                    iconAnchor: [16, 16]
+                })
+            }).addTo(map);
+
+            if (isOnline) {
+                $.ajax({
+                    url: '@Url.Action("UpdateLocation", "Driver")',
+                    type: 'POST',
+                    contentType: 'application/json',
+                    data: JSON.stringify({
+                        Latitude: lat,
+                        Longitude: lng,
+                        Progress: activeRideId ? calculateProgress() : 0
+                    }),
+                    error: function (err) {
+                        console.error("Помилка при оновленні позиції:", err);
+                    }
+                });
+            }
+
+            function calculateProgress() {
+                if (!activeRideId || !startMarker || !endMarker) return 0;
+
+                const startPoint = startMarker.getLatLng();
+                const endPoint = endMarker.getLatLng();
+                const driverPoint = driverMarker.getLatLng();
+
+                const totalDistance = startPoint.distanceTo(endPoint);
+                const driverToStart = driverPoint.distanceTo(startPoint);
+                const driverToEnd = driverPoint.distanceTo(endPoint);
+
+                if (driverToStart > totalDistance) {
+                    return 10;
+                } else if (driverToEnd < 100) {
+                    return 95;
+                } else {
+                    return Math.min(90, Math.max(10,
+                        Math.round(100 - (driverToEnd / totalDistance) * 100)));
+                }
+            }
+        }
+
+        function startWatchingPosition() {
+            if (navigator.geolocation && !watchPositionId) {
+                watchPositionId = navigator.geolocation.watchPosition(function (position) {
+                    const lat = position.coords.latitude;
+                    const lng = position.coords.longitude;
+
+                    updateDriverMarker(lat, lng);
+                }, function (error) {
+                    console.error("Помилка геолокації:", error);
+                }, {
+                    enableHighAccuracy: true,
+                    timeout: 10000,
+                    maximumAge: 5000
+                });
+            }
+        }
+
+        function stopWatchingPosition() {
+            if (watchPositionId !== null) {
+                navigator.geolocation.clearWatch(watchPositionId);
+                watchPositionId = null;
+            }
+        }
+
+        function addRideRequestCard(data) {
+            console.log("Додаємо картку запиту:", data);
+
+            if (!data || !data.rideId) {
+                console.error("Неповні дані для картки запиту");
+                return;
+            }
+
+            const scheduledBadge = data.scheduledTime ?
+                `<span class="badge bg-info ms-2">Запланована: ${data.scheduledTime}</span>` : '';
+
+            const rideCard = `
+                <div class="card mb-2 ride-request ${data.scheduledTime ? 'scheduled-active' : ''}" data-ride-id="${data.rideId}">
+                    <div class="card-body p-3">
+                        <div class="d-flex justify-content-between align-items-start mb-2">
+                            <h6 class="mb-0">${data.veteranName || 'Невідомий пасажир'}</h6>
+                            <div>
+                                <span class="badge bg-primary">${data.distanceKm || '?'} км</span>
+                                ${scheduledBadge}
+                            </div>
+                        </div>
+                        <div class="mb-1">Від: ${data.startAddress || 'Невідома адреса'}</div>
+                        <div class="mb-2">До: ${data.endAddress || 'Невідома адреса'}</div>
+                        <div class="d-flex justify-content-between align-items-center">
+                            <span class="text-success fw-bold">${data.estimatedPrice || '0'} грн</span>
+                            <button class="btn btn-sm btn-success accept-ride-btn" 
+                                    data-ride-id="${data.rideId}">Прийняти</button>
+                        </div>
+                    </div>
+                </div>
+            `;
+
+            if ($(`.ride-request[data-ride-id="${data.rideId}"]`).length === 0) {
+                console.log("Додаємо нову картку запиту");
+
+                $("#noRidesMessage").addClass("d-none");
+
+                if (data.scheduledTime) {
+                    $("#rideRequestsContainer").prepend(rideCard);
+                } else {
+                    $("#rideRequestsContainer").prepend(rideCard);
+                }
+
+                $(".accept-ride-btn").off("click").on("click", function () {
+                    const rideId = $(this).data("ride-id");
+                    console.log("Натиснуто кнопку 'Прийняти' для поїздки:", rideId);
+                    acceptRide(rideId);
+                });
+
+                console.log("Картку успішно додано");
+            } else {
+                console.log("Картка з таким ID вже існує, пропускаємо");
+            }
+        }
+
+        function showScheduledRideNotification(title, message) {
+            if (!$("#scheduledRideActivatedAlert").length) {
+                $("body").append(`
+            <div id="scheduledRideActivatedAlert" class="alert alert-success alert-dismissible fade show position-fixed" 
+                 style="bottom: 20px; right: 20px; z-index: 1050;" role="alert">
+                <strong>${title}</strong> ${message}
+                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+            </div>
+        `);
+
+                const audio = new Audio('/sounds/notification.mp3');
+                audio.play().catch(e => console.log("Не вдалося відтворити звук: ", e));
+
+                setTimeout(function() {
+                    $("#scheduledRideActivatedAlert").alert('close');
+                }, 10000);
+            }
+        }
+
+        function acceptRide(rideId) {
+            console.log("Відправляємо запит на прийняття поїздки з ID:", rideId);
+
+            $.ajax({
+                url: '@Url.Action("AcceptRide", "Driver")',
+                type: 'POST',
+                data: {rideId: rideId},
+                success: function (response) {
+                    if (pendingRideRequestModal) {
+                        pendingRideRequestModal.hide();
+                        pendingRideRequestModal = null;
+                        currentRideRequestData = null;
+                    }
+
+                    console.log("Поїздку успішно прийнято, переходимо в активний режим");
+                    activeRideId = rideId;
+                    
+                    $("#rideStatusMessage").text("Їдемо до пасажира");
+                    $("#rideProgress").css("width", "10%");
+
+                    $("#arrivedButton").removeClass("d-none");
+                    $("#startRideButton").addClass("d-none");
+                    $("#completeRideButton").addClass("d-none");
+                    $("#cancelRideButton").removeClass("d-none");
+                },
+                error: function (xhr, status, error) {
+                    console.error("Ajax помилка:", status, error);
+                    console.error("Деталі:", xhr.responseText);
+                    alert("Помилка з'єднання з сервером");
+                }
+            });
+        }
+
+        function acceptScheduledRide(rideId) {
+            $.ajax({
+                url: '/Driver/AcceptScheduledRide',
+                type: 'POST',
+                data: {rideId: rideId},
+                success: function (response) {
+                    if (response.success) {
+                        const card = $(`.scheduled-ride[data-ride-id="${rideId}"]`);
+
+                        card.find(".accept-scheduled-btn")
+                            .removeClass("btn-warning btn-success")
+                            .addClass("btn-secondary")
+                            .prop("disabled", true)
+                            .text("Прийнято");
+
+                        if (!card.find('.assigned-badge').length) {
+                            card.find('.card-body').prepend(
+                                '<div class="alert alert-info py-1 mb-2 assigned-badge">Ви прийняли цю поїздку</div>'
+                            );
+                        }
+
+                        const requestCard = $(`.ride-request[data-ride-id="${rideId}"]`);
+                        if (requestCard.length > 0) {
+                            requestCard.fadeOut(300, function() {
+                                $(this).remove();
+                                checkNoRidesMessage();
+                            });
+                        }
+
+                        alert("Заплановану поїздку прийнято! Ви отримаєте повідомлення, коли настане час поїздки.");
+                    } else {
+                        if (response.message.includes("вже прийнята іншим водієм")) {
+                            $(`.scheduled-ride[data-ride-id="${rideId}"]`).fadeOut(300, function() {
+                                $(this).remove();
+                                checkNoScheduledRidesMessage();
+                            });
+
+                            $(`.ride-request[data-ride-id="${rideId}"]`).fadeOut(300, function() {
+                                $(this).remove();
+                                checkNoRidesMessage();
+                            });
+                        }
+
+                        alert("Помилка: " + response.message);
+                    }
+                },
+                error: function () {
+                    alert("Помилка з'єднання з сервером");
+                }
+            });
+        }
+
+        function resetRideUI() {
+            activeRideId = null;
+
+            if (startMarker) map.removeLayer(startMarker);
+            if (endMarker) map.removeLayer(endMarker);
+            if (routeLine) map.removeLayer(routeLine);
+
+            startMarker = null;
+            endMarker = null;
+            routeLine = null;
+
+            $("#noActiveRideSection").removeClass("d-none");
+            $("#activeRideSection").addClass("d-none");
+
+            $("#arrivedButton").removeClass("d-none");
+            $("#startRideButton").addClass("d-none");
+            $("#completeRideButton").addClass("d-none");
+            $("#cancelRideButton").removeClass("d-none");
+
+            $("#rideStatusMessage").text("");
+            $("#rideProgress").css("width", "0%");
+
+            if (driverMarker) {
+                map.setView(driverMarker.getLatLng(), 15);
+            }
+        }
+
+        $("#statusToggle").change(function () {
+            isOnline = $(this).is(":checked");
+            updateOnlineStatus();
+        });
+
+        let scheduledRidesCheckInterval = setInterval(function() {
+            if (isOnline && !activeRideId) {
+                checkScheduledRidesBecomingActive();
+            }
+        }, 30000);
+
+        function updateOnlineStatus() {
+            if (isOnline) {
+                $("#statusLabel").text("На зв'язку");
+                $("#activeStatus").removeClass("d-none");
+                $("#inactiveStatus").addClass("d-none");
+                startWatchingPosition();
+
+                connection.invoke("GoOnline")
+                    .then(function () {
+                        console.log("Встановлено статус: на зв'язку");
+
+                        loadActiveRideRequests();
+                        loadScheduledRides();
+                        checkScheduledRidesBecomingActive();
+                    })
+                    .catch(function (err) {
+                        console.error("Помилка при зміні статусу:", err);
+                    });
+            } else {
+                $("#statusLabel").text("Не на зв'язку");
+                $("#activeStatus").addClass("d-none");
+                $("#inactiveStatus").removeClass("d-none");
+                stopWatchingPosition();
+
+                connection.invoke("GoOffline")
+                    .then(function () {
+                        console.log("Встановлено статус: не на зв'язку");
+                    })
+                    .catch(function (err) {
+                        console.error("Помилка при зміні статусу:", err);
+                    });
+            }
+}
+
+        setInterval(function() {
+            if (isOnline && !activeRideId) {
+                checkScheduledRidesBecomingActive();
+            }
+        }, 60000);
+
+        function loadActiveRideRequests() {
+            if (!isOnline || activeRideId) return;
+
+            console.log("Завантаження активних запитів на поїздку...");
+
+            $.ajax({
+                url: '/Driver/GetActiveRideRequests',
+                type: 'GET',
+                success: function(response) {
+                    if (response.success && response.rides && response.rides.length > 0) {
+                        console.log("Отримано активні запити:", response.rides);
+
+                        $("#rideRequestsContainer").empty();
+
+                        response.rides.forEach(function(ride) {
+                            if (!ride.isScheduled && ride.status !== "Canceled") {
+                                addRideRequestCard(ride);
+                            }
+                        });
+
+                        if ($("#rideRequestsContainer").children().length === 0) {
+                            $("#noRidesMessage").removeClass("d-none");
+                        }
+                    } else {
+                        console.log("Активні запити відсутні");
+                        $("#noRidesMessage").removeClass("d-none");
+                    }
+                },
+                error: function(error) {
+                    console.error("Помилка при завантаженні активних запитів:", error);
+                }
+            });
+        }
+
+        $("#acceptRideModalBtn").click(function () {
+            if (currentRideRequestData) {
+                acceptRide(currentRideRequestData.rideId);
+            }
+            
+
+        });
+
+        $("#arrivedButton").click(function () {
+            if (!activeRideId) {
+                alert("Помилка: activeRideId не встановлено");
+                console.error("activeRideId не встановлено");
+                return;
+            }
+
+            console.log("Відправляємо запит з activeRideId:", activeRideId);
+
+            $.ajax({
+                url: '/Driver/ArriveAtPickup',
+                type: 'POST',
+                data: {rideId: activeRideId},
+                success: function (response) {
+                    console.log("Отримано відповідь:", response);
+                    if (response.success) {
+                        $("#arrivedButton").addClass("d-none");
+                        $("#startRideButton").removeClass("d-none");
+                        $("#rideStatusMessage").text("Очікуємо на пасажира");
+                        $("#rideProgress").css("width", "25%");
+                    } else {
+                        alert("Помилка: " + response.message);
+                        console.error("Помилка при обробці запиту:", response.message);
+                    }
+                },
+                error: function (xhr, status, error) {
+                    console.error("Ajax помилка:", status, error);
+                    console.error("Деталі:", xhr.responseText);
+                    alert("Помилка з'єднання з сервером: " + error);
+                }
+            });
+        });
+
+        $("#startRideButton").click(function () {
+            if (activeRideId) {
+                $.ajax({
+                    url: '@Url.Action("StartRide", "Driver")',
+                    type: 'POST',
+                    data: {rideId: activeRideId},
+                    success: function (response) {
+                        if (response.success) {
+                            $("#startRideButton").addClass("d-none");
+                            $("#completeRideButton").removeClass("d-none");
+                            $("#cancelRideButton").addClass("d-none");
+                            $("#rideStatusMessage").text("Поїздка розпочалась");
+                            $("#rideProgress").css("width", "50%");
+                        } else {
+                            alert("Помилка: " + response.message);
+                        }
+                    },
+                    error: function () {
+                        alert("Помилка з'єднання з сервером");
+                    }
+                });
+            }
+});
+
+        $("#completeRideButton").click(function () {
+            if (activeRideId) {
+                $.ajax({
+                    url: '@Url.Action("CompleteRide", "Driver")',
+                    type: 'POST',
+                    data: {rideId: activeRideId},
+                    success: function (response) {
+                        if (response.success) {
+                            $("#rideStatusMessage").text("Поїздку завершено");
+                            $("#rideProgress").css("width", "100%");
+
+                            setTimeout(function () {
+                                resetRideUI();
+                            }, 3000);
+                        } else {
+                            alert("Помилка: " + response.message);
+                        }
+                    },
+                    error: function () {
+                        alert("Помилка з'єднання з сервером");
+                    }
+                });
+            }
+            
+
+        });
+
+        $("#cancelRideButton").click(function () {
+            if (activeRideId) {
+                $.ajax({
+                    url: '@Url.Action("CancelRide", "Driver")',
+                    type: 'POST',
+                    data: { rideId: activeRideId },
+                    success: function (response) {
+                        if (response.success) {
+                            $("#rideStatusMessage").text("Поїздку скасовано");
+                            setTimeout(function () {
+                                resetRideUI();
+                            }, 3000);
+                        } else {
+                            alert(response.message);
+
+                            if (response.message.includes("розпочата")) {
+                                $("#cancelRideButton").addClass("d-none");
+                            }
+                        }
+                    },
+                    error: function () {
+                        alert("Помилка з'єднання з сервером");
+                    }
+                });
+            }
+});
+
+        function checkActiveRide() {
+            console.log("Перевіряємо активну поїздку...");
+
+            $.ajax({
+                url: '@Url.Action("GetActiveRide", "Driver")',
+                type: 'GET',
+                success: function (response) {
+                    console.log("Відповідь про активну поїздку:", response);
+
+                    if (response.success && response.ride) {
+                        console.log("Знайдено активну поїздку з ID:", response.ride.id);
+                        activeRideId = response.ride.id;
+
+                        $("#veteranName span").text(response.ride.veteranName);
+                        $("#startAddress").text(response.ride.startAddress);
+                        $("#endAddress").text(response.ride.endAddress);
+
+                        $("#noActiveRideSection").addClass("d-none");
+                        $("#activeRideSection").removeClass("d-none");
+
+                        startMarker = L.marker([response.ride.startLat, response.ride.startLng], {
+                            icon: L.icon({
+                                iconUrl: '/images/start-marker.png',
+                                iconSize: [32, 32],
+                                iconAnchor: [16, 32]
+                            })
+                        }).addTo(map);
+
+                        endMarker = L.marker([response.ride.endLat, response.ride.endLng], {
+                            icon: L.icon({
+                                iconUrl: '/images/end-marker.png',
+                                iconSize: [32, 32],
+                                iconAnchor: [16, 32]
+                            })
+                        }).addTo(map);
+
+                        fetchRoute(response.ride.startLat, response.ride.startLng,
+                            response.ride.endLat, response.ride.endLng);
+
+                        updateRideButtonsByStatus(response.ride.status);
+
+                        connection.invoke("JoinRide", activeRideId.toString())
+                            .then(() => console.log("Успішно приєднано до групи поїздки:", activeRideId))
+                            .catch(err => console.error("Помилка при долученні до групи поїздки:", err));
+                    } else {
+                        console.log("Активних поїздок не знайдено");
+                    }
+                },
+                error: function(xhr, status, error) {
+                    console.error("Помилка при перевірці активної поїздки:", status, error);
+                    console.error("Деталі:", xhr.responseText);
+                }
+            });
+        }
+
+        function updateRideButtonsByStatus(status) {
+            $("#arrivedButton").addClass("d-none");
+            $("#startRideButton").addClass("d-none");
+            $("#completeRideButton").addClass("d-none");
+            $("#cancelRideButton").addClass("d-none");
+
+            switch (status) {
+                case "Accepted":
+                    $("#arrivedButton").removeClass("d-none");
+                    $("#cancelRideButton").removeClass("d-none");
+                    $("#rideStatusMessage").text("Їдемо до пасажира");
+                    $("#rideProgress").css("width", "10%");
+                    break;
+                case "DriverArriving":
+                    $("#startRideButton").removeClass("d-none");
+                    $("#cancelRideButton").removeClass("d-none");
+                    $("#rideStatusMessage").text("Очікуємо на пасажира");
+                    $("#rideProgress").css("width", "25%");
+                    break;
+                case "InProgress":
+                    $("#completeRideButton").removeClass("d-none");
+                    $("#rideStatusMessage").text("Поїздка триває");
+                    $("#rideProgress").css("width", "50%");
+                    break;
+            }
+        }
+
+        function loadScheduledRides() {
+            if (!isOnline) return;
+
+            console.log("Завантаження запланованих поїздок...");
+
+            $.ajax({
+                url: '/Driver/GetScheduledRides',
+                type: 'GET',
+                success: function(response) {
+                    if (response.success && response.rides && response.rides.length > 0) {
+                        console.log("Отримано заплановані поїздки:", response.rides);
+
+                        $("#scheduledRidesListContainer").empty();
+                        $("#noScheduledRidesMessage").addClass("d-none");
+
+                        response.rides.forEach(function(ride) {
+                            const scheduledRideCard = `
+                        <div class="card mb-2 scheduled-ride" data-ride-id="${ride.rideId}">
+                            <div class="card-body p-3">
+                                <div class="d-flex justify-content-between align-items-start mb-2">
+                                    <h6 class="mb-0">На: ${ride.scheduledTime}</h6>
+                                    <span class="badge bg-warning">${ride.distanceKm} км</span>
+                                </div>
+                                <div class="mb-1">Від: ${ride.startAddress}</div>
+                                <div class="mb-2">До: ${ride.endAddress}</div>
+                                <div class="d-flex justify-content-between align-items-center">
+                                    <span class="text-success fw-bold">${ride.estimatedPrice} грн</span>
+                                    <button class="btn btn-sm btn-warning accept-scheduled-btn" 
+                                            data-ride-id="${ride.rideId}">Прийняти</button>
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                            $("#scheduledRidesListContainer").append(scheduledRideCard);
+                        });
+
+                        $(".accept-scheduled-btn").off("click").on("click", function () {
+                            const rideId = $(this).data("ride-id");
+                            acceptScheduledRide(rideId);
+                        });
+                    } else {
+                        console.log("Заплановані поїздки відсутні");
+                        $("#noScheduledRidesMessage").removeClass("d-none");
+                    }
+                },
+                error: function(error) {
+                    console.error("Помилка при завантаженні запланованих поїздок:", error);
+                }
+            });
+        }
+
+        function checkScheduledRidesBecomingActive() {
+            if (!isOnline || activeRideId) return;
+
+            console.log("Перевірка запланованих поїздок, час яких настав...");
+
+            $.ajax({
+                url: '/Driver/GetActiveScheduledRides',
+                type: 'GET',
+                success: function(response) {
+                    if (response.success && response.rides && response.rides.length > 0) {
+                        console.log("Заплановані поїздки, час яких настав:", response.rides);
+
+                        let hasAssignedToMe = false;
+
+                        response.rides.forEach(function(ride) {
+                            if (ride.driverAssigned) {
+                                console.log("Знайдено заплановану поїздку, прийняту цим водієм:", ride);
+                                hasAssignedToMe = true;
+
+                                if (!activeRideId) {
+                                    $(`.scheduled-ride[data-ride-id="${ride.rideId}"]`).fadeOut(300, function() {
+                                        $(this).remove();
+                                        checkNoScheduledRidesMessage();
+                                    });
+
+                                    startScheduledRide(ride.rideId);
+                                }
+                            } else {
+                                addRideRequestCard(ride);
+
+                                const scheduledCard = $(`.scheduled-ride[data-ride-id="${ride.rideId}"]`);
+                                if (scheduledCard.length > 0) {
+                                    scheduledCard.find('.badge')
+                                        .removeClass('bg-warning')
+                                        .addClass('bg-success')
+                                        .text('Час настав');
+
+                                    scheduledCard.find('.accept-scheduled-btn')
+                                        .removeClass('btn-warning')
+                                        .addClass('btn-success')
+                                        .text('Прийняти зараз');
+
+                                    if (!scheduledCard.find('.urgent-message').length) {
+                                        scheduledCard.find('.card-body').prepend(
+                                            '<div class="alert alert-success py-1 mb-2 urgent-message">Поїздка активна зараз!</div>'
+                                        );
+                                    }
+                                }
+                            }
+                        });
+
+                        if (hasAssignedToMe) {
+                            showScheduledRideNotification("Увага!", "Час вашої запланованої поїздки настав!");
+                        }
+                    }
+                },
+                error: function(error) {
+                    console.error("Помилка при перевірці активних запланованих поїздок:", error);
+                }
+            });
+        }
+
+        $(document).ready(function() {
+            checkActiveRide();
+        });
+    })
+</script>
+}

@@ -94,6 +94,19 @@ namespace veterans_site.Areas.Identity.Pages.Account
             [Display(Name = "Волонтерська організація")]
             [StringLength(100)]
             public string? VolunteerOrganization { get; set; }
+
+            // Нові поля для ролі водія
+            [Display(Name = "Модель автомобіля")]
+            [StringLength(100)]
+            public string? CarModel { get; set; }
+
+            [Display(Name = "Номер автомобіля")]
+            [RegularExpression(@"^[А-ЯІЇЄҐ]{2}\d{4}[А-ЯІЇЄҐ]{2}$", ErrorMessage = "Введіть номер у форматі: AA1234BB")]
+            public string? LicencePlate { get; set; }
+
+            [Display(Name = "Номер телефону")]
+            [RegularExpression(@"^\+380\d{9}$", ErrorMessage = "Введіть номер у форматі: +380XXXXXXXXX")]
+            public string? PhoneNumber { get; set; }
         }
 
         public async Task OnGetAsync(string returnUrl = null)
@@ -119,8 +132,16 @@ namespace veterans_site.Areas.Identity.Pages.Account
                     LastName = Input.LastName,
                     VeteranCertificateNumber = Input.SelectedRole == "Veteran" ? Input.VeteranCertificateNumber : null,
                     SpecialistType = Input.SelectedRole == "Specialist" ? Input.SpecialistType : null,
-                    VolunteerOrganization = Input.SelectedRole == "Volunteer" ? Input.VolunteerOrganization : null
+                    VolunteerOrganization = Input.SelectedRole == "Volunteer" ? Input.VolunteerOrganization : null,
+                    CarModel = Input.SelectedRole == "Driver" ? Input.CarModel : null,
+                    LicensePlate = Input.SelectedRole == "Driver" ? Input.LicencePlate : null
                 };
+
+                // Додаємо телефон окремо, оскільки це поле входить в базовий клас
+                if (Input.SelectedRole == "Driver" && !string.IsNullOrEmpty(Input.PhoneNumber))
+                {
+                    user.PhoneNumber = Input.PhoneNumber;
+                }
 
                 await _userStore.SetUserNameAsync(user, Input.Email, CancellationToken.None);
                 await _emailStore.SetEmailAsync(user, Input.Email, CancellationToken.None);
@@ -179,6 +200,31 @@ namespace veterans_site.Areas.Identity.Pages.Account
                 if (string.IsNullOrEmpty(Input.VolunteerOrganization))
                 {
                     ModelState.AddModelError("Input.VolunteerOrganization", "Вкажіть назву волонтерської організації");
+                }
+            }
+            else if (Input.SelectedRole == "Driver")
+            {
+                if (string.IsNullOrEmpty(Input.CarModel))
+                {
+                    ModelState.AddModelError("Input.CarModel", "Вкажіть модель автомобіля");
+                }
+        
+                if (string.IsNullOrEmpty(Input.LicencePlate))
+                {
+                    ModelState.AddModelError("Input.CarNumber", "Вкажіть номер автомобіля");
+                }
+                else if (!Regex.IsMatch(Input.LicencePlate, @"^[А-ЯІЇЄҐ]{2}\d{4}[А-ЯІЇЄҐ]{2}$"))
+                {
+                    ModelState.AddModelError("Input.CarNumber", "Введіть номер у форматі: AA1234BB");
+                }
+        
+                if (string.IsNullOrEmpty(Input.PhoneNumber))
+                {
+                    ModelState.AddModelError("Input.PhoneNumber", "Вкажіть номер телефону");
+                }
+                else if (!Regex.IsMatch(Input.PhoneNumber, @"^\+380\d{9}$"))
+                {
+                    ModelState.AddModelError("Input.PhoneNumber", "Введіть номер у форматі: +380XXXXXXXXX");
                 }
             }
         }

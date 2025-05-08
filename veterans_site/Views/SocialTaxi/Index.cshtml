@@ -1,0 +1,1106 @@
+@{
+ViewData["Title"] = "Соціальне таксі";
+}
+
+<div class="container mt-4">
+    <div class="row">
+        <div class="col-md-8">
+            <div class="card">
+                <div class="card-header">
+                    <h4>Соціальне таксі для ветеранів</h4>
+                </div>
+                <div class="card-body">
+                    <div id="taxiMap" style="height: 400px; width: 100%"></div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card">
+                <div class="card-header">
+                    <h5>Деталі поїздки</h5>
+                </div>
+                
+                <div class="card-body">
+                    <form id="rideForm">
+                        <div class="form-group mb-3">
+                            <label for="startAddress">Звідки</label>
+                            <div class="input-group">
+                                <input type="text" class="form-control" id="startAddress" placeholder="Адреса відправлення" required>
+                                <button type="button" id="getLocationBtn" class="btn btn-outline-secondary">
+                                    <i class="fas fa-location-arrow"></i> Моє місцезнаходження
+                                </button>
+                            </div>
+                        </div>
+                        <div class="form-group mb-3">
+                            <label for="endAddress">Куди</label>
+                            <input type="text" class="form-control" id="endAddress" placeholder="Адреса призначення" required>
+                        </div>
+
+                        <input type="hidden" id="startLatitude">
+                        <input type="hidden" id="startLongitude">
+                        <input type="hidden" id="endLatitude">
+                        <input type="hidden" id="endLongitude">
+                        
+                        <div class="card mb-3">
+                            <div class="card-header">
+                                <h5>Тип поїздки</h5>
+                            </div>
+                            <div class="card-body">
+                                <div class="btn-group w-100" role="group">
+                                    <input type="radio" class="btn-check" name="rideType" id="rideTypeNow" value="now" checked>
+                                    <label class="btn btn-outline-primary" for="rideTypeNow">Зараз</label>
+            
+                                    <input type="radio" class="btn-check" name="rideType" id="rideTypePlanned" value="planned">
+                                    <label class="btn btn-outline-primary" for="rideTypePlanned">Запланувати</label>
+                                </div>
+        
+                                <!-- Блок для запланованої поїздки -->
+                                <div id="plannedTimeBlock" class="mt-3 d-none">
+                                    <div class="form-group">
+                                        <label for="plannedDate">Дата поїздки</label>
+                                        <input type="date" class="form-control" id="plannedDate">
+                                    </div>
+                                    <div class="form-group mt-2">
+                                        <label for="plannedTime">Час поїздки</label>
+                                        <input type="time" class="form-control" id="plannedTime">
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div id="estimateSection" class="d-none mb-3">
+                            <div class="card bg-light">
+                                <div class="card-body">
+                                    <h6>Вартість</h6>
+                                    <div class="d-flex justify-content-between">
+                                        <span>Відстань:</span>
+                                        <span id="estimateDistance"></span>
+                                    </div>
+                                    <div class="d-flex justify-content-between">
+                                        <span>Час поїздки:</span>
+                                        <span id="estimateTime"></span>
+                                    </div>
+                                    <div class="d-flex justify-content-between">
+                                        <span>Вартість:</span>
+                                        <span id="estimatePrice"></span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="btn-group w-100 mb-3">
+                            <button type="button" id="getEstimateBtn" class="btn btn-outline-primary">Розрахувати відстань</button>
+                            <button type="button" id="requestRideBtn" class="btn btn-primary d-none">Замовити таксі</button>
+                            <button type="button" id="scheduledRideBtn" class="btn btn-success d-none">Запланувати поїздку</button>
+                        </div>
+                    </form>
+
+                    <div id="rideStatus" class="d-none">
+                        <div class="card bg-light mb-3">
+                            <div class="card-body">
+                                <h6>Статус поїздки: <span id="statusText" class="badge bg-warning">Очікування водія</span></h6>
+                                <div id="driverInfo" class="d-none">
+                                    <div class="d-flex align-items-center mb-2">
+                                        <div class="mr-3">
+                                            <img id="driverPhoto" src="/images/drivers/default.jpg" width="60" height="60" class="rounded-circle">
+                                        </div>
+                                        <div>
+                                            <h6 id="driverName">Ім'я водія</h6>
+                                            <div id="driverCar">Марка авто</div>
+                                            <div id="driverPlate">Номерний знак</div>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="progress mb-2">
+                                    <div id="progressBar" class="progress-bar progress-bar-striped progress-bar-animated" role="progressbar" style="width: 0%"></div>
+                                </div>
+                                <div id="rideMessage">Пошук водія...</div>
+                                <button id="cancelRideBtn" class="btn btn-sm btn-danger mt-2">Скасувати поїздку</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card mt-3">
+                <div class="card-body">
+                    <a href="@Url.Action("MyRides", "SocialTaxi")" class="btn btn-outline-secondary w-100">
+                        Мої поїздки
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script src="https://cdn.jsdelivr.net/npm/@@microsoft/signalr@5.0.0/dist/browser/signalr.min.js"></script>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.7.1/dist/leaflet.css"/>
+    <script src="https://unpkg.com/leaflet@1.7.1/dist/leaflet.js"></script>
+    <script src="https://unpkg.com/esri-leaflet@3.0.0/dist/esri-leaflet.js"></script>
+    <script src="https://unpkg.com/esri-leaflet-geocoder@3.0.0/dist/esri-leaflet-geocoder.js"></script>
+    <link rel="stylesheet" href="https://unpkg.com/esri-leaflet-geocoder@3.0.0/dist/esri-leaflet-geocoder.css">
+
+    <script>
+        $(document).ready(function() {
+            let map, startMarker, endMarker, driverMarker, routeLine;
+            let connection;
+            let currentRideId = null;
+            let debugEvents = true;
+            
+            setupSignalRConnection();
+
+            initMap();
+
+            $("#getEstimateBtn").click(getPriceEstimate);
+            $("#requestRideBtn").click(requestRide);
+            $("#cancelRideBtn").click(cancelRide);
+
+            function initMap() {
+                map = L.map('taxiMap').setView([49.422983, 26.987133], 12);
+
+                L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                    attribution: '&copy; OpenStreetMap contributors'
+                }).addTo(map);
+
+                const searchControl = L.esri.Geocoding.geosearch({
+                    position: 'topright',
+                    placeholder: 'Пошук адреси...',
+                    useMapBounds: false,
+                    providers: [
+                        L.esri.Geocoding.arcgisOnlineProvider({
+                            apikey: 'AAPK7c7c0b526b0d4b5fb7ea19522da29d1e4Tk7eaQpL7zLucKnGi-1qjgCKFDlEy-9k89bm5lxkO6LHDKrR21xFgSq_qHbdUxs' // Перевірте, чи цей ключ дійсний
+                        })
+                    ]
+                }).addTo(map);
+
+                map.on('click', function(e) {
+                    if (startMarker && isMarkerAtPoint(startMarker, e.latlng)) {
+                        removeStartPoint();
+                        return;
+                    }
+
+                    if (endMarker && isMarkerAtPoint(endMarker, e.latlng)) {
+                        removeEndPoint();
+                        return;
+                    }
+
+                    if (!startMarker) {
+                        const lat = e.latlng.lat;
+                        const lng = e.latlng.lng;
+                        console.log("Встановлюємо точку відправлення:", lat, lng);
+
+                        setStartPoint(lat, lng);
+
+                        reverseGeocode(lat, lng, function(address) {
+                            console.log("Отримана адреса для точки відправлення:", address);
+                            $("#startAddress").val(address);
+                        });
+                    } else if (!endMarker) {
+                        const lat = e.latlng.lat;
+                        const lng = e.latlng.lng;
+                        console.log("Встановлюємо точку призначення:", lat, lng);
+
+                        setEndPoint(lat, lng);
+
+                        reverseGeocode(lat, lng, function(address) {
+                            console.log("Отримана адреса для точки призначення:", address);
+                            $("#endAddress").val(address);
+                        });
+                    }
+                });
+
+                searchControl.on('results', function(data) {
+                    if (data.results.length > 0) {
+                        const result = data.results[0];
+
+                        if (!$("#startAddress").val()) {
+                            setStartPoint(result.latlng.lat, result.latlng.lng);
+                            $("#startAddress").val(result.text);
+                        } else if (!$("#endAddress").val()) {
+                            setEndPoint(result.latlng.lat, result.latlng.lng);
+                            $("#endAddress").val(result.text);
+                        }
+                    }
+                });
+
+                $("#startAddress").on('input', function() {
+                    const address = $(this).val();
+                    if (!address) {
+                        removeStartPoint();
+                    }
+                });
+
+                $("#startAddress").on('blur', function() {
+                    const address = $(this).val();
+                    if (address && !$("#startLatitude").val()) {
+                        geocodeAddress(address, function(lat, lng) {
+                            if (lat && lng) {
+                                setStartPoint(lat, lng);
+                            }
+                        });
+                    }
+                });
+
+                $("#endAddress").on('input', function() {
+                    const address = $(this).val();
+                    if (!address) {
+                        removeEndPoint();
+                    }
+                });
+
+                $("#endAddress").on('blur', function() {
+                    const address = $(this).val();
+                    if (address && !$("#endLatitude").val()) {
+                        geocodeAddress(address, function(lat, lng) {
+                            if (lat && lng) {
+                                setEndPoint(lat, lng);
+                            }
+                        });
+                    }
+                });
+            }
+
+            function isMarkerAtPoint(marker, latlng) {
+                const markerLatLng = marker.getLatLng();
+                const clickLatLng = latlng;
+
+                const markerPoint = map.latLngToContainerPoint(markerLatLng);
+                const clickPoint = map.latLngToContainerPoint(clickLatLng);
+
+                const dx = markerPoint.x - clickPoint.x;
+                const dy = markerPoint.y - clickPoint.y;
+                const distance = Math.sqrt(dx * dx + dy * dy);
+
+                return distance < 15;
+            }
+
+            function removeStartPoint() {
+                if (startMarker) {
+                    map.removeLayer(startMarker);
+                    startMarker = null;
+                    $("#startAddress").val('');
+                    $("#startLatitude").val('');
+                    $("#startLongitude").val('');
+                    updateRoute();
+
+                    console.log("Точку відправлення видалено");
+
+                    $("#estimateSection").addClass("d-none");
+                    $("#requestRideBtn").addClass("d-none");
+                }
+            }
+
+            function removeEndPoint() {
+                if (endMarker) {
+                    map.removeLayer(endMarker);
+                    endMarker = null;
+                    $("#endAddress").val('');
+                    $("#endLatitude").val('');
+                    $("#endLongitude").val('');
+                    updateRoute();
+
+                    console.log("Точку призначення видалено");
+
+                    $("#estimateSection").addClass("d-none");
+                    $("#requestRideBtn").addClass("d-none");
+                }
+            }
+
+            function setStartPoint(lat, lng) {
+                if (startMarker) {
+                    map.removeLayer(startMarker);
+                }
+
+                startMarker = L.marker([lat, lng], {
+                    icon: L.icon({
+                        iconUrl: '/images/start-marker.png',
+                        iconSize: [32, 32],
+                        iconAnchor: [16, 32]
+                    })
+                }).addTo(map);
+
+                $("#startLatitude").val(lat);
+                $("#startLongitude").val(lng);
+
+                map.setView([lat, lng], 15);
+
+                updateRoute();
+            }
+
+            function setEndPoint(lat, lng) {
+                if (endMarker) {
+                    map.removeLayer(endMarker);
+                }
+
+                endMarker = L.marker([lat, lng], {
+                    icon: L.icon({
+                        iconUrl: '/images/end-marker.png',
+                        iconSize: [32, 32],
+                        iconAnchor: [16, 32]
+                    })
+                }).addTo(map);
+
+                $("#endLatitude").val(lat);
+                $("#endLongitude").val(lng);
+
+                map.setView([lat, lng], 15);
+
+                updateRoute();
+            }
+
+            function updateRoute() {
+                if (routeLine) {
+                    map.removeLayer(routeLine);
+                }
+
+                if (startMarker && endMarker) {
+                    const startLatLng = startMarker.getLatLng();
+                    const endLatLng = endMarker.getLatLng();
+                    
+                    const url = `https://router.project-osrm.org/route/v1/driving/${startLatLng.lng},${startLatLng.lat};${endLatLng.lng},${endLatLng.lat}?overview=full&geometries=geojson`;
+
+                    $.ajax({
+                        url: url,
+                        type: 'GET',
+                        dataType: 'json',
+                        success: function(data) {
+                            if (data.code === 'Ok' && data.routes && data.routes.length > 0) {
+                                const coordinates = data.routes[0].geometry.coordinates;
+
+                                const routeCoordinates = coordinates.map(coord => L.latLng(coord[1], coord[0]));
+
+                                routeLine = L.polyline(routeCoordinates, {
+                                    color: '#4a89dc',
+                                    weight: 5,
+                                    opacity: 0.7
+                                }).addTo(map);
+
+                                map.fitBounds(routeLine.getBounds(), { padding: [50, 50] });
+
+                                const distance = data.routes[0].distance;
+                                const duration = data.routes[0].duration;
+
+                                console.log(`Маршрут побудовано: ${(distance/1000).toFixed(2)} км, ${Math.round(duration/60)} хв`);
+                            } else {
+                                console.error("Помилка побудови маршруту:", data);
+                                routeLine = L.polyline([startLatLng, endLatLng], {
+                                    color: '#ff6b6b',
+                                    weight: 4,
+                                    opacity: 0.7,
+                                    dashArray: '5, 10'
+                                }).addTo(map);
+
+                                map.fitBounds(routeLine.getBounds(), { padding: [50, 50] });
+                            }
+                        },
+                        error: function(xhr, status, error) {
+                            console.error("Помилка запиту до API маршрутизації:", error);
+                            routeLine = L.polyline([startLatLng, endLatLng], {
+                                color: '#ff6b6b',
+                                weight: 4,
+                                opacity: 0.7,
+                                dashArray: '5, 10'
+                            }).addTo(map);
+
+                            map.fitBounds(routeLine.getBounds(), { padding: [50, 50] });
+                        }
+                    });
+                }
+            }
+
+            function geocodeAddress(address, callback) {
+                console.log("Геокодування адреси:", address);
+
+                var url = `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(address)}&limit=1`;
+
+                $.ajax({
+                    url: url,
+                    type: 'GET',
+                    dataType: 'json',
+                    success: function(data) {
+                        if (data && data.length > 0) {
+                            const result = data[0];
+                            const lat = parseFloat(result.lat);
+                            const lng = parseFloat(result.lon);
+                            console.log("Знайдено координати:", { lat, lng });
+
+                            map.setView([lat, lng], 15);
+
+                            callback(lat, lng);
+                        } else {
+                            console.warn("Геокодер не знайшов результатів для адреси:", address);
+                            callback(null, null);
+                        }
+                    },
+                    error: function(error) {
+                        console.error("Помилка геокодування:", error);
+                        callback(null, null);
+                    }
+                });
+            }
+
+            function reverseGeocode(lat, lng, callback) {
+                var url = `https://nominatim.openstreetmap.org/reverse?format=jsonv2&lat=${lat}&lon=${lng}`;
+
+                $.ajax({
+                    url: url,
+                    type: 'GET',
+                    dataType: 'json',
+                    success: function(data) {
+                        if (data && data.display_name) {
+                            console.log("Знайдена адреса:", data.display_name);
+                            callback(data.display_name);
+                        } else {
+                            console.warn("Адреса не знайдена");
+                            callback(`${lat.toFixed(6)}, ${lng.toFixed(6)}`);
+                        }
+                    },
+                    error: function(error) {
+                        console.error("Помилка геокодування:", error);
+                        callback(`${lat.toFixed(6)}, ${lng.toFixed(6)}`);
+                    }
+                });
+            }
+
+            function getPriceEstimate() {
+                const startLat = $("#startLatitude").val();
+                const startLng = $("#startLongitude").val();
+                const endLat = $("#endLatitude").val();
+                const endLng = $("#endLongitude").val();
+
+                if (!startLat || !startLng || !endLat || !endLng) {
+                    alert("Будь ласка, вкажіть точки відправлення і прибуття");
+                    return;
+                }
+
+                const selectedType = $("input[name='rideType']:checked").val();
+                if (selectedType === "planned") {
+                    if (!validatePlannedDateTime()) {
+                        return;
+                    }
+                }
+
+                const url = `https://router.project-osrm.org/route/v1/driving/${startLng},${startLat};${endLng},${endLat}?overview=full&geometries=geojson`;
+
+                $.ajax({
+                    url: url,
+                    type: 'GET',
+                    dataType: 'json',
+                    success: function(routeData) {
+                        if (routeData.code === 'Ok' && routeData.routes && routeData.routes.length > 0) {
+                            const distance = routeData.routes[0].distance / 1000;
+                            const duration = Math.round(routeData.routes[0].duration / 60);
+
+                            $.ajax({
+                                url: '/SocialTaxi/GetEstimate',
+                                type: 'POST',
+                                contentType: 'application/json',
+                                data: JSON.stringify({
+                                    startLatitude: parseFloat(startLat),
+                                    startLongitude: parseFloat(startLng),
+                                    endLatitude: parseFloat(endLat),
+                                    endLongitude: parseFloat(endLng),
+                                    distanceKm: distance,
+                                    durationMinutes: duration
+                                }),
+                                success: function(response) {
+                                    if (response.success) {
+                                        $("#estimateDistance").text(distance.toFixed(2) + " км");
+                                        $("#estimateTime").text(duration + " хв");
+                                        $("#estimatePrice").text(response.estimatedPrice.toFixed(2) + " грн");
+
+                                        $("#estimateSection").removeClass("d-none");
+
+                                        $("#requestRideBtn").attr("data-price", response.estimatedPrice);
+                                        $("#requestRideBtn").attr("data-duration", duration);
+                                        $("#requestRideBtn").attr("data-distance", distance);
+
+                                        $("#scheduledRideBtn").attr("data-price", response.estimatedPrice);
+                                        $("#scheduledRideBtn").attr("data-duration", duration);
+                                        $("#scheduledRideBtn").attr("data-distance", distance);
+
+                                        window.estimatedPrice = response.estimatedPrice;
+                                        window.estimatedDuration = duration;
+                                        window.estimatedDistance = distance;
+
+                                        const selectedType = $("input[name='rideType']:checked").val();
+                                        if (selectedType === "planned") {
+                                            $("#scheduledRideBtn").removeClass("d-none");
+                                            $("#requestRideBtn").addClass("d-none");
+                                        } else {
+                                            $("#requestRideBtn").removeClass("d-none");
+                                            $("#scheduledRideBtn").addClass("d-none");
+                                        }
+                                    } else {
+                                        alert("Помилка отримання оцінки вартості: " + response.message);
+                                    }
+                                },
+                                error: function() {
+                                    alert("Помилка з'єднання з сервером");
+                                }
+                            });
+                        } else {
+                            alert("Не вдалося побудувати маршрут. Спробуйте інші адреси.");
+                        }
+                    },
+                    error: function() {
+                        alert("Помилка при отриманні даних маршруту");
+                    }
+                });
+            }
+
+            function requestRide() {
+                const startLat = $("#startLatitude").val();
+                const startLng = $("#startLongitude").val();
+                const endLat = $("#endLatitude").val();
+                const endLng = $("#endLongitude").val();
+                const startAddress = $("#startAddress").val();
+                const endAddress = $("#endAddress").val();
+
+                let estimatedPrice = $("#requestRideBtn").attr("data-price");
+                let estimatedDuration = $("#requestRideBtn").attr("data-duration");
+                let estimatedDistance = $("#requestRideBtn").attr("data-distance");
+
+                if (!estimatedPrice) estimatedPrice = $("#requestRideBtn").data("price");
+                if (!estimatedDuration) estimatedDuration = $("#requestRideBtn").data("duration");
+                if (!estimatedDistance) estimatedDistance = $("#requestRideBtn").data("distance");
+
+                if (!estimatedPrice && window.estimatedPrice) estimatedPrice = window.estimatedPrice;
+                if (!estimatedDuration && window.estimatedDuration) estimatedDuration = window.estimatedDuration;
+                if (!estimatedDistance && window.estimatedDistance) estimatedDistance = window.estimatedDistance;
+
+                if (!estimatedPrice) {
+                    const priceText = $("#estimatePrice").text();
+                    if (priceText) {
+                        estimatedPrice = parseFloat(priceText.replace(" грн", ""));
+                    }
+                }
+
+                if (!estimatedDuration) {
+                    const durationText = $("#estimateTime").text();
+                    if (durationText) {
+                        estimatedDuration = parseInt(durationText.replace(" хв", ""));
+                    }
+                }
+
+                if (!estimatedDistance) {
+                    const distanceText = $("#estimateDistance").text();
+                    if (distanceText) {
+                        estimatedDistance = parseFloat(distanceText.replace(" км", ""));
+                    }
+                }
+
+                if (!startLat || !startLng || !endLat || !endLng) {
+                    alert("Будь ласка, вкажіть точки відправлення і прибуття");
+                    return;
+                }
+
+                if (!estimatedPrice || !estimatedDuration || !estimatedDistance) {
+                    alert("Будь ласка, спочатку натисніть кнопку \"Розрахувати відстань\"");
+                    return;
+                }
+
+                console.log("Замовлення поїздки з параметрами:", {
+                    price: estimatedPrice,
+                    duration: estimatedDuration,
+                    distance: estimatedDistance
+                });
+
+                $.ajax({
+                    url: '@Url.Action("RequestRide", "SocialTaxi")',
+                    type: 'POST',
+                    contentType: 'application/json',
+                    data: JSON.stringify({
+                        StartAddress: startAddress,
+                        EndAddress: endAddress,
+                        StartLatitude: parseFloat(startLat),
+                        StartLongitude: parseFloat(startLng),
+                        EndLatitude: parseFloat(endLat),
+                        EndLongitude: parseFloat(endLng),
+                        EstimatedPrice: parseFloat(estimatedPrice),
+                        EstimatedDuration: parseInt(estimatedDuration),
+                        EstimatedDistance: parseFloat(estimatedDistance)
+                    }),
+                    success: function(response) {
+                        if (response.success) {
+                            console.log("Ride created with ID:", response.rideId);
+
+                            currentRideId = response.rideId;
+                            console.log("Current ride ID set to:", currentRideId);
+
+                            connection.invoke("JoinRide", currentRideId.toString())
+                                .then(function() {
+                                    $("#rideForm").addClass("d-none");
+                                    $("#rideStatus").removeClass("d-none");
+
+                                    updateRideStatusUI("Searching", "Пошук водія...");
+                                })
+                                .catch(function(err) {
+                                    console.error("Error joining ride:", err);
+                                });
+                        } else {
+                            alert("Помилка замовлення таксі: " + response.message);
+                        }
+                    },
+                    error: function(xhr, status, error) {
+                        console.error("Error details:", xhr.responseText);
+                        alert("Помилка з'єднання з сервером: " + xhr.status + " " + error);
+                    }
+                });
+            }
+
+            function cancelRide() {
+                if (!currentRideId) return;
+
+                $.ajax({
+                    url: '@Url.Action("CancelRide", "SocialTaxi")',
+                    type: 'POST',
+                    data: { rideId: currentRideId },
+                    success: function(response) {
+                        if (response.success) {
+                            connection.invoke("LeaveRide", currentRideId.toString());
+
+                            resetUI();
+
+                            alert("Поїздку скасовано");
+                        } else {
+                            alert("Помилка скасування поїздки: " + response.message);
+                        }
+                    },
+                    error: function() {
+                        alert("Помилка з'єднання з сервером");
+                    }
+                });
+            }
+
+            function setupSignalRConnection() {
+                connection = new signalR.HubConnectionBuilder()
+                    .withUrl("/taxiHub")
+                    .withAutomaticReconnect()
+                    .configureLogging(signalR.LogLevel.Debug)
+                    .build();
+
+                connection.onreconnecting(error => {
+                    console.log(`Відновлення підключення: ${error ? error.message : "Невідома помилка"}`);
+                });
+
+                connection.onreconnected(connectionId => {
+                    console.log(`Підключення відновлено. ID: ${connectionId}`);
+
+                    if (currentRideId) {
+                        connection.invoke("JoinRide", currentRideId.toString())
+                            .then(() => console.log(`Повторно приєднано до групи поїздки ${currentRideId}`))
+                            .catch(err => console.error(`Помилка при повторному приєднанні до групи: ${err}`));
+                    }
+                });
+
+                connection.onclose(error => {
+                    console.log(`Підключення закрито: ${error ? error.message : "Невідома причина"}`);
+                });
+
+                connection.on("JoinedRide", function(data) {
+                    console.log(`Успішно приєднано до групи поїздки ${data.rideId}`);
+                });
+
+                connection.on("RideAccepted", function(data) {
+                    console.log("Дані про прийняття поїздки:", data);
+
+                    if (data.rideId == currentRideId) {
+                        console.log("Оновлюємо інформацію про водія:", data);
+                        updateDriverInfo(data);
+
+                        setTimeout(function() {
+                            updateRideStatusUI("DriverArriving", "Водій їде до вас. Очікуйте!");
+                        }, 2000);
+                    }
+                });
+
+                connection.on("RideStatusUpdated", function(data) {
+                    console.log("Отримано оновлення статусу поїздки:", data);
+                    if (debugEvents) {
+                        console.log(`%cПодія RideStatusUpdated: ${JSON.stringify(data)}`, 'background: #ccf; color: #000');
+                    }
+
+                    const rideId = data.RideId || data.rideId;
+                    const status = data.Status || data.status;
+                    const message = data.Message || data.message;
+
+                    if (rideId == currentRideId) {
+                        console.log(`Оновлюємо статус: ${status}, повідомлення: ${message}`);
+
+                        let uiStatus = status;
+                        if (status === "DriverArrived" || (status === "PickupTime" && message.includes("прибув"))) {
+                            uiStatus = "DriverArrived";
+                        }
+
+                        updateRideStatusUI(uiStatus, message);
+
+                        if (status === "Completed" || status === "completed") {
+                            setTimeout(function() {
+                                resetUI();
+                                alert("Поїздку завершено! Дякуємо, що скористалися сервісом.");
+                            }, 3000);
+                        }
+                    }
+                });
+
+                connection.on("RideCancellationDisabled", function(data) {
+                    console.log("Скасування поїздки відключено:", data);
+
+                    if (data.RideId == currentRideId) {
+                        $("#cancelRideBtn").prop("disabled", true)
+                            .addClass("btn-secondary").removeClass("btn-danger")
+                            .attr("title", data.Message);
+                    }
+                });
+
+                connection.on("DriverLocationUpdated", function(data) {
+                    console.log("Оновлення позиції водія:", data);
+
+                    if (data.RideId == currentRideId) {
+                        updateDriverMarker(data.DriverLatitude, data.DriverLongitude);
+                        $("#progressBar").css("width", data.Progress + "%");
+                    }
+                });
+
+                connection.start()
+                    .then(function() {
+                        console.log("SignalR успішно підключено");
+
+                        setTimeout(function() {
+                            if (currentRideId) {
+                                console.log("Тестуємо оновлення статусу UI");
+                                updateRideStatusUI("DriverArriving", "Тестове повідомлення: Водій їде до вас!");
+                            }
+                        }, 2000);
+                    })
+                    .catch(function(err) {
+                        console.error("Помилка підключення SignalR:", err.toString());
+                    });
+            }
+
+            function updateDriverInfo(data) {
+                $("#driverName").text(data.driverName);
+                $("#driverCar").text(data.carModel);
+                $("#driverPlate").text(data.licensePlate);
+
+                if (data.driverPhoto) {
+                    $("#driverPhoto").attr("src", data.driverPhoto);
+                } else {
+                    $("#driverPhoto").attr("src", "/images/drivers/default.jpg");
+                }
+
+                $("#driverInfo").removeClass("d-none");
+
+                updateRideStatusUI("Accepted", `Водій прийняв замовлення. Скоро вирушить до вас.`);
+            }
+
+            function updateDriverMarker(lat, lng) {
+                if (driverMarker) {
+                    map.removeLayer(driverMarker);
+                }
+
+                driverMarker = L.marker([lat, lng], {
+                    icon: L.icon({
+                        iconUrl: '/images/car-marker.png',
+                        iconSize: [32, 32],
+                        iconAnchor: [16, 16]
+                    })
+                }).addTo(map);
+
+                if (startMarker && endMarker) {
+                    const bounds = L.latLngBounds([
+                        startMarker.getLatLng(),
+                        endMarker.getLatLng(),
+                        driverMarker.getLatLng()
+                    ]);
+                    map.fitBounds(bounds, { padding: [50, 50] });
+                }
+            }
+
+            function updateRideStatusUI(status, message) {
+                console.log("updateRideStatusUI викликано зі статусом:", status);
+
+                let statusClass = "bg-warning";
+                let statusText = "Очікування";
+
+                switch (status) {
+                    case "Searching":
+                        statusClass = "bg-warning";
+                        statusText = "Пошук водія";
+                        $("#cancelRideBtn").prop("disabled", false)
+                            .addClass("btn-danger").removeClass("btn-secondary")
+                            .attr("title", "");
+                        break;
+                    case "Accepted":
+                        statusClass = "bg-info";
+                        statusText = "Прийнято";
+                        $("#cancelRideBtn").prop("disabled", false)
+                            .addClass("btn-danger").removeClass("btn-secondary")
+                            .attr("title", "");
+                        break;
+                    case "DriverArriving":
+                        statusClass = "bg-info";
+                        statusText = "Водій їде до вас";
+                        $("#cancelRideBtn").prop("disabled", false)
+                            .addClass("btn-danger").removeClass("btn-secondary")
+                            .attr("title", "");
+                        break;
+                    case "DriverArrived":
+                        statusClass = "bg-success";
+                        statusText = "Водій прибув";
+                        $("#cancelRideBtn").prop("disabled", false)
+                            .addClass("btn-danger").removeClass("btn-secondary")
+                            .attr("title", "");
+                        break;
+                    case "InProgress":
+                        statusClass = "bg-primary";
+                        statusText = "В дорозі";
+                        $("#cancelRideBtn").prop("disabled", true)
+                            .addClass("btn-secondary").removeClass("btn-danger")
+                            .attr("title", "Не можна скасувати поїздку, що вже в процесі");
+                        break;
+                    case "Completed":
+                        statusClass = "bg-success";
+                        statusText = "Завершено";
+                        $("#cancelRideBtn").prop("disabled", true)
+                            .addClass("btn-secondary").removeClass("btn-danger")
+                            .attr("title", "Поїздку завершено");
+                        break;
+                    case "Canceled":
+                        statusClass = "bg-danger";
+                        statusText = "Скасовано";
+                        $("#cancelRideBtn").prop("disabled", true)
+                            .addClass("btn-secondary").removeClass("btn-danger")
+                            .attr("title", "Поїздку скасовано");
+                        break;
+                    case "NoDrivers":
+                        statusClass = "bg-danger";
+                        statusText = "Немає водіїв";
+                        $("#cancelRideBtn").prop("disabled", true)
+                            .addClass("btn-secondary").removeClass("btn-danger")
+                            .attr("title", "Немає доступних водіїв");
+                        break;
+                }
+
+                $("#statusText").removeClass().addClass("badge " + statusClass).text(statusText);
+                $("#rideMessage").text(message);
+            }
+
+            function resetUI() {
+                currentRideId = null;
+
+                $("#rideForm").removeClass("d-none");
+                $("#rideStatus").addClass("d-none");
+
+                $("#progressBar").css("width", "0%");
+
+                $("#driverInfo").addClass("d-none");
+
+                $("#cancelRideBtn").removeClass("d-none");
+
+                if (driverMarker) {
+                    map.removeLayer(driverMarker);
+                    driverMarker = null;
+                }
+            }
+
+            $("#getLocationBtn").click(function() {
+                if (navigator.geolocation) {
+                    $("#getLocationBtn").prop("disabled", true).html('<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Визначення...');
+
+                    navigator.geolocation.getCurrentPosition(
+                        function(position) {
+                            const lat = position.coords.latitude;
+                            const lng = position.coords.longitude;
+
+                            setStartPoint(lat, lng);
+
+                            reverseGeocode(lat, lng, function(address) {
+                                $("#startAddress").val(address);
+                                $("#getLocationBtn").prop("disabled", false).html('<i class="fas fa-location-arrow"></i> Моє місцезнаходження');
+                            });
+                        },
+                        function(error) {
+                            let errorMessage;
+                            switch(error.code) {
+                                case error.PERMISSION_DENIED:
+                                    errorMessage = "Доступ до геолокації відхилено. Дозвольте доступ у налаштуваннях браузера.";
+                                    break;
+                                case error.POSITION_UNAVAILABLE:
+                                    errorMessage = "Інформація про місцезнаходження недоступна.";
+                                    break;
+                                case error.TIMEOUT:
+                                    errorMessage = "Час очікування визначення місця вийшов.";
+                                    break;
+                                default:
+                                    errorMessage = "Сталася невідома помилка при визначенні місця.";
+                            }
+
+                            alert(errorMessage);
+                            $("#getLocationBtn").prop("disabled", false).html('<i class="fas fa-location-arrow"></i> Моє місцезнаходження');
+                        },
+                        { enableHighAccuracy: true, timeout: 10000 }
+                    );
+                } else {
+                    alert("Ваш браузер не підтримує геолокацію");
+                }
+            });
+
+            $("input[name='rideType']").change(function() {
+                const selectedType = $("input[name='rideType']:checked").val();
+
+                if (selectedType === "planned") {
+                    $("#plannedTimeBlock").removeClass("d-none");
+                    $("#requestRideBtn").addClass("d-none");
+                    $("#scheduledRideBtn").removeClass("d-none");
+                } else {
+                    $("#plannedTimeBlock").addClass("d-none");
+                    $("#scheduledRideBtn").addClass("d-none");
+                    $("#requestRideBtn").removeClass("d-none");
+                }
+            });
+
+            function validatePlannedDateTime() {
+                const selectedType = $("input[name='rideType']:checked").val();
+
+                if (selectedType !== "planned") {
+                    return true;
+                }
+
+                const plannedDate = $("#plannedDate").val();
+                const plannedTime = $("#plannedTime").val();
+
+                if (!plannedDate || !plannedTime) {
+                    alert("Будь ласка, вкажіть дату та час поїздки");
+                    return false;
+                }
+
+                const plannedDateTime = new Date(`${plannedDate}T${plannedTime}`);
+                const now = new Date();
+
+                if (plannedDateTime <= now) {
+                    alert("Запланований час поїздки повинен бути в майбутньому");
+                    return false;
+                }
+
+                return true;
+            }
+
+            $("#scheduledRideBtn").click(scheduleRide);
+
+            function scheduleRide() {
+                const startLat = $("#startLatitude").val();
+                const startLng = $("#startLongitude").val();
+                const endLat = $("#endLatitude").val();
+                const endLng = $("#endLongitude").val();
+                const startAddress = $("#startAddress").val();
+                const endAddress = $("#endAddress").val();
+
+                let estimatedPrice = $("#scheduledRideBtn").attr("data-price");
+                let estimatedDuration = $("#scheduledRideBtn").attr("data-duration");
+                let estimatedDistance = $("#scheduledRideBtn").attr("data-distance");
+
+                if (!estimatedPrice) estimatedPrice = $("#scheduledRideBtn").data("price");
+                if (!estimatedDuration) estimatedDuration = $("#scheduledRideBtn").data("duration");
+                if (!estimatedDistance) estimatedDistance = $("#scheduledRideBtn").data("distance");
+
+                if (!estimatedPrice && window.estimatedPrice) estimatedPrice = window.estimatedPrice;
+                if (!estimatedDuration && window.estimatedDuration) estimatedDuration = window.estimatedDuration;
+                if (!estimatedDistance && window.estimatedDistance) estimatedDistance = window.estimatedDistance;
+
+                if (!estimatedPrice) {
+                    const priceText = $("#estimatePrice").text();
+                    if (priceText) {
+                        estimatedPrice = parseFloat(priceText.replace(" грн", ""));
+                    }
+                }
+
+                if (!estimatedDuration) {
+                    const durationText = $("#estimateTime").text();
+                    if (durationText) {
+                        estimatedDuration = parseInt(durationText.replace(" хв", ""));
+                    }
+                }
+
+                if (!estimatedDistance) {
+                    const distanceText = $("#estimateDistance").text();
+                    if (distanceText) {
+                        estimatedDistance = parseFloat(distanceText.replace(" км", ""));
+                    }
+                }
+
+                if (!startLat || !startLng || !endLat || !endLng) {
+                    alert("Будь ласка, вкажіть точки відправлення і прибуття");
+                    return;
+                }
+
+                if (!estimatedPrice || !estimatedDuration || !estimatedDistance) {
+                    alert("Будь ласка, спочатку натисніть кнопку \"Розрахувати відстань\"");
+                    return;
+                }
+
+                console.log("Scheduling ride with values:", {
+                    price: estimatedPrice,
+                    duration: estimatedDuration,
+                    distance: estimatedDistance
+                });
+
+                if (!validatePlannedDateTime()) {
+                    return;
+                }
+
+                const plannedDate = $("#plannedDate").val();
+                const plannedTime = $("#plannedTime").val();
+                const scheduledTime = new Date(`${plannedDate}T${plannedTime}`);
+
+                const timezoneOffset = scheduledTime.getTimezoneOffset() * 60000;
+                const adjustedTime = new Date(scheduledTime.getTime() - timezoneOffset);
+
+                $.ajax({
+                    url: '/SocialTaxi/ScheduleRide',
+                    type: 'POST',
+                    contentType: 'application/json',
+                    data: JSON.stringify({
+                        StartAddress: startAddress,
+                        EndAddress: endAddress,
+                        StartLatitude: parseFloat(startLat),
+                        StartLongitude: parseFloat(startLng),
+                        EndLatitude: parseFloat(endLat),
+                        EndLongitude: parseFloat(endLng),
+                        EstimatedPrice: parseFloat(estimatedPrice),
+                        EstimatedDuration: parseInt(estimatedDuration),
+                        EstimatedDistance: parseFloat(estimatedDistance),
+                        ScheduledTime: adjustedTime.toISOString()
+                    }),
+                    success: function(response) {
+                        if (response.success) {
+                            console.log("Scheduled ride created with ID:", response.rideId);
+                            window.location.href = "/SocialTaxi/MyRides";
+                        } else {
+                            alert("Помилка планування поїздки: " + response.message);
+                        }
+                    },
+                    error: function(xhr, status, error) {
+                        console.error("Error details:", xhr.responseText);
+
+                        let errorMessage = "Помилка з'єднання з сервером";
+                        try {
+                            const errorResponse = JSON.parse(xhr.responseText);
+                            if (errorResponse && errorResponse.errors) {
+                                errorMessage = "Помилка: " + Object.values(errorResponse.errors).join(". ");
+                            } else if (errorResponse && errorResponse.message) {
+                                errorMessage = errorResponse.message;
+                            }
+                        } catch (e) {
+                            errorMessage = "Помилка відправки даних. Перевірте правильність заповнення всіх полів.";
+                        }
+
+                        alert(errorMessage);
+                    }
+                });
+            }
+        });
+    </script>
+}

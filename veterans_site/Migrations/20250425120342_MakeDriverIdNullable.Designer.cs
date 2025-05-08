@@ -3,6 +3,7 @@ using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using veterans_site.Data;
 
@@ -11,9 +12,11 @@ using veterans_site.Data;
 namespace veterans_site.Migrations
 {
     [DbContext(typeof(VeteranSupportDbContext))]
-    partial class VeteranSupportDBContextModelSnapshot : ModelSnapshot
+    [Migration("20250425120342_MakeDriverIdNullable")]
+    partial class MakeDriverIdNullable
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -233,18 +236,9 @@ namespace veterans_site.Migrations
                     b.Property<string>("AvatarPath")
                         .HasColumnType("nvarchar(max)");
 
-                    b.Property<string>("CarModel")
-                        .HasColumnType("nvarchar(max)");
-
                     b.Property<string>("ConcurrencyStamp")
                         .IsConcurrencyToken()
                         .HasColumnType("nvarchar(max)");
-
-                    b.Property<double?>("CurrentLatitude")
-                        .HasColumnType("float");
-
-                    b.Property<double?>("CurrentLongitude")
-                        .HasColumnType("float");
 
                     b.Property<string>("Email")
                         .HasMaxLength(256)
@@ -263,9 +257,6 @@ namespace veterans_site.Migrations
                         .HasColumnType("bit")
                         .HasDefaultValue(true);
 
-                    b.Property<bool?>("IsAvailable")
-                        .HasColumnType("bit");
-
                     b.Property<bool>("IsOnline")
                         .HasColumnType("bit");
 
@@ -276,9 +267,6 @@ namespace veterans_site.Migrations
 
                     b.Property<DateTime>("LastOnline")
                         .HasColumnType("datetime2");
-
-                    b.Property<string>("LicensePlate")
-                        .HasColumnType("nvarchar(max)");
 
                     b.Property<bool>("LockoutEnabled")
                         .HasColumnType("bit");
@@ -302,9 +290,6 @@ namespace veterans_site.Migrations
 
                     b.Property<bool>("PhoneNumberConfirmed")
                         .HasColumnType("bit");
-
-                    b.Property<double?>("Rating")
-                        .HasColumnType("float");
 
                     b.Property<DateTime>("RegistrationDate")
                         .ValueGeneratedOnAdd()
@@ -983,6 +968,89 @@ namespace veterans_site.Migrations
                     b.ToTable("SavedJobs");
                 });
 
+            modelBuilder.Entity("veterans_site.Models.TaxiDriver", b =>
+                {
+                    b.Property<string>("Id")
+                        .HasColumnType("nvarchar(450)");
+
+                    b.Property<string>("CarModel")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<double>("CurrentLatitude")
+                        .HasColumnType("float");
+
+                    b.Property<double>("CurrentLongitude")
+                        .HasColumnType("float");
+
+                    b.Property<bool>("IsAvailable")
+                        .HasColumnType("bit");
+
+                    b.Property<string>("LicensePlate")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("PhoneNumber")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("PhotoUrl")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<double>("Rating")
+                        .HasColumnType("float");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("TaxiDrivers");
+
+                    b.HasData(
+                        new
+                        {
+                            Id = "driver1",
+                            CarModel = "Toyota Camry",
+                            CurrentLatitude = 50.450099999999999,
+                            CurrentLongitude = 30.523399999999999,
+                            IsAvailable = true,
+                            LicensePlate = "АА1234ВВ",
+                            Name = "Олександр Петренко",
+                            PhoneNumber = "+380991234567",
+                            PhotoUrl = "/images/drivers/driver1.jpg",
+                            Rating = 4.7999999999999998
+                        },
+                        new
+                        {
+                            Id = "driver2",
+                            CarModel = "Hyundai Sonata",
+                            CurrentLatitude = 50.451999999999998,
+                            CurrentLongitude = 30.530000000000001,
+                            IsAvailable = true,
+                            LicensePlate = "АА5678ВС",
+                            Name = "Сергій Коваленко",
+                            PhoneNumber = "+380992345678",
+                            PhotoUrl = "/images/drivers/driver2.jpg",
+                            Rating = 4.7000000000000002
+                        },
+                        new
+                        {
+                            Id = "driver3",
+                            CarModel = "Volkswagen Passat",
+                            CurrentLatitude = 50.447000000000003,
+                            CurrentLongitude = 30.518000000000001,
+                            IsAvailable = true,
+                            LicensePlate = "АА9012ВТ",
+                            Name = "Іван Мельник",
+                            PhoneNumber = "+380993456789",
+                            PhotoUrl = "/images/drivers/driver3.jpg",
+                            Rating = 4.9000000000000004
+                        });
+                });
+
             modelBuilder.Entity("veterans_site.Models.TaxiRide", b =>
                 {
                     b.Property<int>("Id")
@@ -993,6 +1061,9 @@ namespace veterans_site.Migrations
 
                     b.Property<DateTime?>("AcceptTime")
                         .HasColumnType("datetime2");
+
+                    b.Property<double>("ActualPrice")
+                        .HasColumnType("float");
 
                     b.Property<DateTime?>("CompleteTime")
                         .HasColumnType("datetime2");
@@ -1010,19 +1081,13 @@ namespace veterans_site.Migrations
                     b.Property<double>("EndLongitude")
                         .HasColumnType("float");
 
-                    b.Property<double>("EstimatedDistance")
+                    b.Property<double>("EstimatedPrice")
                         .HasColumnType("float");
-
-                    b.Property<int>("EstimatedDuration")
-                        .HasColumnType("int");
 
                     b.Property<DateTime?>("PickupTime")
                         .HasColumnType("datetime2");
 
                     b.Property<DateTime>("RequestTime")
-                        .HasColumnType("datetime2");
-
-                    b.Property<DateTime?>("ScheduledTime")
                         .HasColumnType("datetime2");
 
                     b.Property<string>("StartAddress")
@@ -1383,7 +1448,7 @@ namespace veterans_site.Migrations
 
             modelBuilder.Entity("veterans_site.Models.TaxiRide", b =>
                 {
-                    b.HasOne("veterans_site.Models.ApplicationUser", "Driver")
+                    b.HasOne("veterans_site.Models.TaxiDriver", "Driver")
                         .WithMany("Rides")
                         .HasForeignKey("DriverId")
                         .OnDelete(DeleteBehavior.Restrict);
@@ -1407,8 +1472,6 @@ namespace veterans_site.Migrations
 
                     b.Navigation("ReceivedMessages");
 
-                    b.Navigation("Rides");
-
                     b.Navigation("SentMessages");
                 });
 
@@ -1431,6 +1494,11 @@ namespace veterans_site.Migrations
                     b.Navigation("Applications");
 
                     b.Navigation("SavedJobs");
+                });
+
+            modelBuilder.Entity("veterans_site.Models.TaxiDriver", b =>
+                {
+                    b.Navigation("Rides");
                 });
 #pragma warning restore 612, 618
         }

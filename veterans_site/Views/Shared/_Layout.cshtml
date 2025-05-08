@@ -15,6 +15,7 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/toastr.js/latest/toastr.min.css" />
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <link rel="stylesheet" href="https://unpkg.com/leaflet-routing-machine@3.2.12/dist/leaflet-routing-machine.css" />
     @RenderSection("Styles", required: false)
     <style>
         body {
@@ -304,6 +305,26 @@
                             <i class="fas fa-newspaper me-1"></i> Новини
                         </a>
                     </li>
+                    
+                    @if (User.IsInRole("Driver"))
+                    {
+                        <li class="nav-item">
+                            <a class="nav-link @(ViewContext.RouteData.Values["controller"]?.ToString() == "Driver" ? "active" : "")"
+                               asp-area="" asp-controller="Driver" asp-action="Index">
+                                <i class="fas fa-taxi me-1"></i> Таксі
+                            </a>
+                        </li>
+                    }
+
+                    @if (User.IsInRole("Veteran"))
+                    {
+                        <li class="nav-item">
+                            <a class="nav-link @(ViewContext.RouteData.Values["controller"]?.ToString() == "SocialTaxi" ? "active" : "")"
+                               asp-area="" asp-controller="SocialTaxi" asp-action="Index">
+                                <i class="fas fa-taxi me-1"></i> Таксі
+                            </a>
+                        </li>
+                    }
 
                     @if (SignInManager.IsSignedIn(User))
                     {
@@ -316,7 +337,7 @@
                         
                         <li class="nav-item">
                             <a class="nav-link @(ViewContext.RouteData.Values["controller"]?.ToString() == "Chat" ? "active" : "")"
-                               asp-controller="Chat" asp-action="Index">
+                               asp-controller="Chat" asp-area="" asp-action="Index">
                                 <i class="fas fa-comments me-1"></i> Чат для спілкування
                                 <span id="chat-notification" class="badge bg-danger rounded-pill" style="display: none;"></span>
                             </a>
@@ -478,12 +499,16 @@
 <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/toastr.js/latest/toastr.min.js"></script>
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script src="https://unpkg.com/leaflet-routing-machine@3.2.12/dist/leaflet-routing-machine.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/polyline/1.0.0/polyline.min.js"></script>
 
 @await RenderSectionAsync("Scripts", required: false)
 
 <div id="unread-messages-toast" class="position-fixed bottom-0 end-0 p-3" style="z-index: 1050; display: none;"></div>
 <script>
     $(function() {
+        window.ajaxRequestInProgress = false;
+
         toastr.options = {
             closeButton: true,
             progressBar: true,
@@ -499,13 +524,22 @@
             hideMethod: 'fadeOut'
         };
 
-        @if (TempData["Success"] != null)
+        @if (!string.IsNullOrEmpty(TempData["Success"]?.ToString()) && !ViewBag.AjaxRequest)
         {
-            <text>toastr.success('@TempData["Success"]');</text>
+            <text>
+                if (!window.ajaxRequestInProgress) {
+                    toastr.success('@TempData["Success"]');
+                }
+            </text>
         }
-        @if (TempData["Error"] != null)
+
+        @if (!string.IsNullOrEmpty(TempData["Error"]?.ToString()) && !ViewBag.AjaxRequest)
         {
-            <text>toastr.error('@TempData["Error"]');</text>
+            <text>
+                if (!window.ajaxRequestInProgress) {
+                    toastr.error('@TempData["Error"]');
+                }
+            </text>
         }
 
         function showCustomToast(type, title, message) {
@@ -513,19 +547,19 @@
             const toastId = 'toast-' + Date.now();
 
             const toast = $(`
-                <div id="${toastId}" class="toast show" role="alert" aria-live="assertive" aria-atomic="true">
-                    <div class="toast-header bg-${type} text-white">
-                        <strong class="me-auto">${title}</strong>
-                        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="toast" aria-label="Close"></button>
-                    </div>
-                    <div class="toast-body bg-${type} bg-opacity-90 text-white">
-                        ${message}
-                        <div class="toast-progress">
-                            <div class="toast-progress-bar"></div>
-                        </div>
+            <div id="${toastId}" class="toast show" role="alert" aria-live="assertive" aria-atomic="true">
+                <div class="toast-header bg-${type} text-white">
+                    <strong class="me-auto">${title}</strong>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="toast" aria-label="Close"></button>
+                </div>
+                <div class="toast-body bg-${type} bg-opacity-90 text-white">
+                    ${message}
+                    <div class="toast-progress">
+                        <div class="toast-progress-bar"></div>
                     </div>
                 </div>
-            `);
+            </div>
+        `);
 
             toastContainer.append(toast);
 

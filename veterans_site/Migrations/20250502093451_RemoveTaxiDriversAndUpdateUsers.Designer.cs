@@ -3,6 +3,7 @@ using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using veterans_site.Data;
 
@@ -11,9 +12,11 @@ using veterans_site.Data;
 namespace veterans_site.Migrations
 {
     [DbContext(typeof(VeteranSupportDbContext))]
-    partial class VeteranSupportDBContextModelSnapshot : ModelSnapshot
+    [Migration("20250502093451_RemoveTaxiDriversAndUpdateUsers")]
+    partial class RemoveTaxiDriversAndUpdateUsers
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -994,6 +997,9 @@ namespace veterans_site.Migrations
                     b.Property<DateTime?>("AcceptTime")
                         .HasColumnType("datetime2");
 
+                    b.Property<double>("ActualPrice")
+                        .HasColumnType("float");
+
                     b.Property<DateTime?>("CompleteTime")
                         .HasColumnType("datetime2");
 
@@ -1015,6 +1021,9 @@ namespace veterans_site.Migrations
 
                     b.Property<int>("EstimatedDuration")
                         .HasColumnType("int");
+
+                    b.Property<double>("EstimatedPrice")
+                        .HasColumnType("float");
 
                     b.Property<DateTime?>("PickupTime")
                         .HasColumnType("datetime2");

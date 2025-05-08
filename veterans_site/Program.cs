@@ -75,10 +75,13 @@ builder.Services.AddScoped<IJobRepository, JobRepository>();
 builder.Services.AddScoped<IJobApplicationRepository, JobApplicationRepository>();
 builder.Services.AddScoped<IResumeRepository, ResumeRepository>();
 builder.Services.AddScoped<ISavedJobRepository, SavedJobRepository>();
+builder.Services.AddScoped<ISocialTaxiRepository, SocialTaxiRepository>();
+
 builder.Services.AddScoped<GoogleCalendarService>();
 builder.Services.AddScoped<IPDFService, PDFService>();
 builder.Services.AddHttpClient<IJoobleService, JoobleService>();
 builder.Services.AddScoped<IJoobleService, JoobleService>();
+builder.Services.AddHttpClient<UberApiService>();
 
 builder.Services.AddDataProtection();
 
@@ -92,11 +95,14 @@ builder.Services.AddControllersWithViews();
 builder.Services.AddAuthorizationBuilder()
     .AddPolicy("RequireAdminRole", policy => policy.RequireRole("Admin"))
     .AddPolicy("RequireVeteranRole", policy => policy.RequireRole("Veteran"))
-    .AddPolicy("RequireSpecialistRole", policy => policy.RequireRole("Specialist"));
+    .AddPolicy("RequireSpecialistRole", policy => policy.RequireRole("Specialist"))
+    .AddPolicy("RequireDriverRole", policy => policy.RequireRole("Driver"));
 
 builder.Services.AddHostedService<ConsultationBackgroundService>();
 builder.Services.AddHostedService<EventBackgroundService>();
 builder.Services.AddHostedService<JoobleBackgroundService>();
+builder.Services.AddHostedService<ScheduledRidesService>();
+builder.Services.AddHostedService<ScheduledRidesWorker>();
 
 builder.Services.AddAuthorization(options =>
 {
@@ -154,5 +160,6 @@ app.MapDefaultControllerRoute();
 app.MapRazorPages();
 
 app.MapHub<ChatHub>("/chatHub");
+app.MapHub<TaxiHub>("/taxiHub");
 
 app.Run();

@@ -1,21 +1,26 @@
-﻿using MailKit.Security;
+﻿using System.Net;
+using System.Net.Mail;
+using MailKit.Security;
 using Microsoft.Extensions.Options;
 using MimeKit;
 using veterans_site.Models;
-using MailKit.Net.Smtp;
 using veterans_site.Extensions;
+using SmtpClient = MailKit.Net.Smtp.SmtpClient;
 
 namespace veterans_site.Services
 {
     public class EmailService : IEmailService
     {
         private readonly EmailSettings _emailSettings;
+        private readonly IConfiguration _configuration;
+
         private readonly ILogger<EmailService> _logger;
 
-        public EmailService(IOptions<EmailSettings> emailSettings, ILogger<EmailService> logger)
+        public EmailService(IOptions<EmailSettings> emailSettings, ILogger<EmailService> logger, IConfiguration configuration)
         {
             _emailSettings = emailSettings.Value;
             _logger = logger;
+            _configuration = configuration;
         }
 
         public async Task SendConsultationConfirmationAsync(
@@ -612,6 +617,42 @@ namespace veterans_site.Services
             {
                 _logger.LogError($"Error sending registration confirmation email: {ex.Message}");
                 throw;
+            }
+        }
+        
+        public async Task<bool> SendEmailAsync(string to, string subject, string htmlBody)
+        {
+            try
+            {
+                var email = new MimeMessage();
+                email.From.Add(new MailboxAddress(
+                    _configuration["Email:SenderName"], 
+                    _configuration["Email:FromEmail"]));
+                email.To.Add(MailboxAddress.Parse(to));
+                email.Subject = subject;
+
+                var builder = new BodyBuilder();
+                builder.HtmlBody = htmlBody;
+                email.Body = builder.ToMessageBody();
+
+                using var smtp = new SmtpClient();
+                await smtp.ConnectAsync(
+                    _configuration["Email:SmtpServer"], 
+                    int.Parse(_configuration["Email:SmtpPort"]), 
+                    SecureSocketOptions.StartTls);
+                await smtp.AuthenticateAsync(
+                    _configuration["Email:Username"], 
+                    _configuration["Email:Password"]);
+                await smtp.SendAsync(email);
+                await smtp.DisconnectAsync(true);
+
+                _logger.LogInformation($"Email успішно надіслано на адресу {to}");
+                return true;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError($"Помилка при відправці email: {ex.Message}");
+                return false;
             }
         }
     }

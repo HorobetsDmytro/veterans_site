@@ -1,0 +1,461 @@
+@using veterans_site.Extensions
+@model veterans_site.Models.TaxiRide
+@{
+ViewData["Title"] = "Деталі поїздки";
+}
+
+<div class="container mt-4">
+    <div class="row">
+        <div class="col-md-8">
+            <div class="card mb-4">
+                <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
+                    <h4>Деталі поїздки</h4>
+                    <span class="badge bg-light text-dark">@Model.Status.GetDisplayName()</span>
+                </div>
+                <div class="card-body">
+                    <div id="rideMap" style="height: 400px; width: 100%; margin-bottom: 20px;"></div>
+
+                    <div class="row">
+                        <div class="col-md-6">
+                            <h5 class="mb-3">Інформація про поїздку</h5>
+                            <dl class="row">
+                                <dt class="col-sm-5">Дата запиту:</dt>
+                                <dd class="col-sm-7">@Model.RequestTime.ToString("dd.MM.yyyy HH:mm")</dd>
+
+                                @if (Model.ScheduledTime.HasValue)
+                                {
+                                <dt class="col-sm-5">Запланований час:</dt>
+                                <dd class="col-sm-7">@Model.ScheduledTime.Value.ToString("dd.MM.yyyy HH:mm")</dd>
+                                }
+
+                                @if (Model.AcceptTime.HasValue)
+                                {
+                                <dt class="col-sm-5">Час прийняття:</dt>
+                                <dd class="col-sm-7">@Model.AcceptTime.Value.ToString("dd.MM.yyyy HH:mm")</dd>
+                                }
+
+                                @if (Model.PickupTime.HasValue)
+                                {
+                                <dt class="col-sm-5">Час початку:</dt>
+                                <dd class="col-sm-7">@Model.PickupTime.Value.ToString("dd.MM.yyyy HH:mm")</dd>
+                                }
+
+                                @if (Model.CompleteTime.HasValue)
+                                {
+                                    <dt class="col-sm-5">Час завершення:</dt>
+                                    <dd class="col-sm-7">@Model.CompleteTime.Value.ToString("dd.MM.yyyy HH:mm")</dd>
+                                }
+
+                                <dt class="col-sm-5">Відстань:</dt>
+                                <dd class="col-sm-7">@Model.EstimatedDistance.ToString("F1") км</dd>
+
+                                @if (Model.Status == TaxiRideStatus.Completed)
+                                {
+                                    <dt class="col-sm-5">Вартість:</dt>
+                                    <dd class="col-sm-7">0 грн</dd>
+                                }
+                            </dl>
+                        </div>
+
+                        <div class="col-md-6">
+                            <h5 class="mb-3">Маршрут</h5>
+                            <div class="mb-3">
+                                <div class="fw-bold mb-1">Початкова адреса:</div>
+                                <div class="p-2 bg-light rounded">@Model.StartAddress</div>
+                            </div>
+                            <div class="mb-3">
+                                <div class="fw-bold mb-1">Кінцева адреса:</div>
+                                <div class="p-2 bg-light rounded">@Model.EndAddress</div>
+                            </div>
+
+                            @if (Model.Veteran != null)
+                            {
+                            <h5 class="mb-3 mt-4">Інформація про пасажира</h5>
+                            <div class="d-flex align-items-center mb-3">
+                                <div class="flex-shrink-0">
+                                    <img src="@(string.IsNullOrEmpty(Model.Veteran.AvatarPath) ? "/images/profile/default.jpg" : Model.Veteran.AvatarPath)"
+                                         class="rounded-circle" alt="Фото пасажира" width="64" height="64">
+                                </div>
+                                <div class="flex-grow-1 ms-3">
+                                    <h6 class="mb-0">@Model.Veteran.FirstName @Model.Veteran.LastName</h6>
+                                    <p class="text-muted mb-0">@Model.Veteran.PhoneNumber</p>
+                                </div>
+                            </div>
+                            }
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            @if (Model.Status == TaxiRideStatus.Requested)
+            {
+                <div class="card mb-4">
+                    <div class="card-body">
+                        <h5 class="mb-3">Прийняти поїздку</h5>
+                        <p>Якщо вам підходить ця поїздка, ви можете прийняти її зараз.</p>
+                        <form asp-action="AcceptRide" asp-controller="Driver" asp-route-returnUrl="@Url.Action("Index", "Driver")" method="post">
+                            <input type="hidden" name="rideId" value="@Model.Id" />
+                            <button type="submit" class="btn btn-success">Прийняти поїздку</button>
+                        </form>
+                    </div>
+                </div>
+            }
+            else if (Model.Status == TaxiRideStatus.Accepted || Model.Status == TaxiRideStatus.DriverArriving)
+            {
+            <div class="card mb-4">
+                <div class="card-body">
+                    <h5 class="mb-3">Керування поїздкою</h5>
+                    <div class="row g-3">
+                        @if (Model.Status == TaxiRideStatus.Accepted)
+                        {
+                        <div class="col-md-6">
+                            <form asp-action="ArriveAtPickup" asp-controller="Driver" method="post">
+                                <input type="hidden" name="rideId" value="@Model.Id" />
+                                <button type="submit" class="btn btn-warning w-100">Я прибув на місце</button>
+                            </form>
+                        </div>
+                        }
+                        else if (Model.Status == TaxiRideStatus.DriverArriving)
+                        {
+                        <div class="col-md-6">
+                            <form asp-action="StartRide" asp-controller="Driver" method="post">
+                                <input type="hidden" name="rideId" value="@Model.Id" />
+                                <button type="submit" class="btn btn-success w-100">Розпочати поїздку</button>
+                            </form>
+                        </div>
+                        }
+                        <div class="col-md-6">
+                            <form asp-action="CancelRide" asp-controller="Driver" method="post"
+                                  onsubmit="return confirm('Ви впевнені, що хочете скасувати цю поїздку?');">
+                                <input type="hidden" name="rideId" value="@Model.Id" />
+                                <button type="submit" class="btn btn-danger w-100">Скасувати поїздку</button>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            }
+            else if (Model.Status == TaxiRideStatus.InProgress)
+            {
+            <div class="card mb-4">
+                <div class="card-body">
+                    <h5 class="mb-3">Керування поїздкою</h5>
+                    <div class="row g-3">
+                        <div class="col-md-6">
+                            <form asp-action="CompleteRide" asp-controller="Driver" method="post">
+                                <input type="hidden" name="rideId" value="@Model.Id" />
+                                <button type="submit" class="btn btn-primary w-100">Завершити поїздку</button>
+                            </form>
+                        </div>
+                        <div class="col-md-6">
+                            <form asp-action="CancelRide" asp-controller="Driver" method="post"
+                                  onsubmit="return confirm('Ви впевнені, що хочете скасувати цю поїздку?');">
+                                <input type="hidden" name="rideId" value="@Model.Id" />
+                                <button type="submit" class="btn btn-danger w-100">Скасувати поїздку</button>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            }
+        </div>
+
+        <div class="col-md-4">
+            <div class="card mb-4">
+                <div class="card-header bg-info text-white">
+                    <h5>Статус поїздки</h5>
+                </div>
+                <div class="card-body">
+                    <div class="position-relative">
+                        <div class="progress" style="height: 5px;">
+                            @{
+                            string progressWidth = "0%";
+
+                            switch (Model.Status)
+                            {
+                            case veterans_site.Models.TaxiRideStatus.Requested:
+                            progressWidth = "10%";
+                            break;
+                            case veterans_site.Models.TaxiRideStatus.Accepted:
+                            progressWidth = "25%";
+                            break;
+                            case veterans_site.Models.TaxiRideStatus.DriverArriving:
+                            progressWidth = "50%";
+                            break;
+                            case veterans_site.Models.TaxiRideStatus.InProgress:
+                            progressWidth = "75%";
+                            break;
+                            case veterans_site.Models.TaxiRideStatus.Completed:
+                            progressWidth = "100%";
+                            break;
+                            case veterans_site.Models.TaxiRideStatus.Canceled:
+                            progressWidth = "100%";
+                            break;
+                            }
+                            }
+                            <div class="progress-bar @(Model.Status == veterans_site.Models.TaxiRideStatus.Canceled ? "bg-danger" : "")"
+                                 role="progressbar" style="width: @progressWidth"></div>
+                        </div>
+
+                        <div class="mt-4 d-flex justify-content-between">
+                            <div class="text-center position-relative" style="width: 20%;">
+                                <div class="@(Model.Status != veterans_site.Models.TaxiRideStatus.Requested ? "bg-success" : "bg-secondary") rounded-circle mx-auto"
+                                     style="width: 20px; height: 20px;"></div>
+                                <div class="mt-2 small">Запит</div>
+                            </div>
+                            <div class="text-center position-relative" style="width: 20%;">
+                                <div class="@(Model.Status == veterans_site.Models.TaxiRideStatus.Accepted ||
+                                Model.Status == veterans_site.Models.TaxiRideStatus.DriverArriving ||
+                                Model.Status == veterans_site.Models.TaxiRideStatus.InProgress ||
+                                Model.Status == veterans_site.Models.TaxiRideStatus.Completed ? "bg-success" : "bg-secondary") rounded-circle mx-auto"
+                                     style="width: 20px; height: 20px;"></div>
+                                <div class="mt-2 small">Прийнято</div>
+                            </div>
+                            <div class="text-center position-relative" style="width: 20%;">
+                                <div class="@(Model.Status == veterans_site.Models.TaxiRideStatus.DriverArriving ||
+                                Model.Status == veterans_site.Models.TaxiRideStatus.InProgress ||
+                                Model.Status == veterans_site.Models.TaxiRideStatus.Completed ? "bg-success" : "bg-secondary") rounded-circle mx-auto"
+                                     style="width: 20px; height: 20px;"></div>
+                                <div class="mt-2 small">Прибуття</div>
+                            </div>
+                            <div class="text-center position-relative" style="width: 20%;">
+                                <div class="@(Model.Status == veterans_site.Models.TaxiRideStatus.InProgress ||
+                                Model.Status == veterans_site.Models.TaxiRideStatus.Completed ? "bg-success" : "bg-secondary") rounded-circle mx-auto"
+                                     style="width: 20px; height: 20px;"></div>
+                                <div class="mt-2 small">В дорозі</div>
+                            </div>
+                            <div class="text-center position-relative" style="width: 20%;">
+                                <div class="@(Model.Status == veterans_site.Models.TaxiRideStatus.Completed ? "bg-success" :
+                                Model.Status == veterans_site.Models.TaxiRideStatus.Canceled ? "bg-danger" : "bg-secondary") rounded-circle mx-auto"
+                                     style="width: 20px; height: 20px;"></div>
+                                <div class="mt-2 small">@(Model.Status == veterans_site.Models.TaxiRideStatus.Canceled ? "Скасовано" : "Завершено")</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="mt-4">
+                        <h6>Поточний статус:</h6>
+                        @{
+                        string statusText = "Невідомий";
+                        string statusClass = "bg-secondary";
+
+                        switch (Model.Status)
+                        {
+                        case veterans_site.Models.TaxiRideStatus.Requested:
+                        statusText = "Запитано поїздку";
+                        statusClass = "bg-info";
+                        break;
+                        case veterans_site.Models.TaxiRideStatus.Accepted:
+                        statusText = "Поїздку прийнято";
+                        statusClass = "bg-primary";
+                        break;
+                        case veterans_site.Models.TaxiRideStatus.DriverArriving:
+                        statusText = "Водій прибув";
+                        statusClass = "bg-warning";
+                        break;
+                        case veterans_site.Models.TaxiRideStatus.InProgress:
+                        statusText = "Поїздка в процесі";
+                        statusClass = "bg-info";
+                        break;
+                        case veterans_site.Models.TaxiRideStatus.Completed:
+                        statusText = "Поїздку завершено";
+                        statusClass = "bg-success";
+                        break;
+                        case veterans_site.Models.TaxiRideStatus.Canceled:
+                        statusText = "Поїздку скасовано";
+                        statusClass = "bg-danger";
+                        break;
+                        }
+                        }
+                        <div class="alert @statusClass text-white">@statusText</div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card">
+                <div class="card-header bg-secondary text-white">
+                    <h5>Навігація</h5>
+                </div>
+                <div class="card-body">
+                    <div class="d-grid gap-2">
+                        <a href="@Url.Action("Index", "Driver")" class="btn btn-outline-secondary">Повернутися на панель</a>
+                        <a href="@Url.Action("MyRides", "Driver")" class="btn btn-outline-info">Всі мої поїздки</a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.7.1/dist/leaflet.css"/>
+<script src="https://unpkg.com/leaflet@1.7.1/dist/leaflet.js"></script>
+<script src="https://unpkg.com/esri-leaflet@3.0.0/dist/esri-leaflet.js"></script>
+<script src="https://unpkg.com/esri-leaflet-geocoder@3.0.0/dist/esri-leaflet-geocoder.js"></script>
+<link rel="stylesheet" href="https://unpkg.com/esri-leaflet-geocoder@3.0.0/dist/esri-leaflet-geocoder.css"/>
+
+<script>
+    $(document).ready(function () {
+        const map = L.map('rideMap');
+
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            attribution: '&copy; OpenStreetMap contributors'
+        }).addTo(map);
+
+        const startLatStr = "@Model.StartLatitude.ToString(System.Globalization.CultureInfo.InvariantCulture)".replace(',', '.');
+        const startLngStr = "@Model.StartLongitude.ToString(System.Globalization.CultureInfo.InvariantCulture)".replace(',', '.');
+        const endLatStr = "@Model.EndLatitude.ToString(System.Globalization.CultureInfo.InvariantCulture)".replace(',', '.');
+        const endLngStr = "@Model.EndLongitude.ToString(System.Globalization.CultureInfo.InvariantCulture)".replace(',', '.');
+        
+        const startLat = parseFloat(startLatStr);
+        const startLng = parseFloat(startLngStr);
+        const endLat = parseFloat(endLatStr);
+        const endLng = parseFloat(endLngStr);
+
+        const startMarker = L.marker([startLat, startLng], {
+            icon: L.icon({
+                iconUrl: '/images/start-marker.png',
+                iconSize: [32, 32],
+                iconAnchor: [16, 32]
+            })
+        }).addTo(map).bindPopup('Початок: @Model.StartAddress');
+
+        const endMarker = L.marker([endLat, endLng], {
+            icon: L.icon({
+                iconUrl: '/images/end-marker.png',
+                iconSize: [32, 32],
+                iconAnchor: [16, 32]
+            })
+        }).addTo(map).bindPopup('Кінець: @Model.EndAddress');
+
+        fetchRoute(startLat, startLng, endLat, endLng);
+
+        const bounds = L.latLngBounds([
+            [startLat, startLng],
+            [endLat, endLng]
+        ]);
+        map.fitBounds(bounds, {padding: [50, 50]});
+
+        function fetchRoute(startLat, startLng, endLat, endLng) {
+            const url = `https://router.project-osrm.org/route/v1/driving/${startLng},${startLat};${endLng},${endLat}?overview=full&geometries=geojson`;
+
+            $.ajax({
+                url: url,
+                type: 'GET',
+                dataType: 'json',
+                success: function (data) {
+                    if (data.code === 'Ok' && data.routes && data.routes.length > 0) {
+                        const routeLine = L.geoJSON(data.routes[0].geometry, {
+                            style: {
+                                color: '#3388ff',
+                                weight: 5,
+                                opacity: 0.7
+                            }
+                        }).addTo(map);
+                    }
+                },
+                error: function (error) {
+                    console.error("Помилка при отриманні маршруту:", error);
+                }
+            });
+        }
+
+        @if (Model.Status == TaxiRideStatus.Accepted ||
+            Model.Status == TaxiRideStatus.DriverArriving ||
+            Model.Status == TaxiRideStatus.InProgress)
+        {
+        <text>
+        let watchPositionId = null;
+        let driverMarker = null;
+
+        if (navigator.geolocation) {
+            watchPositionId = navigator.geolocation.watchPosition(function (position) {
+                const lat = position.coords.latitude;
+                const lng = position.coords.longitude;
+
+                if (driverMarker) {
+                    map.removeLayer(driverMarker);
+                }
+
+                driverMarker = L.marker([lat, lng], {
+                    icon: L.icon({
+                        iconUrl: '/images/car-marker.png',
+                        iconSize: [32, 32],
+                        iconAnchor: [16, 16]
+                    })
+                }).addTo(map);
+
+                updateDriverLocation(lat, lng);
+            }, function (error) {
+                console.error("Помилка геолокації:", error);
+            }, {
+                enableHighAccuracy: true,
+                timeout: 10000,
+                maximumAge: 5000
+            });
+        }
+
+        function updateDriverLocation(lat, lng) {
+            let progress = 0;
+
+            @if (Model.Status == veterans_site.Models.TaxiRideStatus.Accepted)
+            {
+            <text>
+            const startPoint = L.latLng(startLat, startLng);
+            const driverPoint = L.latLng(lat, lng);
+            const distanceToStart = driverPoint.distanceTo(startPoint);
+
+            if (distanceToStart &lt; 200) {
+                progress = 25;
+            } else {
+                progress = 10;
+            }
+            </text>
+            }
+            else if (Model.Status == veterans_site.Models.TaxiRideStatus.DriverArriving)
+            {
+            <text>
+            progress = 40;
+            </text>
+            }
+            else if (Model.Status == veterans_site.Models.TaxiRideStatus.InProgress)
+            {
+            <text>
+            const endPoint = L.latLng(endLat, endLng);
+            const driverPoint1 = L.latLng(lat, lng);
+            const distanceToEnd = driverPoint1.distanceTo(endPoint);
+            const totalDistance = L.latLng(startLat, startLng).distanceTo(endPoint);
+
+            if (distanceToEnd &lt; 200) {
+                progress = 90;
+            } else {
+                progress = 50 + Math.min(40, Math.round(40 * (1 - distanceToEnd / totalDistance)));
+            }
+            </text>
+            }
+
+            $.ajax({
+                url: '@Url.Action("UpdateLocation", "Driver")',
+                type: 'POST',
+                contentType: 'application/json',
+                data: JSON.stringify({
+                    Latitude: lat,
+                    Longitude: lng,
+                    Progress: progress
+                }),
+                error: function (err) {
+                    console.error("Помилка при оновленні позиції:", err);
+                }
+            });
+        }
+
+        $(window).on('beforeunload', function() {
+            if (watchPositionId !== null) {
+                navigator.geolocation.clearWatch(watchPositionId);
+            }
+        });
+        </text>
+        }
+    });
+</script>
+}

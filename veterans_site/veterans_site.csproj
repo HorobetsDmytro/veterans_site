@@ -47,9 +47,9 @@
     <Folder Include="Areas\Admin\Views\Shared\" />
     <Folder Include="Areas\Specialist\Data\" />
     <Folder Include="Areas\Specialist\Models\" />
-    <Folder Include="wwwroot\images\" />
     <Folder Include="GoogleCredentials\" />
     <Folder Include="wwwroot\fonts\" />
+    <Folder Include="wwwroot\images\drivers\" />
     <Folder Include="wwwroot\uploads\avatars\" />
   </ItemGroup>
 

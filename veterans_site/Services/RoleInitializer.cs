@@ -7,7 +7,7 @@ namespace veterans_site.Services
     {
         public static async Task InitializeAsync(UserManager<ApplicationUser> userManager, RoleManager<IdentityRole> roleManager)
         {
-            string[] roleNames = { "Admin", "Veteran", "Specialist", "Volunteer" };
+            string[] roleNames = { "Admin", "Veteran", "Specialist", "Volunteer", "Driver" };
             foreach (var roleName in roleNames)
             {
                 if (!await roleManager.RoleExistsAsync(roleName))

@@ -42,6 +42,8 @@ namespace veterans_site.Controllers
 
         public async Task<IActionResult> Index()
         {
+            ViewBag.AjaxRequest = Request.Headers["X-Requested-With"] == "XMLHttpRequest";
+
             var user = await _userManager.GetUserAsync(User);
             if (user == null)
             {
@@ -210,8 +212,15 @@ namespace veterans_site.Controllers
         [HttpPost]
         public async Task<IActionResult> UploadAvatar(IFormFile avatarFile)
         {
+            bool isAjaxRequest = Request.Headers["X-Requested-With"] == "XMLHttpRequest";
+            
             if (avatarFile == null || avatarFile.Length == 0)
             {
+                if (isAjaxRequest)
+                {
+                    return Json(new { success = false, message = "Файл не вибрано" });
+                }
+                
                 TempData["Error"] = "Файл не вибрано";
                 return RedirectToAction("Index");
             }   
@@ -220,6 +229,11 @@ namespace veterans_site.Controllers
             var fileExtension = Path.GetExtension(avatarFile.FileName).ToLower();
             if (!allowedExtensions.Contains(fileExtension))
             {
+                if (isAjaxRequest)
+                {
+                    return Json(new { success = false, message = "Дозволені лише зображення (JPG, JPEG, PNG, GIF)" });
+                }
+                
                 TempData["Error"] = "Дозволені лише зображення (JPG, JPEG, PNG, GIF)";
                 return RedirectToAction("Index");
             }
@@ -252,27 +266,19 @@ namespace veterans_site.Controllers
 
                 user.AvatarPath = $"/uploads/avatars/{fileName}";
                 var result = await _userManager.UpdateAsync(user);
-
-                if (result.Succeeded)
-                {
-                    TempData["Success"] = "Аватар успішно оновлено";
-                }
-                else
-                {
-                    TempData["Error"] = "Помилка при оновленні профілю";
-                    if (System.IO.File.Exists(filePath))
-                    {
-                        System.IO.File.Delete(filePath);
-                    }
-                }
             }
             catch (Exception ex)
             {
-                TempData["Error"] = $"Помилка: {ex.Message}";
                 if (System.IO.File.Exists(filePath))
                 {
                     System.IO.File.Delete(filePath);
                 }
+                
+                if (isAjaxRequest)
+                {
+                    return Json(new { success = false, message = $"Помилка: {ex.Message}" });
+                }
+                
             }
 
             return RedirectToAction("Index");

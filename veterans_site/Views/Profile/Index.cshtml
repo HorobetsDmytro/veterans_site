@@ -677,44 +677,121 @@
             const avatarForm = document.getElementById('avatarForm');
 
             if (avatarInput && avatarForm) {
+                window.ajaxRequestInProgress = false;
+                let uploadInProgress = false;
+
                 avatarInput.addEventListener('change', function() {
+                    if (uploadInProgress) {
+                        console.warn('Завантаження вже виконується, дочекайтесь завершення');
+                        return;
+                    }
+
                     if (this.files && this.files[0]) {
+                        const maxSize = 10 * 1024 * 1024;
+                        if (this.files[0].size > maxSize) {
+                            toastr.error('Файл занадто великий. Максимальний розмір 10MB');
+                            return;
+                        }
+
+                        uploadInProgress = true;
+                        window.ajaxRequestInProgress = true;
+
                         const reader = new FileReader();
+
                         reader.onload = function(e) {
                             const avatar = document.querySelector('.profile-avatar');
                             if (avatar) {
+                                const originalBackground = avatar.style.backgroundImage;
                                 avatar.style.backgroundImage = `url(${e.target.result})`;
                                 avatar.innerHTML = '';
 
-                                const csrfToken = document.querySelector('input[name="__RequestVerificationToken"]')?.value;
+                                const tokenElement = document.querySelector('form input[name="__RequestVerificationToken"]');
+                                const csrfToken = tokenElement ? tokenElement.value : null;
 
                                 if (!csrfToken) {
                                     console.error('CSRF token not found');
+                                    toastr.error('Помилка автентифікації. Оновіть сторінку і спробуйте знову.');
+                                    uploadInProgress = false;
+                                    window.ajaxRequestInProgress = false;
                                     return;
                                 }
 
                                 const formData = new FormData();
                                 formData.append('avatarFile', avatarInput.files[0]);
+                                formData.append('__RequestVerificationToken', csrfToken);
+
+                                const loadingToast = toastr.info(
+                                    '<div class="text-center"><div class="spinner-border spinner-border-sm me-2" role="status"></div>Завантаження аватарки...</div>',
+                                    'Зачекайте',
+                                    {
+                                        timeOut: 0,
+                                        extendedTimeOut: 0,
+                                        closeButton: false,
+                                        tapToDismiss: false,
+                                        escapeHtml: false
+                                    }
+                                );
 
                                 fetch(avatarForm.action, {
                                     method: 'POST',
                                     body: formData,
                                     headers: {
-                                        'RequestVerificationToken': csrfToken
+                                        'X-Requested-With': 'XMLHttpRequest'
                                     }
                                 })
                                     .then(response => {
-                                        if (response.redirected) {
-                                            window.location.href = response.url;
+                                        if (!response.ok) {
+                                            throw new Error(`HTTP error! Status: ${response.status}`);
                                         }
-                                        return response.text();
+
+                                        const contentType = response.headers.get('content-type');
+                                        if (contentType && contentType.includes('application/json')) {
+                                            return response.json();
+                                        }
+
+                                        if (response.redirected) {
+                                            return { success: true, redirect: response.url };
+                                        }
+
+                                        return { success: true, message: "Аватар успішно оновлено" };
+                                    })
+                                    .then(data => {
+                                        toastr.clear(loadingToast);
+
+                                        if (data) {
+                                            if (data.success) {
+                                                toastr.success(data.message || "Аватар успішно оновлено");
+                                            } else {
+                                                toastr.error(data.message || "Помилка при завантаженні аватарки");
+                                                avatar.style.backgroundImage = originalBackground;
+                                            }
+                                        }
+
+                                        avatarInput.value = '';
+                                        uploadInProgress = false;
+
+                                        setTimeout(() => {
+                                            window.ajaxRequestInProgress = false;
+                                        }, 500);
                                     })
                                     .catch(error => {
+                                        toastr.clear(loadingToast);
+
                                         console.error('Error:', error);
-                                        alert('Сталася помилка при завантаженні аватара');
+                                        toastr.error("Помилка при завантаженні аватарки");
+
+                                        avatar.style.backgroundImage = originalBackground;
+
+                                        avatarInput.value = '';
+                                        uploadInProgress = false;
+
+                                        setTimeout(() => {
+                                            window.ajaxRequestInProgress = false;
+                                        }, 500);
                                     });
                             }
                         };
+
                         reader.readAsDataURL(this.files[0]);
                     }
                 });

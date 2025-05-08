@@ -1,0 +1,624 @@
+@model IEnumerable<veterans_site.Models.TaxiRide>
+@{
+    ViewData["Title"] = "Доступні поїздки";
+}
+
+<div class="container mt-4">
+    <div class="row">
+        <div class="col-12">
+            <div class="card mb-4 shadow-sm">
+                <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
+                    <h4><i class="fas fa-taxi me-2"></i>Доступні поїздки</h4>
+                    <div>
+                        <span class="badge bg-light text-dark rides-counter">@Model.Count() поїздки (ок)</span>
+                        <span class="ms-2 refresh-indicator d-none"><i class="fas fa-sync-alt fa-spin"></i></span>
+                    </div>
+                </div>
+                <div class="card-body">
+                    <div id="ridesContainer">
+                        @if (!Model.Any())
+                        {
+                            <div class="alert alert-warning text-center no-rides-message">
+                                <h5><i class="fas fa-exclamation-triangle me-2"></i>На даний момент немає доступних поїздок</h5>
+                                <p>Спробуйте перевірити знову пізніше або активувати статус "На зв'язку" на головній панелі.</p>
+                            </div>
+                        }
+                        else
+                        {
+                            <div class="row ride-cards-container">
+                                @foreach (var ride in Model)
+                                {
+                                    <div class="col-md-6 col-lg-4 mb-4" data-ride-id="@ride.Id">
+                                        <div class="card h-100 ride-card @(ride.ScheduledTime.HasValue ? "border-warning" : "border-info") shadow-sm hover-card">
+                                            <div class="card-header @(ride.ScheduledTime.HasValue ? "bg-warning" : "bg-info") text-white d-flex justify-content-between align-items-center">
+                                                <span>
+                                                    @if (ride.ScheduledTime.HasValue)
+                                                    {
+                                                        <i class="far fa-clock me-1"></i>
+                                                        <span>Запланована на @ride.ScheduledTime.Value.ToString("dd.MM HH:mm")</span>
+                                                    }
+                                                    else
+                                                    {
+                                                        <i class="fas fa-bolt me-1"></i>
+                                                        <span>Негайна поїздка</span>
+                                                    }
+                                                </span>
+                                                <span class="badge bg-light text-dark">
+                                                    <i class="fas fa-route me-1"></i>
+                                                    @ride.EstimatedDistance.ToString("F1") км
+                                                </span>
+                                            </div>
+                                            <div class="card-body">
+                                                <div class="d-flex justify-content-between mb-3">
+                                                    <h5 class="mb-0">
+                                                        <i class="fas fa-user me-1 text-muted"></i>
+                                                        @(ride.Veteran?.FirstName ?? "Пасажир") @(ride.Veteran?.LastName ?? "")
+                                                    </h5>
+                                                    <span class="text-success fw-bold">0 грн</span>
+                                                </div>
+
+                                                <div class="mb-2 d-flex">
+                                                    <div class="me-2">
+                                                        <i class="fas fa-map-marker-alt text-danger"></i>
+                                                    </div>
+                                                    <div>
+                                                        <div class="text-muted small">Звідки:</div>
+                                                        <div>@ride.StartAddress</div>
+                                                    </div>
+                                                </div>
+
+                                                <div class="mb-3 d-flex">
+                                                    <div class="me-2">
+                                                        <i class="fas fa-flag-checkered text-success"></i>
+                                                    </div>
+                                                    <div>
+                                                        <div class="text-muted small">Куди:</div>
+                                                        <div>@ride.EndAddress</div>
+                                                    </div>
+                                                </div>
+
+                                                <div class="d-flex justify-content-between align-items-center mt-3">
+                                                    <span class="text-muted small ride-request-time">
+                                                        <i class="far fa-calendar-alt me-1"></i>
+                                                        Запит від: @ride.RequestTime.ToString("dd.MM HH:mm")
+                                                    </span>
+                                                    <a href="@Url.Action("RideDetails", "Driver", new { id = ride.Id })" class="btn btn-sm btn-outline-primary">
+                                                        <i class="fas fa-info-circle me-1"></i>
+                                                        Детальніше
+                                                    </a>
+                                                </div>
+                                            </div>
+                                            <div class="card-footer bg-light">
+                                                <form asp-action="AcceptRide" asp-controller="Driver" method="post" class="accept-ride-form">
+                                                    <input type="hidden" name="rideId" value="@ride.Id" />
+                                                    <button type="button" class="btn btn-success w-100 accept-ride-btn">
+                                                        <i class="fas fa-check me-1"></i>
+                                                        Прийняти поїздку
+                                                    </button>
+                                                </form>
+                                            </div>
+                                        </div>
+                                    </div>
+                                }
+                            </div>
+                        }
+                    </div>
+                </div>
+            </div>
+
+            <div class="d-flex justify-content-between mb-4">
+                <a href="@Url.Action("Index", "Driver")" class="btn btn-secondary">
+                    <i class="fas fa-arrow-left me-2"></i> Повернутися на панель
+                </a>
+                <a href="@Url.Action("MyRides", "Driver")" class="btn btn-outline-primary">
+                    <i class="fas fa-history me-2"></i> Історія моїх поїздок
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="modal fade" id="acceptSuccessModal" tabindex="-1" aria-labelledby="acceptSuccessModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header bg-success text-white">
+                <h5 class="modal-title" id="acceptSuccessModalLabel"><i class="fas fa-check-circle me-2"></i>Успішно!</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body text-center">
+                <h4>Поїздку прийнято!</h4>
+                <p class="mb-0">Переходимо на головну панель водія...</p>
+                <div class="spinner-border text-success mt-3" role="status">
+                    <span class="visually-hidden">Завантаження...</span>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Styles {
+    <style>
+        .hover-card {
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+        
+        .hover-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 20px rgba(0,0,0,0.12), 0 4px 8px rgba(0,0,0,0.06) !important;
+        }
+        
+        .new-ride-animation {
+            animation: fadeIn 1s;
+        }
+        
+        .refresh-indicator {
+            animation: fadeInOut 2s infinite;
+        }
+        
+        .ride-request-time {
+            font-size: 0.8rem;
+        }
+        
+        .highlight-card {
+            animation: highlight 1.5s;
+        }
+    </style>
+}
+
+@section Scripts {
+<script>
+    $(document).ready(function() {
+        let connection;
+        let toastInstance;
+        let highlightedRideId = null;
+        
+        setupSignalRConnection();
+        
+        initializeUIComponents();
+        
+        setupEventHandlers();
+        
+        setupAutoRefresh();
+        
+        function setupSignalRConnection() {
+            connection = new signalR.HubConnectionBuilder()
+                .withUrl("/taxiHub")
+                .withAutomaticReconnect()
+                .configureLogging(signalR.LogLevel.Information)
+                .build();
+            
+            connection.onreconnecting(error => {
+                console.log(`Відновлення підключення: ${error ? error.message : "Невідома помилка"}`);
+                $(".refresh-indicator").removeClass("d-none");
+            });
+
+            connection.onreconnected(connectionId => {
+                console.log(`Підключення відновлено. ID: ${connectionId}`);
+                $(".refresh-indicator").addClass("d-none");
+                
+                connection.invoke("JoinDriversGroup")
+                    .then(() => console.log("Повторно приєднано до групи водіїв"))
+                    .catch(err => console.error(`Помилка при повторному приєднанні до групи: ${err}`));
+            });
+
+            connection.onclose(error => {
+                console.log(`Підключення закрито: ${error ? error.message : "Невідома причина"}`);
+                $(".refresh-indicator").removeClass("d-none");
+            });
+            
+            setupSignalREventHandlers();
+            
+            connection.start()
+                .then(() => {
+                    console.log("Підключення до SignalR встановлено");
+                    $(".refresh-indicator").addClass("d-none");
+                    
+                    connection.invoke("JoinDriversGroup")
+                        .then(() => console.log("Приєднано до групи водіїв"))
+                        .catch(err => console.error(`Помилка при приєднанні до групи водіїв: ${err}`));
+                })
+                .catch(err => {
+                    console.error(`Помилка при підключенні до SignalR: ${err}`);
+                    $(".refresh-indicator").removeClass("d-none");
+                });
+        }
+
+        function setupSignalREventHandlers() {
+            connection.on("NewRideRequest", function (data) {
+                $.ajax({
+                    url: '/Driver/CheckRideStatus?rideId=' + data.rideId,
+                    type: 'GET',
+                    success: function(statusResponse) {
+                        if (statusResponse.status !== "Canceled") {
+                            console.log("Отримано новий запит на поїздку:", data);
+                            addRideCard(data);
+                            showNewRideToast(data);
+                        }
+                    },
+                    error: function() {
+                        console.error("Помилка при перевірці статусу поїздки");
+                    }
+                });
+            });
+
+            connection.on("RideCanceled", function(data) {
+                console.log("Отримано повідомлення про скасування поїздки:", data);
+                removeRideCard(data.rideId);
+            });
+
+            connection.on("RideAssigned", function (data) {
+                console.log("Поїздка вже не доступна:", data);
+                removeRideCard(data.rideId);
+            });
+
+            connection.on("NewScheduledRideRequest", function (data) {
+                console.log("Отримано новий запит на заплановану поїздку:", data);
+                addRideCard(data);
+                showNewRideToast(data);
+            });
+
+            connection.on("ScheduledRideActive", function (data) {
+                console.log("Запланована поїздка стала активною:", data);
+
+                const cardElement = $(`[data-ride-id="${data.rideId}"] .card`);
+                if (cardElement.length > 0) {
+                    cardElement.find(".card-header")
+                        .removeClass("bg-warning")
+                        .addClass("bg-success")
+                        .find("span:first")
+                        .html('<i class="fas fa-bolt me-1"></i> Поїздка активна зараз!');
+
+                    if (!cardElement.find(".active-now-badge").length) {
+                        cardElement.append('<span class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-success active-now-badge">Активна</span>');
+                    }
+
+                    cardElement.addClass('highlight-card');
+                    setTimeout(() => {
+                        cardElement.removeClass('highlight-card');
+                    }, 3000);
+                }
+            });
+        }
+        
+        function initializeUIComponents() {
+            toastInstance = new bootstrap.Toast(document.getElementById('newRideToast'));
+            
+            $('.ride-card').each(function() {
+                const requestTimeStr = $(this).find('.ride-request-time').text();
+                const requestTimeMatch = requestTimeStr.match(/Запит від: (\d{2}\.\d{2} \d{2}:\d{2})/);
+
+                if (requestTimeMatch) {
+                    const requestTimeParts = requestTimeMatch[1].split(' ');
+                    const dateParts = requestTimeParts[0].split('.');
+                    const timeParts = requestTimeParts[1].split(':');
+
+                    const requestDate = new Date();
+                    requestDate.setDate(parseInt(dateParts[0]));
+                    requestDate.setMonth(parseInt(dateParts[1]) - 1);
+                    requestDate.setHours(parseInt(timeParts[0]), parseInt(timeParts[1]), 0, 0);
+
+                    const now = new Date();
+                    const diffMinutes = Math.floor((now - requestDate) / (1000 * 60));
+
+                    if (diffMinutes < 5) {
+                        $(this).addClass('border-danger');
+                        $(this).append('<span class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger">Новий</span>');
+                    }
+                }
+            });
+        }
+        
+        function setupEventHandlers() {
+            $(document).on("click", ".accept-ride-btn", function() {
+                const rideId = $(this).closest('form').find('input[name="rideId"]').val();
+                const button = $(this);
+                
+                button.prop('disabled', true)
+                    .html('<i class="fas fa-spinner fa-spin me-1"></i> Обробка...');
+                
+                acceptRide(rideId, button);
+            });
+            
+            $(document).on("click", ".view-new-ride-btn", function() {
+                if (highlightedRideId) {
+                    const rideCard = $(`[data-ride-id="${highlightedRideId}"] .card`);
+                    
+                    $('html, body').animate({
+                        scrollTop: rideCard.offset().top - 100
+                    }, 500);
+                    
+                    rideCard.addClass('highlight-card');
+                    setTimeout(() => {
+                        rideCard.removeClass('highlight-card');
+                    }, 1500);
+                }
+                
+                toastInstance.hide();
+            });
+        }
+        
+        function setupAutoRefresh() {
+            setTimeout(function() {
+                location.reload();
+            }, 60000);
+        }
+
+        function acceptRide(rideId, button) {
+            button.prop('disabled', true)
+                .html('<i class="fas fa-spinner fa-spin me-1"></i> Обробка...');
+
+            const rideCard = $(`[data-ride-id="${rideId}"]`);
+            const isScheduled = rideCard.find(".card-header").hasClass("bg-warning");
+
+            if (isScheduled) {
+                $.ajax({
+                    url: '/Driver/AcceptScheduledRide',
+                    type: 'POST',
+                    data: { rideId: rideId },
+                    success: function(response) {
+                        console.log("Відповідь сервера:", response);
+
+                        if (response.success) {
+                            showScheduledRideAcceptedModal(response.scheduledTime);
+                        } else {
+                            button.prop('disabled', false)
+                                .html('<i class="fas fa-check me-1"></i> Прийняти поїздку');
+
+                            alert("Помилка: " + response.message);
+
+                            if (response.message.includes("вже прийнята іншим водієм")) {
+                                removeRideCard(rideId);
+                            }
+                        }
+                    },
+                    error: function(xhr, status, error) {
+                        console.error("Помилка AJAX:", status, error);
+                        console.error("Деталі:", xhr.responseText);
+
+                        button.prop('disabled', false)
+                            .html('<i class="fas fa-check me-1"></i> Прийняти поїздку');
+
+                        alert("Помилка з'єднання з сервером: " + error);
+                    }
+                });
+            } else {
+                $.ajax({
+                    url: '@Url.Action("AcceptRide", "Driver")',
+                    type: 'POST',
+                    data: { rideId: rideId },
+                    success: function(response) {
+                        console.log("Відповідь сервера:", response);
+
+                        window.location.href = '@Url.Action("Index", "Driver")';
+                    },
+                    error: function(xhr, status, error) {
+                        console.error("Помилка AJAX:", status, error);
+                        console.error("Деталі:", xhr.responseText);
+
+                        button.prop('disabled', false)
+                            .html('<i class="fas fa-check me-1"></i> Прийняти поїздку');
+
+                        alert("Помилка з'єднання з сервером: " + error);
+                    }
+                });
+            }
+        }
+
+        function showScheduledRideAcceptedModal(scheduledTime) {
+            if ($("#scheduledRideAcceptedModal").length === 0) {
+                const modalHtml = `
+                <div class="modal fade" id="scheduledRideAcceptedModal" tabindex="-1" aria-labelledby="scheduledRideAcceptedModalLabel" aria-hidden="true">
+                    <div class="modal-dialog">
+                        <div class="modal-content">
+                            <div class="modal-header bg-success text-white">
+                                <h5 class="modal-title" id="scheduledRideAcceptedModalLabel">
+                                    <i class="far fa-clock me-2"></i>Заплановану поїздку прийнято
+                                </h5>
+                                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                            </div>
+                            <div class="modal-body">
+                                <div class="alert alert-info">
+                                    <i class="fas fa-info-circle me-2"></i>
+                                    Ви успішно прийняли заплановану поїздку на <strong>${scheduledTime}</strong>
+                                </div>
+                                <p>Коли настане час поїздки, ви отримаєте повідомлення, і поїздка автоматично стане активною.</p>
+                                <p>До того часу ви можете приймати інші поїздки.</p>
+                            </div>
+                            <div class="modal-footer">
+                                <button type="button" class="btn btn-primary" data-bs-dismiss="modal" id="redirectToIndexBtn">Зрозуміло</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                `;
+
+                $("body").append(modalHtml);
+
+                $("#redirectToIndexBtn").on("click", function() {
+                    window.location.href = '@Url.Action("Index", "Driver")';
+                });
+            }
+
+            const modal = new bootstrap.Modal(document.getElementById('scheduledRideAcceptedModal'));
+            modal.show();
+
+            setTimeout(function() {
+                window.location.href = '@Url.Action("Index", "Driver")';
+            }, 3000);
+        }
+
+        function addRideCard(data) {
+            if ($(`[data-ride-id="${data.rideId}"]`).length > 0) {
+                console.log("Картка з ID " + data.rideId + " вже існує");
+                return;
+            }
+
+            console.log("Додаємо нову картку поїздки:", data);
+
+            const isScheduled = data.scheduledTime != null;
+            const isActive = isScheduled && data.isActive;
+            let cardHeaderClass = "bg-info";
+            let cardBorderClass = "border-info";
+
+            if (isScheduled) {
+                cardHeaderClass = isActive ? "bg-success" : "bg-warning";
+                cardBorderClass = isActive ? "border-success" : "border-warning";
+            }
+
+            const scheduledTimeDisplay = isScheduled
+                ? `<i class="far fa-clock me-1"></i> ${isActive ? 'Поїздка активна зараз!' : 'Запланована на ' + data.scheduledTime}`
+                : `<i class="fas fa-bolt me-1"></i> Негайна поїздка`;
+
+            const badgeClass = isActive ? "bg-success" : (isScheduled ? "bg-warning" : "bg-danger");
+            const badgeText = isActive ? "Активна" : (isScheduled ? "Запланована" : "Новий");
+
+            const rideCard = `
+                <div class="col-md-6 col-lg-4 mb-4 new-ride-animation" data-ride-id="${data.rideId}">
+                    <div class="card h-100 ride-card ${cardBorderClass} shadow-sm hover-card ${isActive ? '' : (isScheduled ? '' : 'border-danger')}">
+                        <span class="position-absolute top-0 start-100 translate-middle badge rounded-pill ${badgeClass}">${badgeText}</span>
+                        <div class="card-header ${cardHeaderClass} text-white d-flex justify-content-between align-items-center">
+                            <span>${scheduledTimeDisplay}</span>
+                            <span class="badge bg-light text-dark">
+                                <i class="fas fa-route me-1"></i>
+                                ${data.distanceKm || "?"} км
+                            </span>
+                        </div>
+                        <div class="card-body">
+                            <div class="d-flex justify-content-between mb-3">
+                                <h5 class="mb-0">
+                                    <i class="fas fa-user me-1 text-muted"></i>
+                                    ${data.veteranName || "Пасажир"}
+                                </h5>
+                                <span class="text-success fw-bold">0 грн</span>
+                            </div>
+        
+                            <div class="mb-2 d-flex">
+                                <div class="me-2">
+                                    <i class="fas fa-map-marker-alt text-danger"></i>
+                                </div>
+                                <div>
+                                    <div class="text-muted small">Звідки:</div>
+                                    <div>${data.startAddress || "Невідома адреса"}</div>
+                                </div>
+                            </div>
+        
+                            <div class="mb-3 d-flex">
+                                <div class="me-2">
+                                    <i class="fas fa-flag-checkered text-success"></i>
+                                </div>
+                                <div>
+                                    <div class="text-muted small">Куди:</div>
+                                    <div>${data.endAddress || "Невідома адреса"}</div>
+                                </div>
+                            </div>
+        
+                            <div class="d-flex justify-content-between align-items-center mt-3">
+                                <span class="text-muted small ride-request-time">
+                                    <i class="far fa-calendar-alt me-1"></i>
+                                    Запит від: ${formatCurrentDateTime()}
+                                </span>
+                                <a href="/Driver/RideDetails/${data.rideId}" class="btn btn-sm btn-outline-primary">
+                                    <i class="fas fa-info-circle me-1"></i>
+                                    Детальніше
+                                </a>
+                            </div>
+                        </div>
+                        <div class="card-footer bg-light">
+                            <form asp-action="AcceptRide" asp-controller="Driver" method="post" class="accept-ride-form">
+                                <input type="hidden" name="rideId" value="${data.rideId}" />
+                                <button type="button" class="btn btn-success w-100 accept-ride-btn">
+                                    <i class="fas fa-check me-1"></i>
+                                    Прийняти поїздку
+                                </button>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+            `;
+
+            $(".no-rides-message").addClass("d-none");
+
+            if ($(".ride-cards-container").length === 0) {
+                $("#ridesContainer").html('<div class="row ride-cards-container"></div>');
+            }
+
+            if (isScheduled && !isActive) {
+                $(".ride-cards-container").append(rideCard);
+            } else {
+                $(".ride-cards-container").prepend(rideCard);
+            }
+
+            updateRidesCounter();
+
+            highlightedRideId = data.rideId;
+
+            if (!isScheduled || isActive) {
+                playNotificationSound();
+            }
+        }
+
+        $("head").append(`
+        <style>
+            .highlight-card {
+                animation: pulse 1.5s;
+            }
+            
+        </style>
+        `);
+        
+        function removeRideCard(rideId) {
+            const rideCard = $(`[data-ride-id="${rideId}"]`);
+            
+            if (rideCard.length > 0) {
+                console.log("Видаляємо картку поїздки з ID:", rideId);
+                
+                rideCard.fadeOut(300, function() {
+                    $(this).remove();
+                    
+                    checkEmptyRides();
+                    
+                    updateRidesCounter();
+                });
+            }
+        }
+        
+        function checkEmptyRides() {
+            if ($(".ride-cards-container").children().length === 0) {
+                $("#ridesContainer").html(`
+                    <div class="alert alert-warning text-center no-rides-message">
+                        <h5><i class="fas fa-exclamation-triangle me-2"></i>На даний момент немає доступних поїздок</h5>
+                        <p>Спробуйте перевірити знову пізніше або активувати статус "На зв'язку" на головній панелі.</p>
+                    </div>
+                `);
+            }
+        }
+        
+        function updateRidesCounter() {
+            const ridesCount = $(".ride-cards-container").children().length;
+            $(".rides-counter").text(ridesCount + " поїздок");
+        }
+        
+        function showNewRideToast(data) {
+            $("#newRideToast .toast-address").text(
+                `${data.startAddress ? "Від: " + data.startAddress : ""} ${data.endAddress ? " до: " + data.endAddress : ""}`
+            );
+            toastInstance.show();
+        }
+        
+        function formatCurrentDateTime() {
+            const now = new Date();
+            const day = String(now.getDate()).padStart(2, '0');
+            const month = String(now.getMonth() + 1).padStart(2, '0');
+            const hours = String(now.getHours()).padStart(2, '0');
+            const minutes = String(now.getMinutes()).padStart(2, '0');
+            
+            return `${day}.${month} ${hours}:${minutes}`;
+        }
+        
+        function playNotificationSound() {
+            const audio = new Audio('/sounds/notification.mp3');
+            audio.play().catch(e => console.log("Помилка відтворення звуку:", e));
+        }
+    });
+</script>
+}
