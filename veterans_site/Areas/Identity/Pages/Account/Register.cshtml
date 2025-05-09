@@ -222,12 +222,45 @@ ViewData["Title"] = "Зареєструватися";
                     <label asp-for="Input.CarModel">Модель автомобіля</label>
                     <span asp-validation-for="Input.CarModel" class="text-danger"></span>
                 </div>
+                
+                <div class="mb-3">
+                    <label class="form-label">Тип автомобіля <span class="text-danger">*</span></label>
+                    <div class="car-types-container">
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" name="Input.CarTypes" value="Regular" id="carTypeRegular">
+                            <label class="form-check-label" for="carTypeRegular">
+                                Звичайне авто
+                            </label>
+                        </div>
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" name="Input.CarTypes" value="WithRamp" id="carTypeWithRamp">
+                            <label class="form-check-label" for="carTypeWithRamp">
+                                Авто з пандусом або підйомником
+                            </label>
+                        </div>
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" name="Input.CarTypes" value="WithMedical" id="carTypeWithMedical">
+                            <label class="form-check-label" for="carTypeWithMedical">
+                                Авто з медичним обладнанням
+                            </label>
+                        </div>
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" name="Input.CarTypes" value="WithAssistant" id="carTypeWithAssistant">
+                            <label class="form-check-label" for="carTypeWithAssistant">
+                                Авто з супроводжуючим
+                            </label>
+                        </div>
+                    </div>
+                    <span id="carTypesError" class="text-danger"></span>
+                </div>
+                
                 <div class="form-floating mb-3">
                     <input asp-for="Input.LicencePlate" class="form-control" placeholder="AA1234BB" />
                     <label asp-for="Input.LicencePlate">Номер автомобіля</label>
                     <span asp-validation-for="Input.LicencePlate" class="text-danger"></span>
                     <small class="form-text text-muted">Формат: AA1234BB</small>
                 </div>
+                
                 <div class="form-floating mb-3">
                     <input asp-for="Input.PhoneNumber" class="form-control" placeholder="+380XXXXXXXXX" />
                     <label asp-for="Input.PhoneNumber">Номер телефону</label>
@@ -262,6 +295,8 @@ ViewData["Title"] = "Зареєструватися";
         const volunteerFields = document.getElementById('volunteerFields');
         const driverFields = document.getElementById('driverFields');
         const form = document.getElementById('registerForm');
+        const carTypeCheckboxes = document.querySelectorAll('input[name="Input.CarTypes"]');
+        const carTypesError = document.getElementById('carTypesError');
 
         function handleLabelVisibility(input, label) {
             if (input.value.trim() !== '') {
@@ -270,6 +305,27 @@ ViewData["Title"] = "Зареєструватися";
                 label.style.display = 'block';
             }
         }
+
+        function validateCarTypes() {
+            let isChecked = false;
+            carTypeCheckboxes.forEach(checkbox => {
+                if (checkbox.checked) {
+                    isChecked = true;
+                }
+            });
+
+            if (!isChecked && roleSelect.value === 'Driver') {
+                carTypesError.textContent = 'Виберіть хоча б один тип автомобіля';
+                return false;
+            } else {
+                carTypesError.textContent = '';
+                return true;
+            }
+        }
+
+        carTypeCheckboxes.forEach(checkbox => {
+            checkbox.addEventListener('change', validateCarTypes);
+        });
 
         handleLabelVisibility(passwordInput, passwordLabel);
         handleLabelVisibility(confirmPasswordInput, confirmPasswordLabel);
@@ -391,6 +447,11 @@ ViewData["Title"] = "Зареєструватися";
                         hasError = true;
                     }
 
+                    if (!validateCarTypes()) {
+                        e.preventDefault();
+                        hasError = true;
+                    }
+
                     if (!licencePlateInput.value) {
                         e.preventDefault();
                         const errorMsg = document.createElement('span');
@@ -463,6 +524,21 @@ ViewData["Title"] = "Зареєструватися";
                     });
                 }
             });
+
+            const style = document.createElement('style');
+            style.textContent = `
+                .car-types-container {
+                    background-color: #f8f9fa;
+                    padding: 10px 15px;
+                    border-radius: 0.5rem;
+                    border: 1px solid #e2e8f0;
+                    margin-bottom: 10px;
+                }
+                .form-check {
+                    margin-bottom: 8px;
+                }
+            `;
+            document.head.appendChild(style);
         });
     });
 </script>

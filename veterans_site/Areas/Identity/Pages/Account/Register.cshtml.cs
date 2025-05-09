@@ -95,10 +95,12 @@ namespace veterans_site.Areas.Identity.Pages.Account
             [StringLength(100)]
             public string? VolunteerOrganization { get; set; }
 
-            // Нові поля для ролі водія
             [Display(Name = "Модель автомобіля")]
             [StringLength(100)]
             public string? CarModel { get; set; }
+            
+            [Display(Name = "Тип автомобіля")]
+            public List<string>? CarTypes { get; set; }
 
             [Display(Name = "Номер автомобіля")]
             [RegularExpression(@"^[А-ЯІЇЄҐ]{2}\d{4}[А-ЯІЇЄҐ]{2}$", ErrorMessage = "Введіть номер у форматі: AA1234BB")]
@@ -134,10 +136,11 @@ namespace veterans_site.Areas.Identity.Pages.Account
                     SpecialistType = Input.SelectedRole == "Specialist" ? Input.SpecialistType : null,
                     VolunteerOrganization = Input.SelectedRole == "Volunteer" ? Input.VolunteerOrganization : null,
                     CarModel = Input.SelectedRole == "Driver" ? Input.CarModel : null,
+                    CarType = Input.SelectedRole == "Driver" && Input.CarTypes != null && Input.CarTypes.Any() 
+                        ? string.Join(",", Input.CarTypes) : null,
                     LicensePlate = Input.SelectedRole == "Driver" ? Input.LicencePlate : null
                 };
 
-                // Додаємо телефон окремо, оскільки це поле входить в базовий клас
                 if (Input.SelectedRole == "Driver" && !string.IsNullOrEmpty(Input.PhoneNumber))
                 {
                     user.PhoneNumber = Input.PhoneNumber;
@@ -207,6 +210,11 @@ namespace veterans_site.Areas.Identity.Pages.Account
                 if (string.IsNullOrEmpty(Input.CarModel))
                 {
                     ModelState.AddModelError("Input.CarModel", "Вкажіть модель автомобіля");
+                }
+        
+                if (Input.CarTypes == null || !Input.CarTypes.Any())
+                {
+                    ModelState.AddModelError("Input.CarTypes", "Виберіть хоча б один тип автомобіля");
                 }
         
                 if (string.IsNullOrEmpty(Input.LicencePlate))

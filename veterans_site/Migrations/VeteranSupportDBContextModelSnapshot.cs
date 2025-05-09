@@ -236,6 +236,9 @@ namespace veterans_site.Migrations
                     b.Property<string>("CarModel")
                         .HasColumnType("nvarchar(max)");
 
+                    b.Property<string>("CarType")
+                        .HasColumnType("nvarchar(max)");
+
                     b.Property<string>("ConcurrencyStamp")
                         .IsConcurrencyToken()
                         .HasColumnType("nvarchar(max)");

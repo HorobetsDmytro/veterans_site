@@ -524,7 +524,7 @@
             hideMethod: 'fadeOut'
         };
 
-        @if (!string.IsNullOrEmpty(TempData["Success"]?.ToString()) && !ViewBag.AjaxRequest)
+        @if (!string.IsNullOrEmpty(TempData["Success"]?.ToString()) && !(ViewBag.AjaxRequest ?? false))
         {
             <text>
                 if (!window.ajaxRequestInProgress) {
@@ -533,7 +533,7 @@
             </text>
         }
 
-        @if (!string.IsNullOrEmpty(TempData["Error"]?.ToString()) && !ViewBag.AjaxRequest)
+        @if (!string.IsNullOrEmpty(TempData["Error"]?.ToString()) && !(ViewBag.AjaxRequest ?? false))
         {
             <text>
                 if (!window.ajaxRequestInProgress) {
