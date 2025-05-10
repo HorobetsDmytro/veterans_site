@@ -43,6 +43,40 @@ ViewData["Title"] = "Соціальне таксі";
                         
                         <div class="card mb-3">
                             <div class="card-header">
+                                <h5>Тип автомобіля</h5>
+                            </div>
+                            <div class="card-body">
+                                <div class="car-types-container">
+                                    <div class="form-check">
+                                        <input class="form-check-input" type="checkbox" name="carType" value="Regular" id="carTypeRegular" checked>
+                                        <label class="form-check-label" for="carTypeRegular">
+                                            Звичайне авто
+                                        </label>
+                                    </div>
+                                    <div class="form-check">
+                                        <input class="form-check-input" type="checkbox" name="carType" value="WithRamp" id="carTypeWithRamp">
+                                        <label class="form-check-label" for="carTypeWithRamp">
+                                            Авто з пандусом або підйомником
+                                        </label>
+                                    </div>
+                                    <div class="form-check">
+                                        <input class="form-check-input" type="checkbox" name="carType" value="WithMedical" id="carTypeWithMedical">
+                                        <label class="form-check-label" for="carTypeWithMedical">
+                                            Авто з медичним обладнанням
+                                        </label>
+                                    </div>
+                                    <div class="form-check">
+                                        <input class="form-check-input" type="checkbox" name="carType" value="WithAssistant" id="carTypeWithAssistant">
+                                        <label class="form-check-label" for="carTypeWithAssistant">
+                                            Авто з супроводжуючим
+                                        </label>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="card mb-3">
+                            <div class="card-header">
                                 <h5>Тип поїздки</h5>
                             </div>
                             <div class="card-body">
@@ -54,7 +88,6 @@ ViewData["Title"] = "Соціальне таксі";
                                     <label class="btn btn-outline-primary" for="rideTypePlanned">Запланувати</label>
                                 </div>
         
-                                <!-- Блок для запланованої поїздки -->
                                 <div id="plannedTimeBlock" class="mt-3 d-none">
                                     <div class="form-group">
                                         <label for="plannedDate">Дата поїздки</label>
@@ -550,6 +583,14 @@ ViewData["Title"] = "Соціальне таксі";
                 });
             }
 
+            function getSelectedCarTypes() {
+                const selectedTypes = [];
+                $('input[name="carType"]:checked').each(function() {
+                    selectedTypes.push($(this).val());
+                });
+                return selectedTypes;
+            }
+
             function requestRide() {
                 const startLat = $("#startLatitude").val();
                 const startLng = $("#startLongitude").val();
@@ -557,6 +598,7 @@ ViewData["Title"] = "Соціальне таксі";
                 const endLng = $("#endLongitude").val();
                 const startAddress = $("#startAddress").val();
                 const endAddress = $("#endAddress").val();
+                const carTypes = getSelectedCarTypes();
 
                 let estimatedPrice = $("#requestRideBtn").attr("data-price");
                 let estimatedDuration = $("#requestRideBtn").attr("data-duration");
@@ -601,14 +643,20 @@ ViewData["Title"] = "Соціальне таксі";
                     return;
                 }
 
+                if (carTypes.length === 0) {
+                    alert("Будь ласка, виберіть хоча б один тип автомобіля");
+                    return;
+                }
+
                 console.log("Замовлення поїздки з параметрами:", {
                     price: estimatedPrice,
                     duration: estimatedDuration,
-                    distance: estimatedDistance
+                    distance: estimatedDistance,
+                    carTypes: carTypes
                 });
 
                 $.ajax({
-                    url: '@Url.Action("RequestRide", "SocialTaxi")',
+                    url: '/SocialTaxi/RequestRide',
                     type: 'POST',
                     contentType: 'application/json',
                     data: JSON.stringify({
@@ -620,7 +668,8 @@ ViewData["Title"] = "Соціальне таксі";
                         EndLongitude: parseFloat(endLng),
                         EstimatedPrice: parseFloat(estimatedPrice),
                         EstimatedDuration: parseInt(estimatedDuration),
-                        EstimatedDistance: parseFloat(estimatedDistance)
+                        EstimatedDistance: parseFloat(estimatedDistance),
+                        CarTypes: carTypes
                     }),
                     success: function(response) {
                         if (response.success) {
@@ -997,6 +1046,7 @@ ViewData["Title"] = "Соціальне таксі";
                 const endLng = $("#endLongitude").val();
                 const startAddress = $("#startAddress").val();
                 const endAddress = $("#endAddress").val();
+                const carTypes = getSelectedCarTypes();
 
                 let estimatedPrice = $("#scheduledRideBtn").attr("data-price");
                 let estimatedDuration = $("#scheduledRideBtn").attr("data-duration");
@@ -1041,10 +1091,16 @@ ViewData["Title"] = "Соціальне таксі";
                     return;
                 }
 
+                if (carTypes.length === 0) {
+                    alert("Будь ласка, виберіть хоча б один тип автомобіля");
+                    return;
+                }
+
                 console.log("Scheduling ride with values:", {
                     price: estimatedPrice,
                     duration: estimatedDuration,
-                    distance: estimatedDistance
+                    distance: estimatedDistance,
+                    carTypes: carTypes
                 });
 
                 if (!validatePlannedDateTime()) {
@@ -1072,7 +1128,8 @@ ViewData["Title"] = "Соціальне таксі";
                         EstimatedPrice: parseFloat(estimatedPrice),
                         EstimatedDuration: parseInt(estimatedDuration),
                         EstimatedDistance: parseFloat(estimatedDistance),
-                        ScheduledTime: adjustedTime.toISOString()
+                        ScheduledTime: adjustedTime.toISOString(),
+                        CarTypes: carTypes
                     }),
                     success: function(response) {
                         if (response.success) {

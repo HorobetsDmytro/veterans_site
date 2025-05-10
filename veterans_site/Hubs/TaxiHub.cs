@@ -1,14 +1,17 @@
 using Microsoft.AspNetCore.SignalR;
+using veterans_site.Interfaces;
 
 namespace veterans_site.Hubs
 {
     public class TaxiHub : Hub
     {
         private readonly ILogger<TaxiHub> _logger;
+        private readonly ISocialTaxiRepository _taxiRepository;
 
-        public TaxiHub(ILogger<TaxiHub> logger)
+        public TaxiHub(ILogger<TaxiHub> logger, ISocialTaxiRepository taxiRepository)
         {
             _logger = logger;
+            _taxiRepository = taxiRepository;
         }
 
         public async Task JoinRide(string rideId)
@@ -60,41 +63,62 @@ namespace veterans_site.Hubs
         }
         
         public async Task NotifyNewScheduledRide(int rideId, string veteranName, string startAddress, string endAddress, 
-            double startLat, double startLng, double endLat, double endLng, double distanceKm, string scheduledTime)
+            double startLat, double startLng, double endLat, double endLng, double distanceKm, string scheduledTime, List<string> carTypes)
         {
-            await Clients.Group("drivers").SendAsync("NewScheduledRide", new
+            var eligibleDriversIds = await _taxiRepository.GetDriverIdsByCarTypesAsync(carTypes);
+    
+            foreach (var driverId in eligibleDriversIds)
             {
-                rideId,
-                veteranName,
-                startAddress,
-                endAddress,
-                startLat,
-                startLng,
-                endLat,
-                endLng,
-                distanceKm,
-                estimatedPrice = 0,
-                scheduledTime
-            });
+                await Clients.User(driverId).SendAsync("NewScheduledRide", new
+                {
+                    rideId,
+                    veteranName,
+                    startAddress,
+                    endAddress,
+                    startLat,
+                    startLng,
+                    endLat,
+                    endLng,
+                    distanceKm,
+                    estimatedPrice = 0,
+                    scheduledTime,
+                    carTypes
+                });
+            }
         }
 
-        public async Task NotifyScheduledRideActive(int rideId, string veteranName, string startAddress, string endAddress, 
-            double startLat, double startLng, double endLat, double endLng, double distanceKm, string scheduledTime)
+        public async Task NotifyScheduledRideActive(
+            string rideId, 
+            string veteranName, 
+            string startAddress, 
+            string endAddress,
+            double startLat,
+            double startLng,
+            double endLat,
+            double endLng,
+            double distanceKm,
+            string scheduledTime,
+            List<string> carTypes)
         {
-            await Clients.Group("drivers").SendAsync("ScheduledRideActive", new
+            var eligibleDriverIds = await _taxiRepository.GetDriverIdsByCarTypesAsync(carTypes);
+    
+            foreach (var driverId in eligibleDriverIds)
             {
-                rideId,
-                veteranName,
-                startAddress,
-                endAddress,
-                startLat,
-                startLng,
-                endLat,
-                endLng,
-                distanceKm,
-                estimatedPrice = 0,
-                scheduledTime
-            });
+                await Clients.User(driverId).SendAsync("ScheduledRideActive", new
+                {
+                    rideId,
+                    veteranName,
+                    startAddress,
+                    endAddress,
+                    startLat,
+                    startLng,
+                    endLat,
+                    endLng,
+                    distanceKm,
+                    scheduledTime,
+                    carTypes
+                });
+            }
         }
     }
 }

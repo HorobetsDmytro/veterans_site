@@ -37,6 +37,7 @@ public class TaxiRide
     public DateTime? CompleteTime { get; set; }
     public DateTime? ScheduledTime { get; set; }
     public TaxiRideStatus Status { get; set; } = TaxiRideStatus.Requested;
+    public List<string>? CarTypes { get; set; }
     public virtual ApplicationUser Veteran { get; set; }
     public virtual ApplicationUser Driver { get; set; }
 }

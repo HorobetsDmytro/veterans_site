@@ -120,76 +120,101 @@ public class SocialTaxiController : Controller
             EstimatedDistance = model.EstimatedDistance,
             Status = TaxiRideStatus.Requested,
             RequestTime = DateTime.Now,
-            ScheduledTime = model.ScheduledTime
+            ScheduledTime = model.ScheduledTime,
+            CarTypes = model.CarTypes
         };
 
         var createdRide = await _taxiRepository.CreateRideAsync(ride);
 
-        var availableDrivers = await _taxiRepository.GetAvailableDriversAsync();
-        
-        if (ride.ScheduledTime.HasValue)
+        try
         {
-            await _taxiHubContext.Clients.Group("drivers").SendAsync("NotifyNewScheduledRide",
-                ride.Id, 
-                $"{ride.Veteran.FirstName} {ride.Veteran.LastName}", 
-                ride.StartAddress, 
-                ride.EndAddress,
-                ride.StartLatitude,
-                ride.StartLongitude,
-                ride.EndLatitude,
-                ride.EndLongitude,
-                ride.EstimatedDistance,
-                ride.ScheduledTime.Value.ToString("dd.MM.yyyy HH:mm"));
-        }
-
-        await _taxiHubContext.Clients.Group("drivers").SendAsync("NewRideRequest", new
-        {
-            rideId = createdRide.Id,
-            veteranName = veteran.FirstName + " " + veteran.LastName,
-            startAddress = createdRide.StartAddress,
-            endAddress = createdRide.EndAddress,
-            startLat = createdRide.StartLatitude,
-            startLng = createdRide.StartLongitude,
-            endLat = createdRide.EndLatitude,
-            endLng = createdRide.EndLongitude,
-            distanceKm = createdRide.EstimatedDistance,
-            estimatedPrice = 0,
-            isScheduled = createdRide.ScheduledTime.HasValue,
-            scheduledTime = createdRide.ScheduledTime?.ToString("dd.MM.yyyy HH:mm")
-        });
-
-        foreach (var driver in availableDrivers)
-        {
-            if (!string.IsNullOrEmpty(driver.Email))
+            var eligibleDriverIds = await _taxiRepository.GetDriverIdsByCarTypesAsync(model.CarTypes ?? new List<string>());
+            var availableDrivers = await _taxiRepository.GetAvailableDriversAsync();
+            var eligibleAvailableDrivers = availableDrivers.Where(d => eligibleDriverIds.Contains(d.Id)).ToList();
+            
+            if (ride.ScheduledTime.HasValue)
             {
-                var emailSubject = "Нове замовлення таксі";
-                var emailBody = 
-                    "<h2>Нове замовлення таксі</h2>" +
-                    "<p>Шановний водій,</p>" +
-                    "<p>Надійшло нове замовлення на поїздку:</p>" +
-                    "<ul>" +
-                    $"<li>Пасажир: {veteran.FirstName} {veteran.LastName}</li>" +
-                    $"<li>Звідки: {createdRide.StartAddress}</li>" +
-                    $"<li>Куди: {createdRide.EndAddress}</li>" +
-                    $"<li>Відстань: {createdRide.EstimatedDistance} км</li>" +
-                    $"<li>Орієнтовна вартість: 0 грн</li>";
-                
-                if (createdRide.ScheduledTime.HasValue)
+                foreach (var driverId in eligibleDriverIds)
                 {
-                    emailBody += $"<li>Запланований час: {createdRide.ScheduledTime.Value.ToString("dd.MM.yyyy HH:mm")}</li>";
+                    await _taxiHubContext.Clients.User(driverId).SendAsync("NotifyNewScheduledRide", new
+                    {
+                        rideId = ride.Id,
+                        veteranName = $"{ride.Veteran.FirstName} {ride.Veteran.LastName}",
+                        startAddress = ride.StartAddress,
+                        endAddress = ride.EndAddress,
+                        startLat = ride.StartLatitude,
+                        startLng = ride.StartLongitude,
+                        endLat = ride.EndLatitude,
+                        endLng = ride.EndLongitude,
+                        distanceKm = ride.EstimatedDistance,
+                        scheduledTime = ride.ScheduledTime.Value.ToString("dd.MM.yyyy HH:mm"),
+                        carTypes = ride.CarTypes
+                    });
                 }
-                else
-                {
-                    emailBody += "<li>Час: Зараз</li>";
-                }
-                
-                emailBody +=
-                    "</ul>" +
-                    "<p>Щоб прийняти замовлення, будь ласка, увійдіть у свій кабінет.</p>" +
-                    "<p>З повагою,<br>Команда Соціального Таксі</p>";
-                
-                await _emailService.SendEmailAsync(driver.Email, emailSubject, emailBody);
             }
+
+            foreach (var driverId in eligibleDriverIds)
+            {
+                await _taxiHubContext.Clients.User(driverId).SendAsync("NewRideRequest", new
+                {
+                    rideId = createdRide.Id,
+                    veteranName = veteran.FirstName + " " + veteran.LastName,
+                    startAddress = createdRide.StartAddress,
+                    endAddress = createdRide.EndAddress,
+                    startLat = createdRide.StartLatitude,
+                    startLng = createdRide.StartLongitude,
+                    endLat = createdRide.EndLatitude,
+                    endLng = createdRide.EndLongitude,
+                    distanceKm = createdRide.EstimatedDistance,
+                    estimatedPrice = 0,
+                    isScheduled = createdRide.ScheduledTime.HasValue,
+                    scheduledTime = createdRide.ScheduledTime?.ToString("dd.MM.yyyy HH:mm"),
+                    carTypes = createdRide.CarTypes
+                });
+            }
+
+            foreach (var driver in eligibleAvailableDrivers)
+            {
+                if (!string.IsNullOrEmpty(driver.Email))
+                {
+                    var emailSubject = "Нове замовлення таксі";
+                    var emailBody = 
+                        "<h2>Нове замовлення таксі</h2>" +
+                        "<p>Шановний водій,</p>" +
+                        "<p>Надійшло нове замовлення на поїздку:</p>" +
+                        "<ul>" +
+                        $"<li>Пасажир: {veteran.FirstName} {veteran.LastName}</li>" +
+                        $"<li>Звідки: {createdRide.StartAddress}</li>" +
+                        $"<li>Куди: {createdRide.EndAddress}</li>" +
+                        $"<li>Відстань: {createdRide.EstimatedDistance} км</li>" +
+                        $"<li>Орієнтовна вартість: 0 грн</li>";
+                    
+                    if (createdRide.CarTypes != null && createdRide.CarTypes.Any())
+                    {
+                        emailBody += $"<li>Типи автомобілів: {string.Join(", ", createdRide.CarTypes)}</li>";
+                    }
+                    
+                    if (createdRide.ScheduledTime.HasValue)
+                    {
+                        emailBody += $"<li>Запланований час: {createdRide.ScheduledTime.Value.ToString("dd.MM.yyyy HH:mm")}</li>";
+                    }
+                    else
+                    {
+                        emailBody += "<li>Час: Зараз</li>";
+                    }
+                    
+                    emailBody +=
+                        "</ul>" +
+                        "<p>Щоб прийняти замовлення, будь ласка, увійдіть у свій кабінет.</p>" +
+                        "<p>З повагою,<br>Команда Соціального Таксі</p>";
+                    
+                    await _emailService.SendEmailAsync(driver.Email, emailSubject, emailBody);
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Помилка при обробці сповіщень: {ex.Message}");
         }
 
         return Json(new { success = true, rideId = createdRide.Id });
@@ -319,49 +344,72 @@ public class SocialTaxiController : Controller
             EstimatedDistance = model.EstimatedDistance,
             Status = TaxiRideStatus.Requested,
             RequestTime = DateTime.Now,
-            ScheduledTime = model.ScheduledTime
+            ScheduledTime = model.ScheduledTime,
+            CarTypes = model.CarTypes
         };
 
         var createdRide = await _taxiRepository.CreateRideAsync(ride);
 
-        await _taxiHubContext.Clients.Group("drivers").SendAsync("NewScheduledRideRequest", new
+        try
         {
-            rideId = createdRide.Id,
-            veteranName = veteran.FirstName + " " + veteran.LastName,
-            startAddress = createdRide.StartAddress,
-            endAddress = createdRide.EndAddress,
-            startLat = createdRide.StartLatitude,
-            startLng = createdRide.StartLongitude,
-            endLat = createdRide.EndLatitude,
-            endLng = createdRide.EndLongitude,
-            distanceKm = createdRide.EstimatedDistance,
-            estimatedPrice = 0,
-            scheduledTime = createdRide.ScheduledTime?.ToString("dd.MM.yyyy HH:mm")
-        });
-
-        var allDrivers = await _taxiRepository.GetAllDriversAsync();
-        foreach (var driver in allDrivers)
-        {
-            if (!string.IsNullOrEmpty(driver.Email))
+            var eligibleDriverIds = await _taxiRepository.GetDriverIdsByCarTypesAsync(model.CarTypes ?? new List<string>());
+            
+            foreach (var driverId in eligibleDriverIds)
             {
-                var emailSubject = "Нова запланована поїздка";
-                var emailBody = 
-                    "<h2>Нова запланована поїздка</h2>" +
-                    "<p>Шановний водій,</p>" +
-                    "<p>Надійшло нове замовлення на заплановану поїздку:</p>" +
-                    "<ul>" +
-                    $"<li>Пасажир: {veteran.FirstName} {veteran.LastName}</li>" +
-                    $"<li>Звідки: {createdRide.StartAddress}</li>" +
-                    $"<li>Куди: {createdRide.EndAddress}</li>" +
-                    $"<li>Відстань: {createdRide.EstimatedDistance} км</li>" +
-                    $"<li>Орієнтовна вартість: 0 грн</li>" +
-                    $"<li>Запланований час: {createdRide.ScheduledTime.Value.ToString("dd.MM.yyyy HH:mm")}</li>" +
-                    "</ul>" +
-                    "<p>Щоб прийняти замовлення, будь ласка, увійдіть у свій кабінет.</p>" +
-                    "<p>З повагою,<br>Команда Соціального Таксі</p>";
-                
-                await _emailService.SendEmailAsync(driver.Email, emailSubject, emailBody);
+                await _taxiHubContext.Clients.User(driverId).SendAsync("NewScheduledRideRequest", new
+                {
+                    rideId = createdRide.Id,
+                    veteranName = veteran.FirstName + " " + veteran.LastName,
+                    startAddress = createdRide.StartAddress,
+                    endAddress = createdRide.EndAddress,
+                    startLat = createdRide.StartLatitude,
+                    startLng = createdRide.StartLongitude,
+                    endLat = createdRide.EndLatitude,
+                    endLng = createdRide.EndLongitude,
+                    distanceKm = createdRide.EstimatedDistance,
+                    estimatedPrice = 0,
+                    scheduledTime = createdRide.ScheduledTime?.ToString("dd.MM.yyyy HH:mm"),
+                    carTypes = createdRide.CarTypes
+                });
             }
+
+            var allDrivers = await _taxiRepository.GetAllDriversAsync();
+            var eligibleDrivers = allDrivers.Where(d => eligibleDriverIds.Contains(d.Id)).ToList();
+            
+            foreach (var driver in eligibleDrivers)
+            {
+                if (!string.IsNullOrEmpty(driver.Email))
+                {
+                    var emailSubject = "Нова запланована поїздка";
+                    var emailBody = 
+                        "<h2>Нова запланована поїздка</h2>" +
+                        "<p>Шановний водій,</p>" +
+                        "<p>Надійшло нове замовлення на заплановану поїздку:</p>" +
+                        "<ul>" +
+                        $"<li>Пасажир: {veteran.FirstName} {veteran.LastName}</li>" +
+                        $"<li>Звідки: {createdRide.StartAddress}</li>" +
+                        $"<li>Куди: {createdRide.EndAddress}</li>" +
+                        $"<li>Відстань: {createdRide.EstimatedDistance} км</li>" +
+                        $"<li>Орієнтовна вартість: 0 грн</li>";
+                    
+                    if (createdRide.CarTypes != null && createdRide.CarTypes.Any())
+                    {
+                        emailBody += $"<li>Типи автомобілів: {string.Join(", ", createdRide.CarTypes)}</li>";
+                    }
+                    
+                    emailBody +=
+                        $"<li>Запланований час: {createdRide.ScheduledTime.Value.ToString("dd.MM.yyyy HH:mm")}</li>" +
+                        "</ul>" +
+                        "<p>Щоб прийняти замовлення, будь ласка, увійдіть у свій кабінет.</p>" +
+                        "<p>З повагою,<br>Команда Соціального Таксі</p>";
+                    
+                    await _emailService.SendEmailAsync(driver.Email, emailSubject, emailBody);
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Помилка при обробці сповіщень: {ex.Message}");
         }
 
         return Json(new { success = true, rideId = createdRide.Id });

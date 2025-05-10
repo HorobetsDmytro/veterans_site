@@ -27,4 +27,9 @@ public interface ISocialTaxiRepository
     Task<bool> AssignDriverToScheduledRideAsync(int rideId, string driverId);
     Task<List<TaxiRide>> GetDriverAcceptedScheduledRidesAsync(string driverId);
     Task<List<TaxiRide>> GetRidesForActivationAsync();
+    Task<List<TaxiRide>> GetScheduledRidesForDriverTypeAsync(string carType);
+    Task<List<TaxiRide>> GetActiveScheduledRidesForDriverTypeAsync(string carType);
+    Task<List<string>> GetDriverIdsByCarTypesAsync(List<string> carTypes);
+    Task<List<TaxiRide>> GetActiveRideRequestsForDriverTypeAsync(string driverCarType);
+
 }

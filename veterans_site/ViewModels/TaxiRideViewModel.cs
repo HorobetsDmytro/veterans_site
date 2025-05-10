@@ -17,4 +17,6 @@ public class TaxiRideViewModel
 
     public int EstimatedDuration { get; set; }
     public DateTime? ScheduledTime { get; set; }
+    public List<string> CarTypes { get; set; }
+
 }

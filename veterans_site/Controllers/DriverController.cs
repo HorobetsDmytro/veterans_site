@@ -124,7 +124,16 @@ public class DriverController : Controller
     {
         try
         {
-            var rideRequests = await _taxiRepository.GetActiveRideRequestsAsync();
+            var driverId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+            var driver = await _taxiRepository.GetDriverByIdAsync(driverId);
+    
+            if (driver == null)
+            {
+                return Json(new { success = false, message = "Водія не знайдено" });
+            }
+    
+            var rideRequests = await _taxiRepository.GetActiveRideRequestsForDriverTypeAsync(driver.CarType);
+    
             var rideRequestsData = rideRequests.Select(ride => new
             {
                 rideId = ride.Id,
@@ -138,9 +147,11 @@ public class DriverController : Controller
                 distanceKm = ride.EstimatedDistance,
                 estimatedPrice = 0,
                 isScheduled = ride.ScheduledTime.HasValue,
-                scheduledTime = ride.ScheduledTime?.ToString("dd.MM.yyyy HH:mm")
+                scheduledTime = ride.ScheduledTime?.ToString("dd.MM.yyyy HH:mm"),
+                carTypes = ride.CarTypes,
+                status = ride.Status.ToString()
             }).ToList();
-            
+    
             return Json(new { success = true, rides = rideRequestsData });
         }
         catch (Exception ex)
@@ -431,7 +442,16 @@ public class DriverController : Controller
     {
         try
         {
-            var scheduledRides = await _taxiRepository.GetScheduledRidesAsync();
+            var driverId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+            var driver = await _taxiRepository.GetDriverByIdAsync(driverId);
+        
+            if (driver == null)
+            {
+                return Json(new { success = false, message = "Водія не знайдено" });
+            }
+        
+            var scheduledRides = await _taxiRepository.GetScheduledRidesForDriverTypeAsync(driver.CarType);
+        
             var scheduledRidesData = scheduledRides.Select(ride => new
             {
                 rideId = ride.Id,
@@ -444,9 +464,10 @@ public class DriverController : Controller
                 endLng = ride.EndLongitude,
                 distanceKm = ride.EstimatedDistance,
                 estimatedPrice = 0,
-                scheduledTime = ride.ScheduledTime?.ToString("dd.MM.yyyy HH:mm")
+                scheduledTime = ride.ScheduledTime?.ToString("dd.MM.yyyy HH:mm"),
+                carTypes = ride.CarTypes
             }).ToList();
-            
+        
             return Json(new { success = true, rides = scheduledRidesData });
         }
         catch (Exception ex)
@@ -456,72 +477,72 @@ public class DriverController : Controller
     }
 
     public async Task<IActionResult> AcceptScheduledRide(int rideId)
-{
-    var driverId = User.FindFirstValue(ClaimTypes.NameIdentifier);
-    
-    try
     {
-        var driver = await _taxiRepository.GetDriverByIdAsync(driverId);
-        if (driver == null)
-        {
-            return Json(new { success = false, message = "Водія не знайдено в системі" });
-        }
+        var driverId = User.FindFirstValue(ClaimTypes.NameIdentifier);
         
-        var ride = await _taxiRepository.GetRideByIdAsync(rideId);
-        if (ride == null)
+        try
         {
-            return Json(new { success = false, message = "Заплановану поїздку не знайдено" });
-        }
-        
-        if (!ride.ScheduledTime.HasValue)
-        {
-            return Json(new { success = false, message = "Це не є запланованою поїздкою" });
-        }
-
-        if (!string.IsNullOrEmpty(ride.DriverId) && ride.DriverId != driverId)
-        {
-            return Json(new { success = false, message = "Ця поїздка вже прийнята іншим водієм" });
-        }
-        
-        bool assignSuccess = await _taxiRepository.AssignDriverToScheduledRideAsync(rideId, driverId);
-        
-        if (!assignSuccess)
-        {
-            return Json(new { success = false, message = "Не вдалося прийняти заплановану поїздку" });
-        }
-        
-        await _hubContext.Clients.Group("drivers").SendAsync("RideAssigned", new
-        {
-            rideId = ride.Id
-        });
-        
-        await _hubContext.Clients.User(ride.VeteranId).SendAsync("ScheduledRideAccepted", new
-        {
-            rideId = ride.Id,
-            driverName = $"{driver.FirstName} {driver.LastName}",
-            driverPhone = driver.PhoneNumber,
-            carModel = driver.CarModel,
-            licensePlate = driver.LicensePlate,
-            driverPhoto = driver.AvatarPath ?? "/images/drivers/default.jpg",
-            scheduledTime = ride.ScheduledTime?.ToString("dd.MM.yyyy HH:mm")
-        });
-        
-        return Json(new { 
-            success = true,
-            scheduledTime = ride.ScheduledTime?.ToString("dd.MM.yyyy HH:mm"),
-            rideDetails = new {
-                rideId = ride.Id,
-                startAddress = ride.StartAddress,
-                endAddress = ride.EndAddress,
-                veteranName = $"{ride.Veteran?.FirstName} {ride.Veteran?.LastName}"
+            var driver = await _taxiRepository.GetDriverByIdAsync(driverId);
+            if (driver == null)
+            {
+                return Json(new { success = false, message = "Водія не знайдено в системі" });
             }
-        });
+            
+            var ride = await _taxiRepository.GetRideByIdAsync(rideId);
+            if (ride == null)
+            {
+                return Json(new { success = false, message = "Заплановану поїздку не знайдено" });
+            }
+            
+            if (!ride.ScheduledTime.HasValue)
+            {
+                return Json(new { success = false, message = "Це не є запланованою поїздкою" });
+            }
+
+            if (!string.IsNullOrEmpty(ride.DriverId) && ride.DriverId != driverId)
+            {
+                return Json(new { success = false, message = "Ця поїздка вже прийнята іншим водієм" });
+            }
+            
+            bool assignSuccess = await _taxiRepository.AssignDriverToScheduledRideAsync(rideId, driverId);
+            
+            if (!assignSuccess)
+            {
+                return Json(new { success = false, message = "Не вдалося прийняти заплановану поїздку" });
+            }
+            
+            await _hubContext.Clients.Group("drivers").SendAsync("RideAssigned", new
+            {
+                rideId = ride.Id
+            });
+            
+            await _hubContext.Clients.User(ride.VeteranId).SendAsync("ScheduledRideAccepted", new
+            {
+                rideId = ride.Id,
+                driverName = $"{driver.FirstName} {driver.LastName}",
+                driverPhone = driver.PhoneNumber,
+                carModel = driver.CarModel,
+                licensePlate = driver.LicensePlate,
+                driverPhoto = driver.AvatarPath ?? "/images/drivers/default.jpg",
+                scheduledTime = ride.ScheduledTime?.ToString("dd.MM.yyyy HH:mm")
+            });
+            
+            return Json(new { 
+                success = true,
+                scheduledTime = ride.ScheduledTime?.ToString("dd.MM.yyyy HH:mm"),
+                rideDetails = new {
+                    rideId = ride.Id,
+                    startAddress = ride.StartAddress,
+                    endAddress = ride.EndAddress,
+                    veteranName = $"{ride.Veteran?.FirstName} {ride.Veteran?.LastName}"
+                }
+            });
+        }
+        catch (Exception ex)
+        {
+            return Json(new { success = false, message = ex.Message });
+        }
     }
-    catch (Exception ex)
-    {
-        return Json(new { success = false, message = ex.Message });
-    }
-}
 
     [HttpGet]
     public async Task<IActionResult> GetActiveScheduledRides()
@@ -529,13 +550,19 @@ public class DriverController : Controller
         try
         {
             var driverId = User.FindFirstValue(ClaimTypes.NameIdentifier);
-            
-            var activeScheduledRides = await _taxiRepository.GetActiveScheduledRidesAsync();
-            
+            var driver = await _taxiRepository.GetDriverByIdAsync(driverId);
+        
+            if (driver == null)
+            {
+                return Json(new { success = false, message = "Водія не знайдено" });
+            }
+        
+            var activeScheduledRides = await _taxiRepository.GetActiveScheduledRidesForDriverTypeAsync(driver.CarType);
+        
             var filteredRides = activeScheduledRides
                 .Where(ride => string.IsNullOrEmpty(ride.DriverId) || ride.DriverId == driverId)
                 .ToList();
-            
+        
             var activeScheduledRidesData = filteredRides.Select(ride => new
             {
                 rideId = ride.Id,
@@ -549,9 +576,10 @@ public class DriverController : Controller
                 distanceKm = ride.EstimatedDistance,
                 estimatedPrice = 0,
                 scheduledTime = ride.ScheduledTime?.ToString("dd.MM.yyyy HH:mm"),
-                driverAssigned = !string.IsNullOrEmpty(ride.DriverId) && ride.DriverId == driverId
+                driverAssigned = !string.IsNullOrEmpty(ride.DriverId) && ride.DriverId == driverId,
+                carTypes = ride.CarTypes
             }).ToList();
-            
+        
             return Json(new { success = true, rides = activeScheduledRidesData });
         }
         catch (Exception ex)

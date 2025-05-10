@@ -134,6 +134,7 @@ ViewData["Title"] = "Панель водія";
                         <div class="mb-2">
                             <strong>Куди:</strong> <span id="modalEndAddress"></span>
                         </div>
+                        <div id="modalCarTypes" class="mb-2"></div>
                         <div class="mb-2">
                             <strong>Відстань:</strong> <span id="modalDistance"></span> км
                         </div>
@@ -274,9 +275,30 @@ ViewData["Title"] = "Панель водія";
                 $("#modalDistance").text(data.distanceKm);
                 $("#modalPrice").text(data.estimatedPrice);
 
+                const carTypeContainer = $("#modalCarTypes");
+                carTypeContainer.empty();
+
+                if (data.carTypes && data.carTypes.length > 0) {
+                    const carTypeLabels = {
+                        'Regular': 'Звичайне авто',
+                        'WithRamp': 'Авто з пандусом',
+                        'WithMedical': 'Авто з медичним обладнанням',
+                        'WithAssistant': 'Авто з супроводжуючим'
+                    };
+
+                    let carTypesHtml = '<div class="mb-2"><strong>Тип авто:</strong> ';
+                    data.carTypes.forEach((type, index) => {
+                        carTypesHtml += `<span class="badge bg-secondary">${carTypeLabels[type] || type}</span>`;
+                        if (index < data.carTypes.length - 1) carTypesHtml += ' ';
+                    });
+                    carTypesHtml += '</div>';
+
+                    carTypeContainer.html(carTypesHtml);
+                }
+
                 pendingRideRequestModal = new bootstrap.Modal(document.getElementById('newRideRequestModal'));
                 pendingRideRequestModal.show();
-                
+
                 addRideRequestCard(data);
             });
 
@@ -770,26 +792,43 @@ ViewData["Title"] = "Панель водія";
             const scheduledBadge = data.scheduledTime ?
                 `<span class="badge bg-info ms-2">Запланована: ${data.scheduledTime}</span>` : '';
 
+            let carTypesBadges = '';
+            if (data.carTypes && data.carTypes.length > 0) {
+                const carTypeLabels = {
+                    'Regular': 'Звичайне',
+                    'WithRamp': 'З пандусом',
+                    'WithMedical': 'З медичним обладнанням',
+                    'WithAssistant': 'З супроводжуючим'
+                };
+
+                carTypesBadges = '<div class="mb-2">';
+                data.carTypes.forEach(type => {
+                    carTypesBadges += `<span class="badge bg-secondary me-1">${carTypeLabels[type] || type}</span>`;
+                });
+                carTypesBadges += '</div>';
+            }
+
             const rideCard = `
-                <div class="card mb-2 ride-request ${data.scheduledTime ? 'scheduled-active' : ''}" data-ride-id="${data.rideId}">
-                    <div class="card-body p-3">
-                        <div class="d-flex justify-content-between align-items-start mb-2">
-                            <h6 class="mb-0">${data.veteranName || 'Невідомий пасажир'}</h6>
-                            <div>
-                                <span class="badge bg-primary">${data.distanceKm || '?'} км</span>
-                                ${scheduledBadge}
-                            </div>
-                        </div>
-                        <div class="mb-1">Від: ${data.startAddress || 'Невідома адреса'}</div>
-                        <div class="mb-2">До: ${data.endAddress || 'Невідома адреса'}</div>
-                        <div class="d-flex justify-content-between align-items-center">
-                            <span class="text-success fw-bold">${data.estimatedPrice || '0'} грн</span>
-                            <button class="btn btn-sm btn-success accept-ride-btn" 
-                                    data-ride-id="${data.rideId}">Прийняти</button>
-                        </div>
+        <div class="card mb-2 ride-request ${data.scheduledTime ? 'scheduled-active' : ''}" data-ride-id="${data.rideId}">
+            <div class="card-body p-3">
+                <div class="d-flex justify-content-between align-items-start mb-2">
+                    <h6 class="mb-0">${data.veteranName || 'Невідомий пасажир'}</h6>
+                    <div>
+                        <span class="badge bg-primary">${data.distanceKm || '?'} км</span>
+                        ${scheduledBadge}
                     </div>
                 </div>
-            `;
+                <div class="mb-1">Від: ${data.startAddress || 'Невідома адреса'}</div>
+                <div class="mb-2">До: ${data.endAddress || 'Невідома адреса'}</div>
+                ${carTypesBadges}
+                <div class="d-flex justify-content-between align-items-center">
+                    <span class="text-success fw-bold">${data.estimatedPrice || '0'} грн</span>
+                    <button class="btn btn-sm btn-success accept-ride-btn" 
+                            data-ride-id="${data.rideId}">Прийняти</button>
+                </div>
+            </div>
+        </div>
+    `;
 
             if ($(`.ride-request[data-ride-id="${data.rideId}"]`).length === 0) {
                 console.log("Додаємо нову картку запиту");
@@ -812,7 +851,7 @@ ViewData["Title"] = "Панель водія";
             } else {
                 console.log("Картка з таким ID вже існує, пропускаємо");
             }
-        }
+}
 
         function showScheduledRideNotification(title, message) {
             if (!$("#scheduledRideActivatedAlert").length) {
@@ -1247,23 +1286,40 @@ ViewData["Title"] = "Панель водія";
                         $("#noScheduledRidesMessage").addClass("d-none");
 
                         response.rides.forEach(function(ride) {
+                            let carTypesBadges = '';
+                            if (ride.carTypes && ride.carTypes.length > 0) {
+                                const carTypeLabels = {
+                                    'Regular': 'Звичайне',
+                                    'WithRamp': 'З пандусом',
+                                    'WithMedical': 'З медичним обладнанням',
+                                    'WithAssistant': 'З супроводжуючим'
+                                };
+
+                                carTypesBadges = '<div class="mb-2">';
+                                ride.carTypes.forEach(type => {
+                                    carTypesBadges += `<span class="badge bg-secondary me-1">${carTypeLabels[type] || type}</span>`;
+                                });
+                                carTypesBadges += '</div>';
+                            }
+
                             const scheduledRideCard = `
-                        <div class="card mb-2 scheduled-ride" data-ride-id="${ride.rideId}">
-                            <div class="card-body p-3">
-                                <div class="d-flex justify-content-between align-items-start mb-2">
-                                    <h6 class="mb-0">На: ${ride.scheduledTime}</h6>
-                                    <span class="badge bg-warning">${ride.distanceKm} км</span>
-                                </div>
-                                <div class="mb-1">Від: ${ride.startAddress}</div>
-                                <div class="mb-2">До: ${ride.endAddress}</div>
-                                <div class="d-flex justify-content-between align-items-center">
-                                    <span class="text-success fw-bold">${ride.estimatedPrice} грн</span>
-                                    <button class="btn btn-sm btn-warning accept-scheduled-btn" 
-                                            data-ride-id="${ride.rideId}">Прийняти</button>
-                                </div>
+                    <div class="card mb-2 scheduled-ride" data-ride-id="${ride.rideId}">
+                        <div class="card-body p-3">
+                            <div class="d-flex justify-content-between align-items-start mb-2">
+                                <h6 class="mb-0">На: ${ride.scheduledTime}</h6>
+                                <span class="badge bg-warning">${ride.distanceKm} км</span>
+                            </div>
+                            <div class="mb-1">Від: ${ride.startAddress}</div>
+                            <div class="mb-2">До: ${ride.endAddress}</div>
+                            ${carTypesBadges}
+                            <div class="d-flex justify-content-between align-items-center">
+                                <span class="text-success fw-bold">${ride.estimatedPrice} грн</span>
+                                <button class="btn btn-sm btn-warning accept-scheduled-btn" 
+                                        data-ride-id="${ride.rideId}">Прийняти</button>
                             </div>
                         </div>
-                    `;
+                    </div>
+                `;
                             $("#scheduledRidesListContainer").append(scheduledRideCard);
                         });
 

@@ -39,47 +39,64 @@ namespace veterans_site.Services
         }
 
         private async Task CheckScheduledRides()
+{
+    _logger.LogInformation("Checking for scheduled rides that need to be activated...");
+    
+    using (var scope = _serviceProvider.CreateScope())
+    {
+        var taxiRepository = scope.ServiceProvider.GetRequiredService<ISocialTaxiRepository>();
+        var hubContext = scope.ServiceProvider.GetRequiredService<IHubContext<TaxiHub>>();
+        var hub = scope.ServiceProvider.GetRequiredService<TaxiHub>();
+        
+        var activeScheduledRides = await taxiRepository.GetActiveScheduledRidesAsync();
+        
+        foreach (var ride in activeScheduledRides)
         {
-            _logger.LogInformation("Checking for scheduled rides that need to be activated...");
-            
-            using (var scope = _serviceProvider.CreateScope())
+            try
             {
-                var taxiRepository = scope.ServiceProvider.GetRequiredService<ISocialTaxiRepository>();
-                var hubContext = scope.ServiceProvider.GetRequiredService<IHubContext<TaxiHub>>();
-                var hub = scope.ServiceProvider.GetRequiredService<TaxiHub>();
+                _logger.LogInformation($"Found scheduled ride {ride.Id} that needs to be activated");
                 
-                var activeScheduledRides = await taxiRepository.GetActiveScheduledRidesAsync();
+                var carTypes = ride.CarTypes ?? new List<string>();
                 
-                foreach (var ride in activeScheduledRides)
+                var eligibleDriverIds = await taxiRepository.GetDriverIdsByCarTypesAsync(carTypes);
+                
+                foreach (var driverId in eligibleDriverIds)
                 {
-                    _logger.LogInformation($"Found scheduled ride {ride.Id} that needs to be activated");
-                    
-                    await hub.NotifyScheduledRideActive(
-                        ride.Id, 
-                        $"{ride.Veteran.FirstName} {ride.Veteran.LastName}", 
-                        ride.StartAddress, 
-                        ride.EndAddress,
-                        ride.StartLatitude,
-                        ride.StartLongitude,
-                        ride.EndLatitude,
-                        ride.EndLongitude,
-                        ride.EstimatedDistance,
-                        ride.ScheduledTime?.ToString("dd.MM.yyyy HH:mm"));
-                    
-                    if (!string.IsNullOrEmpty(ride.DriverId))
+                    await hubContext.Clients.User(driverId).SendAsync("NotifyScheduledRideActive", new
                     {
-                        await hubContext.Clients.User(ride.DriverId).SendAsync("RideRequestForDriver", new
-                        {
-                            rideId = ride.Id,
-                            veteranName = $"{ride.Veteran.FirstName} {ride.Veteran.LastName}",
-                            startAddress = ride.StartAddress,
-                            endAddress = ride.EndAddress,
-                            distanceKm = ride.EstimatedDistance,
-                            estimatedPrice = 0
-                        });
-                    }
+                        rideId = ride.Id,
+                        veteranName = $"{ride.Veteran.FirstName} {ride.Veteran.LastName}",
+                        startAddress = ride.StartAddress,
+                        endAddress = ride.EndAddress,
+                        startLat = ride.StartLatitude,
+                        startLng = ride.StartLongitude,
+                        endLat = ride.EndLatitude,
+                        endLng = ride.EndLongitude,
+                        distanceKm = ride.EstimatedDistance,
+                        scheduledTime = ride.ScheduledTime?.ToString("dd.MM.yyyy HH:mm"),
+                        carTypes = ride.CarTypes
+                    });
+                }
+                
+                if (!string.IsNullOrEmpty(ride.DriverId))
+                {
+                    await hubContext.Clients.User(ride.DriverId).SendAsync("RideRequestForDriver", new
+                    {
+                        rideId = ride.Id,
+                        veteranName = $"{ride.Veteran.FirstName} {ride.Veteran.LastName}",
+                        startAddress = ride.StartAddress,
+                        endAddress = ride.EndAddress,
+                        distanceKm = ride.EstimatedDistance,
+                        estimatedPrice = 0
+                    });
                 }
             }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, $"Error processing scheduled ride {ride.Id}");
+            }
         }
+    }
+}
     }
 }

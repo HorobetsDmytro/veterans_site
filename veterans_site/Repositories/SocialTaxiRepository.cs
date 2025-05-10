@@ -303,4 +303,86 @@ public class SocialTaxiRepository : ISocialTaxiRepository
                         (r.DriverId != null || r.DriverId == null))
             .ToListAsync();
     }
+    
+    public async Task<List<TaxiRide>> GetActiveScheduledRidesForDriverTypeAsync(string carType)
+    {
+        var driverCarTypes = carType.Split(',').Select(t => t.Trim()).ToList();
+
+        var rides = await _context.TaxiRides
+            .Include(r => r.Veteran)
+            .Where(r => r.Status == TaxiRideStatus.Requested && 
+                        r.ScheduledTime.HasValue)
+            .ToListAsync();
+
+        var filteredRides = rides.Where(r => 
+            r.CarTypes != null && 
+            r.CarTypes.All(requiredType => driverCarTypes.Contains(requiredType))
+        ).ToList();
+
+        return filteredRides;
+    }
+
+    public async Task<List<TaxiRide>> GetScheduledRidesForDriverTypeAsync(string carType)
+    {
+        var driverCarTypes = carType.Split(',').Select(t => t.Trim()).ToList();
+
+        var rides = await _context.TaxiRides
+            .Include(r => r.Veteran)
+            .Where(r => r.Status == TaxiRideStatus.Requested && 
+                        r.ScheduledTime.HasValue)
+            .ToListAsync();
+
+        var filteredRides = rides.Where(r => 
+            r.CarTypes != null && 
+            r.CarTypes.All(requiredType => driverCarTypes.Contains(requiredType))
+        ).ToList();
+
+        return filteredRides;
+    }
+
+    public async Task<List<string>> GetDriverIdsByCarTypesAsync(List<string> carTypes)
+    {
+        if (carTypes == null || !carTypes.Any())
+        {
+            return new List<string>();
+        }
+
+        var activeDrivers = await _context.Users
+            .Where(u => u.IsActive && u.CarType != null)
+            .ToListAsync();
+
+        var eligibleDrivers = activeDrivers.Where(driver =>
+        {
+            if (string.IsNullOrEmpty(driver.CarType))
+                return false;
+            
+            var driverCarTypes = driver.CarType.Split(',').Select(t => t.Trim()).ToList();
+            
+            return carTypes.All(reqType => driverCarTypes.Contains(reqType));
+        }).ToList();
+
+        return eligibleDrivers.Select(d => d.Id).ToList();
+    }
+
+    public async Task<List<TaxiRide>> GetActiveRideRequestsForDriverTypeAsync(string driverCarType)
+    {
+        if (string.IsNullOrEmpty(driverCarType))
+        {
+            return new List<TaxiRide>();
+        }
+
+        var driverCarTypes = driverCarType.Split(',').Select(t => t.Trim()).ToList();
+
+        var rides = await _context.TaxiRides
+            .Include(r => r.Veteran)
+            .Where(r => r.Status == TaxiRideStatus.Requested)
+            .ToListAsync();
+
+        var filteredRides = rides.Where(r => 
+            r.CarTypes != null && r.CarTypes.Any() && 
+            r.CarTypes.All(requiredType => driverCarTypes.Contains(requiredType))
+        ).ToList();
+
+        return filteredRides;
+    }
 }
