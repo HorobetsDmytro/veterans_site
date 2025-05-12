@@ -765,9 +765,12 @@ ViewData["Title"] = "Соціальне таксі";
                     }
                 });
 
+                let isCanceled = false;
+
                 connection.on("RideStatusUpdated", function(data) {
                     console.log("Отримано оновлення статусу поїздки:", data);
-                    if (debugEvents) {
+
+                    if (typeof debugEvents !== 'undefined' && debugEvents) {
                         console.log(`%cПодія RideStatusUpdated: ${JSON.stringify(data)}`, 'background: #ccf; color: #000');
                     }
 
@@ -777,6 +780,24 @@ ViewData["Title"] = "Соціальне таксі";
 
                     if (rideId == currentRideId) {
                         console.log(`Оновлюємо статус: ${status}, повідомлення: ${message}`);
+
+                        if (isCanceled) {
+                            console.log("Поїздка вже скасована, ігноруємо оновлення статусу:", status);
+                            return;
+                        }
+
+                        if (status === "Canceled" || status.toLowerCase() === "canceled") {
+                            console.log("Поїздка скасована водієм");
+                            isCanceled = true;
+                            updateRideStatusUI("Canceled", message || "Поїздку скасовано водієм");
+
+                            setTimeout(function() {
+                                resetUI();
+                                isCanceled = false;
+                                alert("Поїздку скасовано водієм");
+                            }, 3000);
+                            return;
+                        }
 
                         let uiStatus = status;
                         if (status === "DriverArrived" || (status === "PickupTime" && message.includes("прибув"))) {
@@ -791,6 +812,22 @@ ViewData["Title"] = "Соціальне таксі";
                                 alert("Поїздку завершено! Дякуємо, що скористалися сервісом.");
                             }, 3000);
                         }
+                    }
+                });
+
+                connection.on("RideCanceled", function(data) {
+                    console.log("Отримано повідомлення про скасування поїздки:", data);
+
+                    if (data.rideId == currentRideId) {
+                        console.log("Скасовано поточну поїздку");
+                        isCanceled = true;
+                        updateRideStatusUI("Canceled", data.message || "Поїздку скасовано водієм");
+
+                        setTimeout(function() {
+                            resetUI();
+                            isCanceled = false;
+                            alert("Поїздку скасовано водієм");
+                        }, 3000);
                     }
                 });
 
@@ -870,6 +907,19 @@ ViewData["Title"] = "Соціальне таксі";
 
             function updateRideStatusUI(status, message) {
                 console.log("updateRideStatusUI викликано зі статусом:", status);
+
+                if (status === "Canceled" || status.toLowerCase() === "canceled") {
+                    console.log("Поїздку скасовано водієм");
+
+                    $("#statusText").removeClass().addClass("badge bg-danger").text("Скасовано");
+                    $("#rideMessage").text(message || "Поїздку скасовано водієм");
+
+                    $("#cancelRideBtn").prop("disabled", true)
+                        .addClass("btn-secondary").removeClass("btn-danger")
+                        .attr("title", "Поїздку скасовано");
+
+                    return;
+                }
 
                 let statusClass = "bg-warning";
                 let statusText = "Очікування";

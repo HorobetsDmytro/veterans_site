@@ -416,17 +416,49 @@ ViewData["Title"] = "Панель водія";
                     .catch(err => console.error(`Помилка при приєднанні до групи: ${err}`));
             });
 
-            connection.on("RideStatusUpdated", function (data) {
-                console.log("Оновлення статусу поїздки:", data);
+            connection.on("RideStatusUpdated", function(data) {
+                console.log("Отримано оновлення статусу поїздки:", data);
+                if (typeof debugEvents === 'undefined') {
+                    debugEvents = false;
+                }
+                
+                if (debugEvents) {
+                    console.log(`%cПодія RideStatusUpdated: ${JSON.stringify(data)}`, 'background: #ccf; color: #000');
+                }
 
-                $("#rideStatusMessage").text(data.Message);
+                const rideId = data.RideId || data.rideId;
+                const status = data.Status || data.status;
+                const message = data.Message || data.message;
 
-                if (data.Status === "Completed" || data.Status === "Canceled") {
-                    setTimeout(() => {
-                        resetRideUI();
-                    }, 5000);
+                if (rideId == activeRideId) {
+                    console.log(`Оновлюємо статус: ${status}, повідомлення: ${message}`);
+
+                    if (status === "Canceled" || status.toLowerCase() === "canceled") {
+                        console.log("Поїздка скасована водієм");
+                        updateRideStatusUI("Canceled", message || "Поїздку скасовано водієм");
+
+                        setTimeout(function() {
+                            resetRideUI();
+                            alert("Поїздку скасовано");
+                        }, 3000);
+                        return;
+                    }
+
+                    if (status === "DriverArrived" || (status === "PickupTime" && message.includes("прибув"))) {
+                        uiStatus = "DriverArrived";
+                    }
+
+                    updateRideStatusUI(uiStatus, message);
+
+                    if (status === "Completed" || status === "completed") {
+                        setTimeout(function() {
+                            resetRideUI();
+                            alert("Поїздку завершено! Дякуємо, що скористалися сервісом.");
+                        }, 3000);
+                    }
                 }
             });
+
 
             connection.on("RideCanceled", function(data) {
                 console.log("Отримано повідомлення про скасування поїздки:", data);
@@ -556,6 +588,58 @@ ViewData["Title"] = "Панель водія";
                     }
                 }
             });
+        }
+
+        function updateRideStatusUI(status, message) {
+            console.log(`Оновлення UI для статусу ${status}: ${message}`);
+
+            $("#statusMessage").text(message);
+
+            $("#statusIndicator")
+                .removeClass("bg-warning bg-info bg-success bg-danger")
+                .addClass("bg-secondary");
+
+            $("#statusIcon")
+                .removeClass("fa-magnifying-glass fa-car-side fa-check-circle fa-ban")
+                .addClass("fa-circle-notch fa-spin");
+
+            switch(status) {
+                case "Searching":
+                    $("#statusIndicator").addClass("bg-warning");
+                    $("#statusIcon").removeClass("fa-spin").addClass("fa-magnifying-glass");
+                    $("#progressBar").css("width", "10%");
+                    break;
+
+                case "DriverArriving":
+                    $("#statusIndicator").addClass("bg-info");
+                    $("#statusIcon").removeClass("fa-spin").addClass("fa-car-side");
+                    $("#progressBar").css("width", "25%");
+                    break;
+
+                case "DriverArrived":
+                    $("#statusIndicator").addClass("bg-info");
+                    $("#statusIcon").removeClass("fa-spin").addClass("fa-car-side");
+                    $("#progressBar").css("width", "50%");
+                    break;
+
+                case "InProgress":
+                    $("#statusIndicator").addClass("bg-info");
+                    $("#statusIcon").removeClass("fa-spin").addClass("fa-car-side");
+                    $("#progressBar").css("width", "75%");
+                    break;
+
+                case "Completed":
+                    $("#statusIndicator").addClass("bg-success");
+                    $("#statusIcon").removeClass("fa-spin").addClass("fa-check-circle");
+                    $("#progressBar").css("width", "100%");
+                    break;
+
+                case "Canceled":
+                    $("#statusIndicator").addClass("bg-danger");
+                    $("#statusIcon").removeClass("fa-spin").addClass("fa-ban");
+                    $("#progressBar").css("width", "100%");
+                    break;
+            }
         }
 
         function startScheduledRide(rideId) {
@@ -1161,32 +1245,42 @@ ViewData["Title"] = "Панель водія";
 
         });
 
+        let debugEvents = false;
+        let currentRideId = null; 
+        
         $("#cancelRideButton").click(function () {
             if (activeRideId) {
-                $.ajax({
-                    url: '@Url.Action("CancelRide", "Driver")',
-                    type: 'POST',
-                    data: { rideId: activeRideId },
-                    success: function (response) {
-                        if (response.success) {
-                            $("#rideStatusMessage").text("Поїздку скасовано");
-                            setTimeout(function () {
-                                resetRideUI();
-                            }, 3000);
-                        } else {
-                            alert(response.message);
+                if (confirm("Ви впевнені, що хочете скасувати цю поїздку?")) {
+                    currentRideId = activeRideId;
 
-                            if (response.message.includes("розпочата")) {
-                                $("#cancelRideButton").addClass("d-none");
+                    $.ajax({
+                        url: '@Url.Action("CancelRide", "Driver")',
+                        type: 'POST',
+                        data: { rideId: activeRideId },
+                        success: function (response) {
+                            if (response.success) {
+                                $("#rideStatusMessage").text("Поїздку скасовано");
+
+                                updateRideButtonsByStatus("Canceled");
+
+                                setTimeout(function () {
+                                    resetRideUI();
+                                }, 3000);
+                            } else {
+                                alert(response.message);
+
+                                if (response.message.includes("розпочата")) {
+                                    $("#cancelRideButton").addClass("d-none");
+                                }
                             }
+                        },
+                        error: function () {
+                            alert("Помилка з'єднання з сервером");
                         }
-                    },
-                    error: function () {
-                        alert("Помилка з'єднання з сервером");
-                    }
-                });
+                    });
+                }
             }
-});
+        });
 
         function checkActiveRide() {
             console.log("Перевіряємо активну поїздку...");

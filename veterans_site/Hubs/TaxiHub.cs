@@ -20,11 +20,11 @@ namespace veterans_site.Hubs
             await Groups.AddToGroupAsync(Context.ConnectionId, rideId);
             await Clients.Caller.SendAsync("JoinedRide", new { rideId = rideId });
         }
-
+        
         public async Task LeaveRide(string rideId)
         {
-            _logger.LogInformation($"Клієнт {Context.ConnectionId} покинув групу поїздки {rideId}");
             await Groups.RemoveFromGroupAsync(Context.ConnectionId, rideId);
+            Console.WriteLine($"Клієнт {Context.ConnectionId} вийшов з групи поїздки {rideId}");
         }
         
         public async Task JoinDriversGroup()
@@ -119,6 +119,17 @@ namespace veterans_site.Hubs
                     carTypes
                 });
             }
+        }
+        
+        public async Task NotifyRideCanceled(int rideId, string message)
+        {
+            Console.WriteLine($"Відправляємо повідомлення про скасування поїздки {rideId}: {message}");
+    
+            await Clients.Group(rideId.ToString()).SendAsync("RideCanceled", new
+            {
+                rideId = rideId,
+                message = message ?? "Поїздку скасовано"
+            });
         }
     }
 }

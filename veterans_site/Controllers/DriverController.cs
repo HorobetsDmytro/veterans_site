@@ -377,12 +377,12 @@ public class DriverController : Controller
     {
         var driverId = User.FindFirstValue(ClaimTypes.NameIdentifier);
         var ride = await _taxiRepository.GetRideByIdAsync(rideId);
-    
+
         if (ride == null || ride.DriverId != driverId)
         {
             return NotFound();
         }
-    
+
         if (ride.Status == TaxiRideStatus.InProgress)
         {
             return Json(new { 
@@ -390,21 +390,38 @@ public class DriverController : Controller
                 message = "Не можна скасувати поїздку, яка вже розпочата" 
             });
         }
-    
+
         if (ride.Status != TaxiRideStatus.Completed && ride.Status != TaxiRideStatus.Canceled)
         {
-            await _taxiRepository.UpdateRideStatusAsync(rideId, TaxiRideStatus.Canceled);
-        
-            await _hubContext.Clients.Group(rideId.ToString()).SendAsync("RideStatusUpdated", new
+            try
             {
-                RideId = rideId,
-                Status = "Canceled",
-                Message = "Поїздку скасовано водієм"
-            });
-        
-            return Json(new { success = true });
-        }
+                await _taxiRepository.UpdateRideStatusAsync(rideId, TaxiRideStatus.Canceled);
     
+                await _hubContext.Clients.Group(rideId.ToString()).SendAsync("RideCanceled", new
+                {
+                    rideId = rideId,
+                    message = "Поїздку скасовано водієм"
+                });
+            
+                await _hubContext.Clients.Group(rideId.ToString()).SendAsync("RideStatusUpdated", new
+                {
+                    RideId = rideId,
+                    Status = "Canceled",
+                    Message = "Поїздку скасовано водієм"
+                });
+                    
+                return Json(new { success = true });
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Помилка при скасуванні поїздки: {ex.Message}");
+                return Json(new { 
+                    success = false, 
+                    message = "Сталася помилка при скасуванні поїздки" 
+                });
+            }
+        }
+
         return Json(new { 
             success = false, 
             message = "Не можна скасувати завершену чи вже скасовану поїздку" 
