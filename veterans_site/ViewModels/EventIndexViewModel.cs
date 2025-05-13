@@ -11,7 +11,4 @@ namespace veterans_site.ViewModels
         public EventStatus? CurrentStatus { get; set; }
         public string CurrentSort { get; set; }
     }
-
-
-
 }

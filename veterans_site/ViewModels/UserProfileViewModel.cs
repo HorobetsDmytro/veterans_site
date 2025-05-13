@@ -9,8 +9,6 @@ namespace veterans_site.ViewModels
         public IEnumerable<Consultation> PastConsultations { get; set; }
         public IEnumerable<Event> UpcomingEvents { get; set; }
         public IEnumerable<Event> PastEvents { get; set; }
-
-        // Додаткова статистика
         public int TotalConsultations { get; set; }
         public int TotalEvents { get; set; }
     }

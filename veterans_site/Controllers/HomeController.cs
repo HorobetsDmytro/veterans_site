@@ -1,10 +1,10 @@
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
-using System.Diagnostics;
 using veterans_site.Data;
 using veterans_site.Interfaces;
 using veterans_site.Models;
+using veterans_site.ViewModels;
 
 namespace veterans_site.Controllers
 {
