@@ -617,5 +617,39 @@ namespace veterans_site.Controllers
 
             return RedirectToAction(nameof(Index));
         }
+        
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> DeleteAccount()
+        {
+            var user = await _userManager.GetUserAsync(User);
+            if (user == null)
+            {
+                return NotFound($"Не вдалося завантажити користувача з ID '{_userManager.GetUserId(User)}'.");
+            }
+
+            _logger.LogInformation("Користувач {UserId} запитав видалення свого акаунту.", user.Id);
+
+            var result = await _userManager.DeleteAsync(user);
+            if (!result.Succeeded)
+            {
+                foreach (var error in result.Errors)
+                {
+                    ModelState.AddModelError(string.Empty, error.Description);
+                }
+                
+                TempData["Error"] = "Не вдалося видалити акаунт. Спробуйте пізніше або зверніться до адміністратора.";
+
+                return RedirectToAction("Index", "Profile");
+            }
+
+            await _signInManager.SignOutAsync();
+            
+            _logger.LogInformation("Користувач з ID {UserId} видалив свій акаунт.", user.Id);
+            
+            TempData["Success"] = "Акаунт видалено\", \"Ваш акаунт та всі пов'язані дані були успішно видалені.";
+
+            return RedirectToAction("Index", "Home");
+        }
     }
 }

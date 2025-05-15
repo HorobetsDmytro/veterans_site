@@ -264,6 +264,38 @@
                             <a asp-action="ChangePassword" class="btn btn-outline-secondary">
                                 <i class="fas fa-key me-2"></i>Змінити пароль
                             </a>
+                            <button type="button" class="btn btn-outline-danger" data-bs-toggle="modal" data-bs-target="#deleteAccountModal">
+                                <i class="fas fa-user-times me-2"></i>Видалити акаунт
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="modal fade" id="deleteAccountModal" tabindex="-1" aria-labelledby="deleteAccountModalLabel" aria-hidden="true">
+                <div class="modal-dialog">
+                    <div class="modal-content">
+                        <div class="modal-header bg-danger text-white">
+                            <h5 class="modal-title" id="deleteAccountModalLabel">Підтвердження видалення акаунту</h5>
+                            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                        </div>
+                        <div class="modal-body">
+                            <div class="alert alert-warning">
+                                <i class="fas fa-exclamation-triangle me-2"></i>
+                                <strong>Увага!</strong> Видалення акаунту є незворотньою дією.
+                            </div>
+                            <p>Ви впевнені, що хочете видалити свій акаунт? Усі ваші дані будуть назавжди видалені з системи.</p>
+                            <p>Для підтвердження введіть слово <strong>ВИДАЛИТИ</strong> нижче:</p>
+                            <input type="text" id="deleteConfirmationInput" class="form-control" placeholder="ВИДАЛИТИ" />
+                        </div>
+                        <div class="modal-footer">
+                            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Скасувати</button>
+                            <form asp-controller="Profile" asp-action="DeleteAccount" method="post" id="deleteAccountForm">
+                                @Html.AntiForgeryToken()
+                                <button type="submit" class="btn btn-danger" id="confirmDeleteBtn" disabled>
+                                    <i class="fas fa-user-times me-2"></i>Видалити акаунт
+                                </button>
+                            </form>
                         </div>
                     </div>
                 </div>
@@ -836,6 +868,11 @@
         document.addEventListener('DOMContentLoaded', function () {
             const avatarInput = document.getElementById('avatarInput');
             const avatarForm = document.getElementById('avatarForm');
+            const carTypesForm = document.querySelector('form[action*="UpdateCarTypes"]');
+            const deleteConfirmationInput = document.getElementById('deleteConfirmationInput');
+            const confirmDeleteBtn = document.getElementById('confirmDeleteBtn');
+            const alerts = document.querySelectorAll('.alert');
+            const hash = window.location.hash;
             const chartInstances = {};
 
             if (avatarInput && avatarForm) {
@@ -960,8 +997,7 @@
             } else {
                 console.error('Не вдалося знайти необхідні елементи для завантаження аватара');
             }
-
-            const carTypesForm = document.querySelector('form[action*="UpdateCarTypes"]');
+            
             if (carTypesForm) {
                 carTypesForm.addEventListener('submit', function(e) {
                     const checkboxes = this.querySelectorAll('input[name="CarTypes"]');
@@ -980,7 +1016,14 @@
                 });
             }
 
-            const alerts = document.querySelectorAll('.alert');
+            deleteConfirmationInput.addEventListener('input', function() {
+                if (this.value === 'ВИДАЛИТИ') {
+                    confirmDeleteBtn.disabled = false;
+                } else {
+                    confirmDeleteBtn.disabled = true;
+                }
+            });
+
             alerts.forEach(alert => {
                 setTimeout(() => {
                     alert.classList.add('fade');
@@ -990,7 +1033,6 @@
                 }, 3000);
             });
 
-            const hash = window.location.hash;
             if (hash) {
                 const tab = document.querySelector(`a[href="${hash}"]`);
                 if (tab) {
