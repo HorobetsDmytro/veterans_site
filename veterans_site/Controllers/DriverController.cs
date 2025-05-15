@@ -235,6 +235,35 @@ public class DriverController : Controller
                 endLat = ride.EndLatitude,
                 endLng = ride.EndLongitude
             });
+
+            if (ride.Veteran != null)
+            {
+                var emailSubject = "Ваше замовлення таксі прийнято";
+                var emailBody = 
+                    "<h2>Ваше замовлення таксі прийнято</h2>" +
+                    "<p>Шановний ветеран,</p>" +
+                    "<p>Ваше замовлення таксі було прийнято водієм:</p>" +
+                    "<ul>" +
+                    $"<li>Водій: {driver.FirstName} {driver.LastName}</li>" +
+                    $"<li>Телефон: {driver.PhoneNumber}</li>" +
+                    $"<li>Автомобіль: {driver.CarModel}</li>" +
+                    $"<li>Номерний знак: {driver.LicensePlate}</li>" +
+                    $"<li>Звідки: {ride.StartAddress}</li>" +
+                    $"<li>Куди: {ride.EndAddress}</li>" +
+                    $"<li>Відстань: {ride.EstimatedDistance} км</li>";
+                
+                if (ride.ScheduledTime.HasValue)
+                {
+                    emailBody += $"<li>Запланований час: {ride.ScheduledTime.Value.ToString("dd.MM.yyyy HH:mm")}</li>";
+                }
+                
+                emailBody +=
+                    "</ul>" +
+                    "<p>Водій уже в дорозі до вас. Ви можете відстежити його місцезнаходження у додатку.</p>" +
+                    "<p>З повагою,<br>Команда Ветеран Хабу</p>";
+                
+                await _emailService.SendEmailWithFallbackAsync(ride.Veteran.Email, emailSubject, emailBody);
+            }
             
             return RedirectToAction("Index", "Driver");
         }
@@ -315,6 +344,28 @@ public class DriverController : Controller
                 Status = "DriverArrived",
                 Message = "Водій прибув! Будь ласка, вийдіть до автомобіля."
             });
+            
+            var driver = await _taxiRepository.GetDriverByIdAsync(driverId);
+            
+            if (ride.Veteran != null && driver != null)
+            {
+                var emailSubject = "Водій прибув на місце посадки";
+                var emailBody = 
+                    "<h2>Водій прибув на місце посадки</h2>" +
+                    "<p>Шановний ветеран,</p>" +
+                    "<p>Ваш водій прибув до місця посадки:</p>" +
+                    "<ul>" +
+                    $"<li>Водій: {driver.FirstName} {driver.LastName}</li>" +
+                    $"<li>Телефон: {driver.PhoneNumber}</li>" +
+                    $"<li>Автомобіль: {driver.CarModel}</li>" +
+                    $"<li>Номерний знак: {driver.LicensePlate}</li>" +
+                    $"<li>Місце посадки: {ride.StartAddress}</li>" +
+                    "</ul>" +
+                    "<p>Будь ласка, вийдіть до автомобіля.</p>" +
+                    "<p>З повагою,<br>Команда Ветеран Хабу</p>";
+                
+                await _emailService.SendEmailWithFallbackAsync(ride.Veteran.Email, emailSubject, emailBody);
+            }
         
             return Json(new { success = true });
         }
@@ -345,6 +396,26 @@ public class DriverController : Controller
             Message = "Поїздка розпочалася! Ви в дорозі"
         });
         
+        if (ride.Veteran != null)
+        {
+            var driver = await _taxiRepository.GetDriverByIdAsync(driverId);
+            var emailSubject = "Ваша поїздка розпочалася";
+            var emailBody = 
+                "<h2>Ваша поїздка розпочалася</h2>" +
+                "<p>Шановний ветеран,</p>" +
+                "<p>Ваша поїздка успішно розпочалася:</p>" +
+                "<ul>" +
+                $"<li>Водій: {driver?.FirstName} {driver?.LastName}</li>" +
+                $"<li>Звідки: {ride.StartAddress}</li>" +
+                $"<li>Куди: {ride.EndAddress}</li>" +
+                $"<li>Час початку: {DateTime.Now.ToString("dd.MM.yyyy HH:mm")}</li>" +
+                "</ul>" +
+                "<p>Бажаємо вам приємної поїздки!</p>" +
+                "<p>З повагою,<br>Команда Ветеран Хабу</p>";
+            
+            await _emailService.SendEmailWithFallbackAsync(ride.Veteran.Email, emailSubject, emailBody);
+        }
+        
         return Json(new { success = true });
     }
     
@@ -368,6 +439,32 @@ public class DriverController : Controller
             Status = "Completed",
             Message = "Поїздку завершено! Дякуємо, що скористалися нашим сервісом"
         });
+        
+        if (ride.Veteran != null)
+        {
+            var driver = await _taxiRepository.GetDriverByIdAsync(driverId);
+            DateTime now = DateTime.Now;
+            TimeSpan duration = now - (ride.PickupTime ?? ride.RequestTime);
+            
+            var emailSubject = "Ваша поїздка завершена";
+            var emailBody = 
+                "<h2>Ваша поїздка завершена</h2>" +
+                "<p>Шановний ветеран,</p>" +
+                "<p>Ваша поїздка успішно завершена:</p>" +
+                "<ul>" +
+                $"<li>Водій: {driver?.FirstName} {driver?.LastName}</li>" +
+                $"<li>Звідки: {ride.StartAddress}</li>" +
+                $"<li>Куди: {ride.EndAddress}</li>" +
+                $"<li>Відстань: {ride.EstimatedDistance} км</li>" +
+                $"<li>Час початку: {ride.PickupTime?.ToString("dd.MM.yyyy HH:mm") ?? "Невідомо"}</li>" +
+                $"<li>Час завершення: {now.ToString("dd.MM.yyyy HH:mm")}</li>" +
+                $"<li>Тривалість: {duration.Hours} год {duration.Minutes} хв</li>" +
+                "</ul>" +
+                "<p>Дякуємо, що скористалися нашим сервісом!</p>" +
+                "<p>З повагою,<br>Команда Ветеран Хабу</p>";
+            
+            await _emailService.SendEmailWithFallbackAsync(ride.Veteran.Email, emailSubject, emailBody);
+        }
         
         return Json(new { success = true });
     }
@@ -396,7 +493,7 @@ public class DriverController : Controller
             try
             {
                 await _taxiRepository.UpdateRideStatusAsync(rideId, TaxiRideStatus.Canceled);
-    
+
                 await _hubContext.Clients.Group(rideId.ToString()).SendAsync("RideCanceled", new
                 {
                     rideId = rideId,
@@ -410,6 +507,33 @@ public class DriverController : Controller
                     Message = "Поїздку скасовано водієм"
                 });
                     
+                var driver = await _taxiRepository.GetDriverByIdAsync(driverId);
+                
+                if (ride.Veteran != null && driver != null)
+                {
+                    var emailSubject = "Вашу поїздку скасовано";
+                    var emailBody = 
+                        "<h2>Вашу поїздку скасовано</h2>" +
+                        "<p>Шановний ветеран,</p>" +
+                        "<p>На жаль, водій скасував вашу поїздку:</p>" +
+                        "<ul>" +
+                        $"<li>Водій: {driver.FirstName} {driver.LastName}</li>" +
+                        $"<li>Звідки: {ride.StartAddress}</li>" +
+                        $"<li>Куди: {ride.EndAddress}</li>";
+                    
+                    if (ride.ScheduledTime.HasValue)
+                    {
+                        emailBody += $"<li>Запланований час: {ride.ScheduledTime.Value.ToString("dd.MM.yyyy HH:mm")}</li>";
+                    }
+                    
+                    emailBody +=
+                        "</ul>" +
+                        "<p>Ви можете замовити нове таксі у додатку.</p>" +
+                        "<p>З повагою,<br>Команда Ветеран Хабу</p>";
+                    
+                    await _emailService.SendEmailWithFallbackAsync(ride.Veteran.Email, emailSubject, emailBody);
+                }
+                
                 return Json(new { success = true });
             }
             catch (Exception ex)
@@ -544,6 +668,29 @@ public class DriverController : Controller
                 scheduledTime = ride.ScheduledTime?.ToString("dd.MM.yyyy HH:mm")
             });
             
+            if (ride.Veteran != null)
+            {
+                var emailSubject = "Ваше заплановане замовлення таксі прийнято";
+                var emailBody = 
+                    "<h2>Ваше заплановане замовлення таксі прийнято</h2>" +
+                    "<p>Шановний ветеран,</p>" +
+                    "<p>Ваше заплановане замовлення таксі було прийнято водієм:</p>" +
+                    "<ul>" +
+                    $"<li>Водій: {driver.FirstName} {driver.LastName}</li>" +
+                    $"<li>Телефон: {driver.PhoneNumber}</li>" +
+                    $"<li>Автомобіль: {driver.CarModel}</li>" +
+                    $"<li>Номерний знак: {driver.LicensePlate}</li>" +
+                    $"<li>Звідки: {ride.StartAddress}</li>" +
+                    $"<li>Куди: {ride.EndAddress}</li>" +
+                    $"<li>Відстань: {ride.EstimatedDistance} км</li>" +
+                    $"<li>Запланований час: {ride.ScheduledTime?.ToString("dd.MM.yyyy HH:mm")}</li>" +
+                    "</ul>" +
+                    "<p>Водій буде очікувати вас у вказаний час. Ви отримаєте повідомлення, коли водій вирушить до вас.</p>" +
+                    "<p>З повагою,<br>Команда Ветеран Хабу</p>";
+                
+                await _emailService.SendEmailWithFallbackAsync(ride.Veteran.Email, emailSubject, emailBody);
+            }
+            
             return Json(new { 
                 success = true,
                 scheduledTime = ride.ScheduledTime?.ToString("dd.MM.yyyy HH:mm"),
@@ -674,6 +821,28 @@ public class DriverController : Controller
                 licensePlate = driver.LicensePlate,
                 driverPhoto = driver.AvatarPath ?? "/images/drivers/default.jpg"
             });
+            
+            if (ride.Veteran != null)
+            {
+                var emailSubject = "Ваша запланована поїздка розпочинається";
+                var emailBody = 
+                    "<h2>Ваша запланована поїздка розпочинається</h2>" +
+                    "<p>Шановний ветеран,</p>" +
+                    "<p>Водій вирушив до місця посадки для вашої запланованої поїздки:</p>" +
+                    "<ul>" +
+                    $"<li>Водій: {driver.FirstName} {driver.LastName}</li>" +
+                    $"<li>Телефон: {driver.PhoneNumber}</li>" +
+                    $"<li>Автомобіль: {driver.CarModel}</li>" +
+                    $"<li>Номерний знак: {driver.LicensePlate}</li>" +
+                    $"<li>Звідки: {ride.StartAddress}</li>" +
+                    $"<li>Куди: {ride.EndAddress}</li>" +
+                    $"<li>Відстань: {ride.EstimatedDistance} км</li>" +
+                    "</ul>" +
+                    "<p>Будь ласка, будьте готові до посадки. Ви отримаєте повідомлення, коли водій прибуде до місця посадки.</p>" +
+                    "<p>З повагою,<br>Команда Ветеран Хабу</p>";
+                
+                await _emailService.SendEmailWithFallbackAsync(ride.Veteran.Email, emailSubject, emailBody);
+            }
             
             return Json(new { 
                 success = true, 

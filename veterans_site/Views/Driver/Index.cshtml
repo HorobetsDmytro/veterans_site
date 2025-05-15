@@ -546,9 +546,6 @@
                     </div>
                 `);
     
-                        const audio = new Audio('/sounds/notification.mp3');
-                        audio.play().catch(e => console.log("Не вдалося відтворити звук: ", e));
-    
                         setTimeout(function() {
                             $("#scheduledRideActivatedAlert").alert('close');
                         }, 10000);
@@ -943,9 +940,6 @@
                     <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
                 </div>
             `);
-    
-                const audio = new Audio('/sounds/notification.mp3');
-                audio.play().catch(e => console.log("Не вдалося відтворити звук: ", e));
 
                 setTimeout(function() {
                     $("#scheduledRideActivatedAlert").alert('close');

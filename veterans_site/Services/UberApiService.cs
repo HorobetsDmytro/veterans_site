@@ -80,22 +80,3 @@ public class EstimateResponse
     public double EstimatedDuration { get; set; }
     public double Distance { get; set; }
 }
-
-public class RideRequest
-{
-    public double StartLatitude { get; set; }
-    public double StartLongitude { get; set; }
-    public string StartAddress { get; set; }
-    public double EndLatitude { get; set; }
-    public double EndLongitude { get; set; }
-    public string EndAddress { get; set; }
-    public string VeteranId { get; set; }
-}
-
-public class RideResponse
-{
-    public string RideId { get; set; }
-    public string Status { get; set; }
-    public string DriverId { get; set; }
-    public DateTime EstimatedPickupTime { get; set; }
-}

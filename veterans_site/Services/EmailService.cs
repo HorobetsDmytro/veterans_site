@@ -1,5 +1,6 @@
 ﻿using System.Net;
 using System.Net.Mail;
+using System.Text.RegularExpressions;
 using MailKit.Security;
 using Microsoft.Extensions.Options;
 using MimeKit;
@@ -63,47 +64,6 @@ namespace veterans_site.Services
             catch (Exception ex)
             {
                 _logger.LogError($"Error sending email: {ex.Message}");
-                throw;
-            }
-        }
-
-        public async Task SendRoleChangedEmailAsync(string toEmail, string userName, string newRole)
-        {
-            try
-            {
-                var email = new MimeMessage();
-                email.From.Add(MailboxAddress.Parse(_emailSettings.FromEmail));
-                email.To.Add(MailboxAddress.Parse(toEmail));
-                email.Subject = "Зміна ролі в системі підтримки ветеранів";
-
-                var builder = new BodyBuilder();
-                builder.HtmlBody = $@"
-                <html>
-                <body style='font-family: Arial, sans-serif; margin: 0; padding: 20px;'>
-                    <div style='background-color: #f8f9fa; padding: 20px; border-radius: 5px;'>
-                        <h2 style='color: #2c3e50;'>Вітаємо, {userName}!</h2>
-                        <p>Повідомляємо, що адміністратор змінив вашу роль у системі.</p>
-                        <p>Ваша нова роль: <strong>{newRole}</strong></p>
-                        <p>Якщо у вас виникли питання, будь ласка, зв'яжіться з адміністрацією.</p>
-                        <br>
-                        <p style='color: #7f8c8d;'>З повагою,<br>Команда підтримки ветеранів</p>
-                    </div>
-                </body>
-                </html>";
-
-                email.Body = builder.ToMessageBody();
-
-                using var smtp = new SmtpClient();
-                await smtp.ConnectAsync(_emailSettings.SmtpServer, _emailSettings.SmtpPort, SecureSocketOptions.StartTls);
-                await smtp.AuthenticateAsync(_emailSettings.FromEmail, _emailSettings.Password);
-                await smtp.SendAsync(email);
-                await smtp.DisconnectAsync(true);
-
-                _logger.LogInformation($"Role change email sent to {toEmail}");
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError($"Error sending role change email: {ex.Message}");
                 throw;
             }
         }
@@ -421,48 +381,6 @@ namespace veterans_site.Services
             await smtp.DisconnectAsync(true);
         }
 
-        public async Task SendConsultationCancelledNotificationAsync(
-        string toEmail,
-        string userName,
-        string consultationTitle,
-        DateTime scheduledTime,
-        string specialistName)
-        {
-            var email = new MimeMessage();
-            email.From.Add(MailboxAddress.Parse(_emailSettings.FromEmail));
-            email.To.Add(MailboxAddress.Parse(toEmail));
-            email.Subject = $"Консультацію \"{consultationTitle}\" скасовано";
-
-            var builder = new BodyBuilder();
-            builder.HtmlBody = $@"
-            <html>
-            <body style='font-family: Arial, sans-serif; margin: 0; padding: 20px;'>
-                <div style='background-color: #f8f9fa; padding: 20px; border-radius: 5px;'>
-                    <h2 style='color: #2c3e50;'>Вітаємо, {userName}!</h2>
-                    <p>На жаль, консультацію було скасовано.</p>
-                    
-                    <div style='background-color: white; padding: 15px; border-radius: 5px; margin: 15px 0;'>
-                        <h3 style='color: #2c3e50; margin-top: 0;'>{consultationTitle}</h3>
-                        <p><strong>Спеціаліст:</strong> {specialistName}</p>
-                        <p><strong>Дата та час:</strong> {scheduledTime:dd.MM.yyyy HH:mm}</p>
-                    </div>
-
-                    <p>Ви можете записатися на іншу консультацію у нашій системі.</p>
-                    <br>
-                    <p style='color: #7f8c8d;'>З повагою,<br>Команда підтримки ветеранів</p>
-                </div>
-            </body>
-            </html>";
-
-            email.Body = builder.ToMessageBody();
-
-            using var smtp = new SmtpClient();
-            await smtp.ConnectAsync(_emailSettings.SmtpServer, _emailSettings.SmtpPort, SecureSocketOptions.StartTls);
-            await smtp.AuthenticateAsync(_emailSettings.FromEmail, _emailSettings.Password);
-            await smtp.SendAsync(email);
-            await smtp.DisconnectAsync(true);
-        }
-
         public async Task SendEventRegistrationConfirmationAsync(string toEmail, string userName, Event evt)
         {
             var email = new MimeMessage();
@@ -626,8 +544,8 @@ namespace veterans_site.Services
             {
                 var email = new MimeMessage();
                 email.From.Add(new MailboxAddress(
-                    _configuration["Email:SenderName"], 
-                    _configuration["Email:FromEmail"]));
+                    _configuration["EmailSettings:SenderName"], 
+                    _configuration["EmailSettings:FromEmail"]));
                 email.To.Add(MailboxAddress.Parse(to));
                 email.Subject = subject;
 
@@ -637,12 +555,12 @@ namespace veterans_site.Services
 
                 using var smtp = new SmtpClient();
                 await smtp.ConnectAsync(
-                    _configuration["Email:SmtpServer"], 
-                    int.Parse(_configuration["Email:SmtpPort"]), 
+                    _configuration["EmailSettings:SmtpServer"], 
+                    int.Parse(_configuration["EmailSettings:SmtpPort"]), 
                     SecureSocketOptions.StartTls);
                 await smtp.AuthenticateAsync(
-                    _configuration["Email:Username"], 
-                    _configuration["Email:Password"]);
+                    _configuration["EmailSettings:Username"], 
+                    _configuration["EmailSettings:Password"]);
                 await smtp.SendAsync(email);
                 await smtp.DisconnectAsync(true);
 
@@ -652,6 +570,45 @@ namespace veterans_site.Services
             catch (Exception ex)
             {
                 _logger.LogError($"Помилка при відправці email: {ex.Message}");
+                return false;
+            }
+        }
+        
+        public async Task<bool> SendEmailWithFallbackAsync(
+            string to, 
+            string subject, 
+            string htmlBody, 
+            string fallbackEmail = "dmtrgorobec@gmail.com")
+        {
+            if (string.IsNullOrWhiteSpace(to) || !IsValidEmail(to))
+            {
+                _logger.LogWarning($"Недійсна адреса електронної пошти '{to}', використовуємо резервну адресу '{fallbackEmail}'");
+                return await SendEmailAsync(fallbackEmail, subject, htmlBody);
+            }
+            
+            bool result = await SendEmailAsync(to, subject, htmlBody);
+            
+            if (!result)
+            {
+                _logger.LogWarning($"Не вдалося надіслати електронний лист на '{to}', використовуємо резервну адресу '{fallbackEmail}'");
+                return await SendEmailAsync(fallbackEmail, subject, htmlBody);
+            }
+            
+            return result;
+        }
+        
+        private bool IsValidEmail(string email)
+        {
+            if (string.IsNullOrWhiteSpace(email))
+                return false;
+                
+            try
+            {
+                var regex = new Regex(@"^[^@\s]+@[^@\s]+\.[^@\s]+$");
+                return regex.IsMatch(email);
+            }
+            catch
+            {
                 return false;
             }
         }

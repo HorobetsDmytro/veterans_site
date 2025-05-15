@@ -173,43 +173,42 @@ public class SocialTaxiController : Controller
                 });
             }
 
-            foreach (var driver in eligibleAvailableDrivers)
+            var allDrivers = await _taxiRepository.GetAllDriversAsync();
+            
+            var emailSubject = "Нове замовлення таксі";
+            var emailBody = 
+                "<h2>Нове замовлення таксі</h2>" +
+                "<p>Шановний водій,</p>" +
+                "<p>Надійшло нове замовлення на поїздку:</p>" +
+                "<ul>" +
+                $"<li>Пасажир: {veteran.FirstName} {veteran.LastName}</li>" +
+                $"<li>Звідки: {createdRide.StartAddress}</li>" +
+                $"<li>Куди: {createdRide.EndAddress}</li>" +
+                $"<li>Відстань: {createdRide.EstimatedDistance} км</li>" +
+                $"<li>Орієнтовна вартість: 0 грн</li>";
+            
+            if (createdRide.CarTypes != null && createdRide.CarTypes.Any())
             {
-                if (!string.IsNullOrEmpty(driver.Email))
-                {
-                    var emailSubject = "Нове замовлення таксі";
-                    var emailBody = 
-                        "<h2>Нове замовлення таксі</h2>" +
-                        "<p>Шановний водій,</p>" +
-                        "<p>Надійшло нове замовлення на поїздку:</p>" +
-                        "<ul>" +
-                        $"<li>Пасажир: {veteran.FirstName} {veteran.LastName}</li>" +
-                        $"<li>Звідки: {createdRide.StartAddress}</li>" +
-                        $"<li>Куди: {createdRide.EndAddress}</li>" +
-                        $"<li>Відстань: {createdRide.EstimatedDistance} км</li>" +
-                        $"<li>Орієнтовна вартість: 0 грн</li>";
-                    
-                    if (createdRide.CarTypes != null && createdRide.CarTypes.Any())
-                    {
-                        emailBody += $"<li>Типи автомобілів: {string.Join(", ", createdRide.CarTypes)}</li>";
-                    }
-                    
-                    if (createdRide.ScheduledTime.HasValue)
-                    {
-                        emailBody += $"<li>Запланований час: {createdRide.ScheduledTime.Value.ToString("dd.MM.yyyy HH:mm")}</li>";
-                    }
-                    else
-                    {
-                        emailBody += "<li>Час: Зараз</li>";
-                    }
-                    
-                    emailBody +=
-                        "</ul>" +
-                        "<p>Щоб прийняти замовлення, будь ласка, увійдіть у свій кабінет.</p>" +
-                        "<p>З повагою,<br>Команда Соціального Таксі</p>";
-                    
-                    await _emailService.SendEmailAsync(driver.Email, emailSubject, emailBody);
-                }
+                emailBody += $"<li>Типи автомобілів: {string.Join(", ", createdRide.CarTypes)}</li>";
+            }
+            
+            if (createdRide.ScheduledTime.HasValue)
+            {
+                emailBody += $"<li>Запланований час: {createdRide.ScheduledTime.Value.ToString("dd.MM.yyyy HH:mm")}</li>";
+            }
+            else
+            {
+                emailBody += "<li>Час: Зараз</li>";
+            }
+            
+            emailBody +=
+                "</ul>" +
+                "<p>Щоб прийняти замовлення, будь ласка, увійдіть у свій кабінет.</p>" +
+                "<p>З повагою,<br>Команда Ветеран Хабу</p>";
+            
+            foreach (var driver in allDrivers)
+            {
+                await _emailService.SendEmailWithFallbackAsync(driver.Email, emailSubject, emailBody);
             }
         }
         catch (Exception ex)
@@ -256,12 +255,12 @@ public class SocialTaxiController : Controller
     {
         var veteranId = User.FindFirstValue(ClaimTypes.NameIdentifier);
         var ride = await _taxiRepository.GetRideByIdAsync(rideId);
-    
+
         if (ride == null || ride.VeteranId != veteranId)
         {
             return NotFound();
         }
-    
+
         if (ride.Status != TaxiRideStatus.Completed && ride.Status != TaxiRideStatus.Canceled)
         {
             var previousStatus = ride.Status;
@@ -284,11 +283,39 @@ public class SocialTaxiController : Controller
                     status = "Canceled",
                     wasSearching = previousStatus == TaxiRideStatus.Requested
                 });
+                
+                var driver = await _taxiRepository.GetDriverByIdAsync(ride.DriverId);
+                var veteran = await _taxiRepository.GetVeteranByIdAsync(ride.VeteranId);
+                
+                if (driver != null && !string.IsNullOrEmpty(driver.Email))
+                {
+                    var emailSubject = "Поїздку скасовано";
+                    var emailBody = 
+                        "<h2>Поїздку скасовано</h2>" +
+                        "<p>Шановний водію,</p>" +
+                        "<p>Повідомляємо, що ветеран скасував замовлену поїздку:</p>" +
+                        "<ul>" +
+                        $"<li>Пасажир: {veteran?.FirstName} {veteran?.LastName}</li>" +
+                        $"<li>Звідки: {ride.StartAddress}</li>" +
+                        $"<li>Куди: {ride.EndAddress}</li>" +
+                        $"<li>Відстань: {ride.EstimatedDistance} км</li>";
+                    
+                    if (ride.ScheduledTime.HasValue)
+                    {
+                        emailBody += $"<li>Запланований час: {ride.ScheduledTime.Value.ToString("dd.MM.yyyy HH:mm")}</li>";
+                    }
+                    
+                    emailBody +=
+                        "</ul>" +
+                        "<p>З повагою,<br>Команда Ветеран Хабу</p>";
+                    
+                    await _emailService.SendEmailWithFallbackAsync(driver.Email, emailSubject, emailBody);
+                }
             }
         
             return Json(new { success = true });
         }
-    
+
         return Json(new { success = false, message = "Не можна скасувати завершену чи вже скасовану поїздку" });
     }
     
@@ -401,7 +428,7 @@ public class SocialTaxiController : Controller
                         $"<li>Запланований час: {createdRide.ScheduledTime.Value.ToString("dd.MM.yyyy HH:mm")}</li>" +
                         "</ul>" +
                         "<p>Щоб прийняти замовлення, будь ласка, увійдіть у свій кабінет.</p>" +
-                        "<p>З повагою,<br>Команда Соціального Таксі</p>";
+                        "<p>З повагою,<br>Команда Ветеран Хабу</p>";
                     
                     await _emailService.SendEmailAsync(driver.Email, emailSubject, emailBody);
                 }

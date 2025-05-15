@@ -56,13 +56,6 @@ public class SocialTaxiRepository : ISocialTaxiRepository
             .ToListAsync();
     }
     
-    public async Task<TaxiRide> UpdateRideAsync(TaxiRide ride)
-    {
-        _context.TaxiRides.Update(ride);
-        await _context.SaveChangesAsync();
-        return ride;
-    }
-    
     public async Task<bool> AssignDriverToRideAsync(int rideId, string driverId)
     {
         var ride = await _context.TaxiRides.FindAsync(rideId);
@@ -234,13 +227,10 @@ public class SocialTaxiRepository : ISocialTaxiRepository
 
     public async Task<List<TaxiRide>> GetActiveScheduledRidesAsync()
     {
-        DateTime now = DateTime.Now;
-        DateTime timeThreshold = now.AddMinutes(1);
-        
         return await _context.TaxiRides
             .Include(r => r.Veteran)
             .Where(r => r.ScheduledTime.HasValue && 
-                        r.ScheduledTime.Value <= timeThreshold && 
+                        r.ScheduledTime.Value == DateTime.Now && 
                         r.Status == TaxiRideStatus.Requested)
             .ToListAsync();
     }
@@ -259,13 +249,10 @@ public class SocialTaxiRepository : ISocialTaxiRepository
     
     public async Task<List<TaxiRide>> GetRidesForActivationAsync()
     {
-        DateTime now = DateTime.Now;
-        DateTime timeThreshold = now.AddMinutes(-1);
-    
         return await _context.TaxiRides
             .Include(r => r.Veteran)
             .Where(r => r.ScheduledTime.HasValue && 
-                        r.ScheduledTime.Value <= timeThreshold && 
+                        r.ScheduledTime.Value == DateTime.Now && 
                         r.Status == TaxiRideStatus.Requested &&
                         (r.DriverId != null || r.DriverId == null))
             .ToListAsync();
