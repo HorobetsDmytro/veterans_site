@@ -37,6 +37,8 @@ namespace veterans_site.Areas.Admin.Controllers
                     .ToListAsync();
 
                 var sixMonthsAgo = DateTime.Now.AddMonths(-6);
+                var currentDate = DateTime.Now;
+
                 var monthlyConsultations = await _context.Consultations
                     .Where(c => c.DateTime >= sixMonthsAgo)
                     .GroupBy(c => new { Month = c.DateTime.Month, Year = c.DateTime.Year })
@@ -48,6 +50,44 @@ namespace veterans_site.Areas.Admin.Controllers
                     .OrderBy(x => x.Year)
                     .ThenBy(x => x.Month)
                     .ToListAsync();
+
+                var allMonths = Enumerable.Range(0, 6)
+                    .Select(i => new {
+                        Year = currentDate.AddMonths(-i).Year,
+                        Month = currentDate.AddMonths(-i).Month
+                    })
+                    .Reverse()
+                    .ToList();
+
+                var dbRegistrations = await _context.Users
+                    .Where(u => u.RegistrationDate >= sixMonthsAgo)
+                    .GroupBy(u => new { u.RegistrationDate.Year, u.RegistrationDate.Month })
+                    .Select(g => new {
+                        Year = g.Key.Year,
+                        Month = g.Key.Month,
+                        Count = g.Count()
+                    })
+                    .ToListAsync();
+
+                var monthlyRegistrations = allMonths
+                    .GroupJoin(
+                        dbRegistrations,
+                        m => new { m.Year, m.Month },
+                        r => new { r.Year, r.Month },
+                        (m, rs) => new {
+                            Year = m.Year,
+                            Month = m.Month,
+                            Count = rs.FirstOrDefault()?.Count ?? 0
+                        })
+                    .OrderBy(x => x.Year)
+                    .ThenBy(x => x.Month)
+                    .ToList();
+
+                var monthLabels = monthlyRegistrations
+                    .Select(x => new DateTime(x.Year, x.Month, 1).ToString("MMM yyyy"))
+                    .ToList();
+
+                var registrationData = monthlyRegistrations.Select(x => x.Count).ToList();
 
                 var eventsByCategory = await _context.Events
                     .GroupBy(e => e.Category)
@@ -73,23 +113,6 @@ namespace veterans_site.Areas.Admin.Controllers
                     })
                     .ToList();
 
-                var monthlyRegistrations = await _context.Users
-                    .Where(u => u.RegistrationDate >= sixMonthsAgo)
-                    .GroupBy(u => new { Month = u.RegistrationDate.Month, Year = u.RegistrationDate.Year })
-                    .Select(g => new { 
-                        Month = g.Key.Month, 
-                        Year = g.Key.Year, 
-                        Count = g.Count() 
-                    })
-                    .OrderBy(x => x.Year)
-                    .ThenBy(x => x.Month)
-                    .ToListAsync();
-
-                var monthLabels = Enumerable.Range(0, 6)
-                    .Select(i => DateTime.Now.AddMonths(-i).ToString("MMM yyyy"))
-                    .Reverse()
-                    .ToList();
-
                 return Ok(new {
                     totalUsers,
                     totalConsultations,
@@ -102,7 +125,19 @@ namespace veterans_site.Areas.Admin.Controllers
                     
                     consultationTrend = new {
                         labels = monthLabels,
-                        data = monthlyConsultations.Select(x => x.Count)
+                        data = monthlyConsultations
+                            .GroupJoin(
+                                allMonths,
+                                c => new { c.Year, c.Month },
+                                m => new { m.Year, m.Month },
+                                (c, ms) => new { 
+                                    Year = c?.Year ?? ms.First().Year, 
+                                    Month = c?.Month ?? ms.First().Month, 
+                                    Count = c?.Count ?? 0 
+                                })
+                            .OrderBy(x => x.Year)
+                            .ThenBy(x => x.Month)
+                            .Select(x => x.Count)
                     },
                     
                     eventCategories = eventsByCategory.Select(x => new { label = x.Category, value = x.Count }),
@@ -111,7 +146,7 @@ namespace veterans_site.Areas.Admin.Controllers
                     
                     userRegistrations = new {
                         labels = monthLabels,
-                        data = monthlyRegistrations.Select(x => x.Count)
+                        data = registrationData
                     }
                 });
             }

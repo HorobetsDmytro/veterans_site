@@ -21,6 +21,7 @@ namespace veterans_site.Controllers
         private readonly ILogger<ProfileController> _logger;
         private readonly IWebHostEnvironment _webHostEnvironment;
         private SignInManager<ApplicationUser> _signInManager;
+        private readonly ISocialTaxiRepository _taxiRepository;
 
         public ProfileController(
             UserManager<ApplicationUser> userManager,
@@ -29,7 +30,8 @@ namespace veterans_site.Controllers
             ILogger<ProfileController> logger, 
             IWebHostEnvironment webHostEnvironment, 
             INewsRepository newsRepository,
-            SignInManager<ApplicationUser> signInManager)
+            SignInManager<ApplicationUser> signInManager, 
+            ISocialTaxiRepository taxiRepository)
         {
             _userManager = userManager;
             _consultationRepository = consultationRepository;
@@ -38,6 +40,7 @@ namespace veterans_site.Controllers
             _webHostEnvironment = webHostEnvironment;
             _newsRepository = newsRepository;
             _signInManager = signInManager;
+            _taxiRepository = taxiRepository;
         }
 
         public async Task<IActionResult> Index()
@@ -393,6 +396,201 @@ namespace veterans_site.Controllers
             await _signInManager.RefreshSignInAsync(user);
             TempData["Success"] = "Ваш пароль успішно змінено";
             return RedirectToAction(nameof(Index));
+        }
+        
+        [HttpGet]
+        public async Task<IActionResult> GetDriverStatistics()
+        {
+            try
+            {
+                var driverId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+                
+                var allRides = await _taxiRepository.GetRidesForDriverAsync(driverId);
+                
+                var completedRides = allRides.Where(r => r.Status == TaxiRideStatus.Completed).ToList();
+                var canceledRides = allRides.Where(r => r.Status == TaxiRideStatus.Canceled).ToList();
+                var inProgressRides = allRides.Where(r => 
+                    r.Status == TaxiRideStatus.Accepted || 
+                    r.Status == TaxiRideStatus.DriverArriving || 
+                    r.Status == TaxiRideStatus.InProgress).ToList();
+                
+                double totalDistance = completedRides.Sum(r => r.EstimatedDistance);
+                
+                var scheduledRides = await _taxiRepository.GetActiveScheduledRidesForDriverAsync(driverId);
+                
+                var today = DateTime.Now.Date;
+                var last7Days = Enumerable.Range(0, 7)
+                    .Select(i => today.AddDays(-i))
+                    .Reverse()
+                    .ToList();
+                
+                var ridesByDay = last7Days.Select(date => {
+                    var count = completedRides.Count(r => 
+                        r.CompleteTime.HasValue && 
+                        r.CompleteTime.Value.Date == date);
+                    return new { Date = date, Count = count };
+                }).ToList();
+                
+                var popularRoutes = completedRides
+                    .GroupBy(r => new { Start = r.StartAddress, End = r.EndAddress })
+                    .Select(g => new {
+                        ShortName = $"{g.Key.Start.Split(',')[0].Trim()} - {g.Key.End.Split(',')[0].Trim()}",
+                        FullStart = g.Key.Start,
+                        FullEnd = g.Key.End,
+                        Count = g.Count() 
+                    })
+                    .OrderByDescending(g => g.Count)
+                    .Take(5)
+                    .ToList();
+                    
+                var activityByHour = completedRides
+                    .Where(r => r.CompleteTime.HasValue)
+                    .GroupBy(r => r.CompleteTime.Value.Hour)
+                    .Select(g => new { 
+                        Hour = g.Key, 
+                        Count = g.Count() 
+                    })
+                    .OrderBy(g => g.Hour)
+                    .ToList();
+                    
+                var hoursLabels = new List<string>();
+                var hoursData = new List<int>();
+                
+                for (int i = 6; i <= 22; i += 2)
+                {
+                    hoursLabels.Add($"{i}:00");
+                    hoursData.Add(activityByHour.FirstOrDefault(a => a.Hour == i)?.Count ?? 0);
+                }
+                
+                var averageDurationByDay = Enumerable.Range(0, 7)
+                    .Select(i => {
+                        var dayOfWeek = (int)DateTime.Now.AddDays(-i).DayOfWeek;
+                        var ridesOnThisDay = completedRides
+                            .Where(r => r.CompleteTime.HasValue && r.PickupTime.HasValue && 
+                                   (int)r.CompleteTime.Value.DayOfWeek == dayOfWeek);
+                        
+                        double avgDuration = ridesOnThisDay.Any() 
+                            ? ridesOnThisDay.Average(r => 
+                                (r.CompleteTime.Value - r.PickupTime.Value).TotalMinutes) 
+                            : 0;
+                        
+                        return new { DayOfWeek = dayOfWeek, AvgDuration = avgDuration };
+                    })
+                    .OrderBy(x => x.DayOfWeek)
+                    .ToList();
+                
+                var ridesByCarType = new Dictionary<string, int>();
+                foreach (var ride in completedRides.Where(r => r.CarTypes != null && r.CarTypes.Any()))
+                {
+                    foreach (var carType in ride.CarTypes)
+                    {
+                        if (ridesByCarType.ContainsKey(carType))
+                            ridesByCarType[carType]++;
+                        else
+                            ridesByCarType[carType] = 1;
+                    }
+                }
+                
+                var ridesByTimeOfDay = new Dictionary<string, int>
+                {
+                    { "Ранок (6-10)", completedRides.Count(r => r.PickupTime.HasValue && r.PickupTime.Value.Hour >= 6 && r.PickupTime.Value.Hour < 10) },
+                    { "День (10-16)", completedRides.Count(r => r.PickupTime.HasValue && r.PickupTime.Value.Hour >= 10 && r.PickupTime.Value.Hour < 16) },
+                    { "Вечір (16-21)", completedRides.Count(r => r.PickupTime.HasValue && r.PickupTime.Value.Hour >= 16 && r.PickupTime.Value.Hour < 21) },
+                    { "Ніч (21-6)", completedRides.Count(r => r.PickupTime.HasValue && (r.PickupTime.Value.Hour >= 21 || r.PickupTime.Value.Hour < 6)) }
+                };
+                
+                var averageDistanceByDay = Enumerable.Range(0, 7)
+                    .Select(i => {
+                        var dayOfWeek = (int)DateTime.Now.AddDays(-i).DayOfWeek;
+                        var ridesOnThisDay = completedRides
+                            .Where(r => r.CompleteTime.HasValue && 
+                                   (int)r.CompleteTime.Value.DayOfWeek == dayOfWeek);
+                        
+                        double avgDistance = ridesOnThisDay.Any() 
+                            ? ridesOnThisDay.Average(r => r.EstimatedDistance) 
+                            : 0;
+                        
+                        return new { DayOfWeek = dayOfWeek, AvgDistance = avgDistance };
+                    })
+                    .OrderBy(x => x.DayOfWeek)
+                    .ToList();
+                    
+                int scheduledRidesCount = completedRides.Count(r => r.ScheduledTime.HasValue);
+                int spontaneousRidesCount = completedRides.Count(r => !r.ScheduledTime.HasValue);
+                
+                string[] daysOfWeek = { "Пн", "Вт", "Ср", "Чт", "Пт", "Сб", "Нд" };
+                
+                var plannedVsRegular = new
+                {
+                    labels = new[] { "Заплановані", "Звичайні" },
+                    data = new[] { 
+                        completedRides.Count(r => r.ScheduledTime.HasValue),
+                        completedRides.Count(r => !r.ScheduledTime.HasValue)
+                    }
+                };
+                
+                var statistics = new
+                {
+                    totalRides = completedRides.Count,
+                    totalDistance,
+                    scheduledRides = scheduledRides.Count,
+                    ridesByDay = new
+                    {
+                        labels = last7Days.Select(d => d.ToString("ddd")).ToArray(),
+                        data = ridesByDay.Select(r => r.Count).ToArray()
+                    },
+                    rideStatuses = new int[] 
+                    { 
+                        completedRides.Count, 
+                        canceledRides.Count, 
+                        inProgressRides.Count 
+                    },
+                    popularRoutes = popularRoutes.Select(r => new { 
+                        shortName = r.ShortName, 
+                        fullStart = r.FullStart, 
+                        fullEnd = r.FullEnd, 
+                        count = r.Count 
+                    }).ToArray(),
+                    activityHours = new
+                    {
+                        labels = hoursLabels.ToArray(),
+                        data = hoursData.ToArray()
+                    },
+                    rideTypes = new
+                    {
+                        labels = ridesByCarType.Keys.ToArray(),
+                        data = ridesByCarType.Values.ToArray()
+                    },
+                    averageDistanceByDay = new
+                    {
+                        labels = daysOfWeek,
+                        data = new double[7].Select((_, i) => 
+                            averageDistanceByDay.FirstOrDefault(d => d.DayOfWeek == i)?.AvgDistance ?? 0).ToArray()
+                    },
+                    averageDurationByDay = new
+                    {
+                        labels = daysOfWeek,
+                        data = new double[7].Select((_, i) => 
+                            averageDurationByDay.FirstOrDefault(d => d.DayOfWeek == i)?.AvgDuration ?? 0).ToArray()
+                    },
+                    ridesByTimeOfDay = new
+                    {
+                        labels = ridesByTimeOfDay.Keys.ToArray(),
+                        data = ridesByTimeOfDay.Values.ToArray()
+                    },
+                    ridePlanningType = new
+                    {
+                        labels = new[] { "Заплановані", "Звичайні" },
+                        data = new[] { scheduledRidesCount, spontaneousRidesCount }
+                    }
+                };
+                
+                return Json(statistics);
+            }
+            catch (Exception ex)
+            {
+                return Json(new { error = ex.Message });
+            }
         }
     }
 }

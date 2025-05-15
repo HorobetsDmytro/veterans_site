@@ -165,16 +165,6 @@ public class SocialTaxiRepository : ISocialTaxiRepository
             await _context.SaveChangesAsync();
         }
     }
-
-    public async Task UpdateRideAcceptTimeAsync(int rideId, DateTime acceptTime)
-    {
-        var ride = await _context.TaxiRides.FindAsync(rideId);
-        if (ride != null)
-        {
-            ride.AcceptTime = acceptTime;
-            await _context.SaveChangesAsync();
-        }
-    }
     
     public async Task<IEnumerable<TaxiRide>> GetAvailableRidesAsync()
     {
@@ -202,29 +192,6 @@ public class SocialTaxiRepository : ISocialTaxiRepository
               (r.Status == TaxiRideStatus.Accepted || 
                r.Status == TaxiRideStatus.DriverArriving || 
                r.Status == TaxiRideStatus.InProgress));
-    }
-    
-    
-    public async Task<List<TaxiRide>> GetActiveRideRequestsAsync()
-    {
-        return await _context.TaxiRides
-            .Include(r => r.Veteran)
-            .Where(r => r.Status == TaxiRideStatus.Requested && 
-                        (!r.ScheduledTime.HasValue || r.ScheduledTime <= DateTime.Now.AddMinutes(30)))
-            .OrderByDescending(r => r.RequestTime)
-            .ToListAsync();
-    }
-
-    public async Task<List<TaxiRide>> GetScheduledRidesAsync()
-    {
-        return await _context.TaxiRides
-            .Include(r => r.Veteran)
-            .Where(r => r.ScheduledTime.HasValue && 
-                        r.Status == TaxiRideStatus.Requested &&
-                        r.DriverId == null &&
-                        r.ScheduledTime > DateTime.Now)
-            .OrderBy(r => r.ScheduledTime)
-            .ToListAsync();
     }
 
     public async Task<bool> AssignDriverToScheduledRideAsync(int rideId, string driverId)
@@ -384,5 +351,18 @@ public class SocialTaxiRepository : ISocialTaxiRepository
         ).ToList();
 
         return filteredRides;
+    }
+    
+    public async Task<List<TaxiRide>> GetActiveScheduledRidesForDriverAsync(string driverId)
+    {
+        var now = DateTime.Now;
+    
+        return await _context.TaxiRides
+            .Include(r => r.Veteran)
+            .Where(r => r.DriverId == driverId &&
+                        r.ScheduledTime.HasValue &&
+                        r.ScheduledTime.Value > now &&
+                        r.Status == TaxiRideStatus.Requested)
+            .ToListAsync();
     }
 }
