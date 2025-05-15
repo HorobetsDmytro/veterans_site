@@ -206,28 +206,22 @@
         margin-bottom: 1rem;
         color: #1e293b;
     }
+
+    .car-types-container {
+        background-color: #f8f9fa;
+        padding: 10px 15px;
+        border-radius: 0.5rem;
+        border: 1px solid #e2e8f0;
+        margin-bottom: 10px;
+    }
+
+    .form-check {
+        margin-bottom: 8px;
+    }
 </style>
 
 <div class="profile-section">
     <div class="container">
-        @if (TempData["Success"] != null)
-        {
-            <div class="alert alert-success alert-dismissible fade show mb-4" role="alert">
-                <i class="fas fa-check-circle me-2"></i>
-                @TempData["Success"]
-                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-            </div>
-        }
-
-        @if (TempData["Error"] != null)
-        {
-            <div class="alert alert-danger alert-dismissible fade show mb-4" role="alert">
-                <i class="fas fa-exclamation-circle me-2"></i>
-                @TempData["Error"]
-                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-            </div>
-        }
-
         <div class="row g-4">
             <div class="col-md-4">
                 <div class="profile-card card">
@@ -274,7 +268,67 @@
                     </div>
                 </div>
             </div>
-            <div class="col-md-8">
+            
+            @if (User.IsInRole("Driver"))
+            {
+                <div class="col-md-4">
+                    <div class="profile-card card">
+                        <div class="card-body p-4">
+                            <h3 class="h5 mb-3">
+                                <i class="fas fa-car-side me-2"></i>Типи автомобіля
+                            </h3>
+                            
+                            <form asp-controller="Profile" asp-action="UpdateCarTypes" method="post">
+                                @Html.AntiForgeryToken()
+                                
+                                <div class="car-types-container mb-3">
+                                    @{
+                                        var currentCarTypes = Model.User.CarType?.Split(',') ?? new string[0];
+                                    }
+                                    
+                                    <div class="form-check mb-2">
+                                        <input class="form-check-input" type="checkbox" name="CarTypes" value="Regular" 
+                                               id="carTypeRegular" @(currentCarTypes.Contains("Regular") ? "checked" : "")>
+                                        <label class="form-check-label" for="carTypeRegular">
+                                            Звичайне авто
+                                        </label>
+                                    </div>
+                                    
+                                    <div class="form-check mb-2">
+                                        <input class="form-check-input" type="checkbox" name="CarTypes" value="WithRamp" 
+                                               id="carTypeWithRamp" @(currentCarTypes.Contains("WithRamp") ? "checked" : "")>
+                                        <label class="form-check-label" for="carTypeWithRamp">
+                                            Авто з пандусом або підйомником
+                                        </label>
+                                    </div>
+                                    
+                                    <div class="form-check mb-2">
+                                        <input class="form-check-input" type="checkbox" name="CarTypes" value="WithMedical" 
+                                               id="carTypeWithMedical" @(currentCarTypes.Contains("WithMedical") ? "checked" : "")>
+                                        <label class="form-check-label" for="carTypeWithMedical">
+                                            Авто з медичним обладнанням
+                                        </label>
+                                    </div>
+                                    
+                                    <div class="form-check mb-2">
+                                        <input class="form-check-input" type="checkbox" name="CarTypes" value="WithAssistant" 
+                                               id="carTypeWithAssistant" @(currentCarTypes.Contains("WithAssistant") ? "checked" : "")>
+                                        <label class="form-check-label" for="carTypeWithAssistant">
+                                            Авто з супроводжуючим
+                                        </label>
+                                    </div>
+                                </div>
+                                
+                                <button type="submit" class="btn btn-primary w-100">
+                                    <i class="fas fa-save me-2"></i>Зберегти зміни
+                                </button>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+            }
+            
+            <div class="col-md-@(User.IsInRole("Driver") ? "4" : "8")">
                 @if (User.IsInRole("Veteran"))
                 {
                     <div class="profile-card card mb-4">
@@ -541,7 +595,6 @@
                 }
             </div>
         </div>
-        
         @if (User.IsInRole("Admin"))
         {
             <div class="admin-stats-section mt-4">
@@ -906,6 +959,25 @@
                 });
             } else {
                 console.error('Не вдалося знайти необхідні елементи для завантаження аватара');
+            }
+
+            const carTypesForm = document.querySelector('form[action*="UpdateCarTypes"]');
+            if (carTypesForm) {
+                carTypesForm.addEventListener('submit', function(e) {
+                    const checkboxes = this.querySelectorAll('input[name="CarTypes"]');
+                    let isChecked = false;
+
+                    checkboxes.forEach(checkbox => {
+                        if (checkbox.checked) {
+                            isChecked = true;
+                        }
+                    });
+
+                    if (!isChecked) {
+                        e.preventDefault();
+                        alert('Будь ласка, виберіть хоча б один тип автомобіля');
+                    }
+                });
             }
 
             const alerts = document.querySelectorAll('.alert');

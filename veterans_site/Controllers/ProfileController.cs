@@ -592,5 +592,30 @@ namespace veterans_site.Controllers
                 return Json(new { error = ex.Message });
             }
         }
+        
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> UpdateCarTypes(List<string> CarTypes)
+        {
+            var user = await _userManager.GetUserAsync(User);
+            if (user == null)
+            {
+                return NotFound();
+            }
+
+            user.CarType = CarTypes != null ? string.Join(",", CarTypes) : null;
+            var result = await _userManager.UpdateAsync(user);
+
+            if (result.Succeeded)
+            {
+                TempData["Success"] = "Типи автомобіля успішно оновлені";
+            }
+            else
+            {
+                TempData["Error"] = "Помилка при оновленні типів автомобіля";
+            }
+
+            return RedirectToAction(nameof(Index));
+        }
     }
 }
