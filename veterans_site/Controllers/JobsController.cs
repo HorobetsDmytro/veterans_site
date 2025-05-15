@@ -49,6 +49,11 @@ public class JobsController : Controller
         }
         
         var jobs = await _jobRepository.SearchJobsAsync(query, location, category, jobType);
+        
+        var acceptedJobIds = await _applicationRepository.GetJobIdsWithStatusAsync(ApplicationStatus.Accepted);
+        
+        jobs = jobs.Where(job => !acceptedJobIds.Contains(job.Id)).ToList();
+        
         var paginatedJobs = jobs.Skip((page - 1) * pageSize).Take(pageSize).ToList();
         
         var userId = _userManager.GetUserId(User);
@@ -424,7 +429,6 @@ public async Task<IActionResult> Edit(int id, Job job)
         return View(viewModel);
     }
     
-    [Authorize(Roles = "Admin")]
     public async Task<IActionResult> MyJobs(string query = null, string location = null, 
         string category = null, JobType? jobType = null, int page = 1)
     {
@@ -432,34 +436,38 @@ public async Task<IActionResult> Edit(int id, Job job)
 
         var jobs = await _jobRepository.GetAllAsync();
         var adminJobs = jobs.Where(j => !j.IsExternal).AsQueryable();
-    
+
         if (!string.IsNullOrEmpty(query))
         {
             adminJobs = adminJobs.Where(j => j.Title.Contains(query) || j.Description.Contains(query));
         }
-    
+
         if (!string.IsNullOrEmpty(location))
         {
             adminJobs = adminJobs.Where(j => j.Location.Contains(location));
         }
-    
+
         if (!string.IsNullOrEmpty(category))
         {
             adminJobs = adminJobs.Where(j => j.Category == category);
         }
-    
+
         if (jobType.HasValue)
         {
             adminJobs = adminJobs.Where(j => j.JobType == jobType.Value);
         }
+
+        var acceptedJobIds = await _applicationRepository.GetJobIdsWithStatusAsync(ApplicationStatus.Accepted);
     
+        adminJobs = adminJobs.Where(job => !acceptedJobIds.Contains(job.Id));
+
         var totalCount = adminJobs.Count();
-    
+
         var paginatedJobs = adminJobs
             .Skip((page - 1) * pageSize)
             .Take(pageSize)
             .ToList();
-    
+
         foreach (var job in paginatedJobs)
         {
             job.ApplicationsCount = await _applicationRepository.GetApplicationsCountAsync(job.Id);

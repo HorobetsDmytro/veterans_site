@@ -49,5 +49,14 @@ namespace veterans_site.Repositories
         {
             return await _context.JobApplications.CountAsync(a => a.JobId == jobId);
         }
+        
+        public async Task<List<int>> GetJobIdsWithStatusAsync(ApplicationStatus status)
+        {
+            return await _dbSet
+                .Where(ja => ja.Status == status)
+                .Select(ja => ja.JobId)
+                .Distinct()
+                .ToListAsync();
+        }
     }
 }

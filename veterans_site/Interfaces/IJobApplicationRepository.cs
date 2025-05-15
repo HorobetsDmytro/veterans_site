@@ -9,5 +9,5 @@ public interface IJobApplicationRepository : IGenericRepository<JobApplication>
     Task<bool> HasUserAppliedAsync(string userId, int jobId);
     Task<IEnumerable<JobApplication>> GetAllApplicationsAsync();
     Task<int> GetApplicationsCountAsync(int jobId);
-
+    Task<List<int>> GetJobIdsWithStatusAsync(ApplicationStatus status);
 }
